@@ -1,0 +1,6 @@
+rootProject.name = 'sixro-logistics'
+
+include 'common-module'
+
+project(':common-module').projectDir =
+        file('com.sixro.logistics.common-module')
