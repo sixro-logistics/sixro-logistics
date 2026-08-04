@@ -1,0 +1,38 @@
+server:
+  # Discovery Server 실행 포트
+  port: 19090
+
+spring:
+  application:
+    # Eureka에 등록되는 서비스 이름
+    name: discovery-server
+
+eureka:
+  instance:
+    # Discovery Server 호스트 이름
+    hostname: localhost
+
+  client:
+    # Discovery Server 자신을 Eureka Registry에 등록하지 않음
+    register-with-eureka: false
+
+    # 다른 Eureka Server의 Registry를 조회하지 않음
+    # 단일 Eureka Server 환경에서 사용
+    fetch-registry: false
+
+    # Eureka Server 주소
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # HTTP로 노출할 Actuator Endpoint
+        include: health, info
+
+  endpoint:
+    health:
+      # Health Endpoint 상세 정보 표시
+      # 운영 환경에서는 when-authorized 또는 never 권장
+      show-details: always
