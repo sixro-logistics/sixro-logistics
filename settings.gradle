@@ -1,3 +1,4 @@
 rootProject.name = 'sixro-logistics'
 
 include 'common-module'
+include 'discovery-server'
