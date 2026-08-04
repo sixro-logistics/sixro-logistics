@@ -1,0 +1,3 @@
+rootProject.name = 'sixro-logistics'
+
+include 'common-module'

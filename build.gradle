@@ -1,0 +1,12 @@
+plugins {
+    id 'base'
+}
+
+allprojects {
+    group = 'com.sixro.logistics'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
