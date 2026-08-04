@@ -1,0 +1,55 @@
+package com.sixro.logistics.delivery.domain;
+
+import com.sixro.logistics.common.persistence.entity.BaseEntity;
+import com.sixro.logistics.delivery.domain.enums.RouteStatus;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "p_delivery_route")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLRestriction("is_deleted = false")
+public class DeliveryRoute extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID deliveryRouteId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "delivery_id", nullable = false)
+    private Delivery delivery;
+
+    @Column(nullable = false)
+    private Integer routeSequence;
+
+    @Column(nullable = false)
+    private UUID originHubId;
+
+    @Column(nullable = false)
+    private UUID destHubId;
+
+    @Column(nullable = false)
+    private Long expectedDistanceM;
+
+    @Column(nullable = false)
+    private Long expectedDurationS;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RouteStatus routeStatus = RouteStatus.HUB_TRANSIT_WAITING;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "delivery_manager_id")
+    private DeliveryManager deliveryManager;
+
+    private LocalDateTime startedAt;
+
+    private LocalDateTime completedAt;
+}
