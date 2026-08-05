@@ -6,6 +6,8 @@ import com.sixro.logistics.inventory.presentation.dto.request.InventoryCreateReq
 import com.sixro.logistics.inventory.presentation.dto.response.InventoryCreateResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,16 +18,18 @@ public class InventoryController {
     private final InventoryFacade inventoryFacade;
 
     @PostMapping("/inventories")
-    public CommonResponse<InventoryCreateResponseDto> createInventory(
+    public ResponseEntity<CommonResponse<InventoryCreateResponseDto>> createInventory(
             @Valid @RequestBody InventoryCreateRequestDto requestDto) {
 
         InventoryCreateResponseDto responseDto =
                 inventoryFacade.createInventory(requestDto);
 
-        return CommonResponse.created(
-                "재고가 등록되었습니다.",
-                responseDto
-        );
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CommonResponse.success(
+                        HttpStatus.CREATED,
+                        "재고가 등록되었습니다.",
+                        responseDto
+                ));
     }
 
 }
