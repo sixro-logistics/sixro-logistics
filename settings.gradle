@@ -1,5 +1,19 @@
 rootProject.name = 'sixro-logistics'
 
+// 공통 모듈
 include 'common-module'
+
+// 인프라 서비스
 include 'discovery-server'
 include 'gateway-service'
+
+// 비즈니스 도메인 서비스
+include 'auth-service'
+include 'user-service'
+include 'company-service'
+include 'product-service'
+include 'order-service'
+include 'inventory-service'
+include 'delivery-service'
+include 'hub-service'
+include 'notification-service'
