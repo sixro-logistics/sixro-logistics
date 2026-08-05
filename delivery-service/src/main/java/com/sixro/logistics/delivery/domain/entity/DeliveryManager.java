@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.domain;
+package com.sixro.logistics.delivery.domain.entity;
 
 import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
@@ -34,4 +34,17 @@ public class DeliveryManager extends BaseEntity {
 
     @Column(nullable = false)
     private Integer deliverySequence;
+
+    // TODO: service에서 순번 배정 로직 작성하고 넘기기
+    public static DeliveryManager create(UUID userId, UUID hubId, ManagerType managerType, Integer deliverySequence) {
+        DeliveryManager deliveryManager = new DeliveryManager();
+        deliveryManager.deliveryManagerId = userId;
+        deliveryManager.hubId = hubId;
+        deliveryManager.managerType = managerType;
+        deliveryManager.managerStatus = ManagerStatus.AVAILABLE;
+        deliveryManager.deliverySequence = deliverySequence;
+
+        return deliveryManager;
+    }
+
 }

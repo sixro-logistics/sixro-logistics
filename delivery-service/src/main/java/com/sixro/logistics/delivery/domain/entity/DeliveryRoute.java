@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.domain;
+package com.sixro.logistics.delivery.domain.entity;
 
 import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import com.sixro.logistics.delivery.domain.enums.RouteStatus;
