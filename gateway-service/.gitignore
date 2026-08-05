@@ -1,3 +1,5 @@
+**/local-keys/
+.env
 HELP.md
 .gradle
 build/
@@ -8,7 +10,7 @@ build/
 ### STS ###
 .apt_generated
 .classpath
-.factorypath
+.factorypath:WQ
 .project
 .settings
 .springBeans

@@ -3,20 +3,116 @@ server:
   port: 19091
 
 spring:
+  config:
+    import: "optional:file:.env[.properties]"
   application:
     # Eureka에 등록되는 서비스 이름
     name: gateway-service
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # RS256 Access Token 검증에 사용할 PEM 공개키 위치
+          public-key-location: classpath:keys/public-key.pem
+
   cloud:
     gateway:
-      discovery:
-        locator:
-          # Eureka에 등록된 서비스 정보를 기반으로 라우팅 활성화
-          enabled: true
+      server:
+        webflux:
+          # Eureka 등록 서비스 자동 노출 대신 명시적 Route만 사용
+          discovery:
+            locator:
+              enabled: false
 
-          # Eureka가 서비스 ID를 대문자로 관리해도
-          # /user-service/** 같은 소문자 경로 사용 가능
-          lower-case-service-id: true
+          # Timeout 적용
+          httpclient:
+            connect-timeout: 3000
+            response-timeout: 5s
+
+          # lb:// Load Balancer를 통해 Eureka에서 ABC-service를 찾습니다.
+          routes:
+            # Auth
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/v1/auth,/api/v1/auth/**
+
+            # User
+            - id: user-service
+              uri: lb://user-service
+              predicates:
+                - Path=/api/v1/users,/api/v1/users/**
+
+            # Company
+            - id: company-service
+              uri: lb://company-service
+              predicates:
+                - Path=/api/v1/companies,/api/v1/companies/**
+
+            # Product
+            - id: product-service
+              uri: lb://product-service
+              predicates:
+                - Path=/api/v1/products,/api/v1/products/**
+
+            # Order
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/api/v1/orders,/api/v1/orders/**
+
+            # Inventory
+            - id: inventory-service
+              uri: lb://inventory-service
+              predicates:
+                - Path=/api/v1/inventories,/api/v1/inventories/**
+
+            # Delivery
+            - id: delivery-service-deliveries
+              uri: lb://delivery-service
+              predicates:
+                - Path=/api/v1/deliveries,/api/v1/deliveries/**
+
+            - id: delivery-service-delivery-routes
+              uri: lb://delivery-service
+              predicates:
+                - Path=/api/v1/delivery-routes,/api/v1/delivery-routes/**
+
+            - id: delivery-service-delivery-managers
+              uri: lb://delivery-service
+              predicates:
+                - Path=/api/v1/delivery-managers,/api/v1/delivery-managers/**
+
+            # Hub
+            - id: hub-service-hubs
+              uri: lb://hub-service
+              predicates:
+                - Path=/api/v1/hubs,/api/v1/hubs/**
+
+            - id: hub-service-hub-routes
+              uri: lb://hub-service
+              predicates:
+                - Path=/api/v1/hub-routes,/api/v1/hub-routes/**
+
+            # Notification / Slack
+            - id: notification-service-slack
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/v1/slack/messages,/api/v1/slack/messages/**
+
+            # Notification / AI
+            - id: notification-service-ai
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/v1/ai,/api/v1/ai/**
 
 eureka:
   client:
@@ -27,7 +123,6 @@ eureka:
     fetch-registry: true
 
     service-url:
-      # 프로젝트에서 사용하는 Discovery Server 주소
       defaultZone: http://localhost:19090/eureka/
 
 management:
@@ -37,8 +132,14 @@ management:
         include:
           - health
           - info
+          # 개발 중 Route 확인이 필요하면 임시 활성화
+#          - gateway
 
   endpoint:
     health:
       # 개발 환경에서 Health 상세 정보 표시
       show-details: always
+
+logging:
+  pattern:
+    console: '%clr(%-5level){green} %clr(%logger{36}.%M\(\)){cyan}: %msg%n'
