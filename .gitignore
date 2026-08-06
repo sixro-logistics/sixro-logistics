@@ -1,3 +1,5 @@
+**/local-keys/
+.env
 .gradle/
 .idea/
 **/build/
