@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Spring Boot의 기본 로그 설정 포함 -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- 어플리케이션 이름 및 액티브 프로필 변수 추출 -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="hub-service"/>
+    <springProperty scope="context" name="ACTIVE_PROFILE" source="spring.profiles.active" defaultValue="local"/>
+
+    <!-- 로컬 개발용 패턴 -->
+    <property name="CONSOLE_LOG_PATTERN" value="%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%-5level) %clr([${APP_NAME}]){magenta} %clr([%15.15t]){faint} %clr([%X{traceId:-},%X{spanId:-}]){yellow} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>utf8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 운영용 JSON Appender -->
+    <!-- TODO: PLG or ELK 스택 연동시 다시 작성 -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+            <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampPattern>
+            <customFields>{"app_name":"${APP_NAME}","env":"${ACTIVE_PROFILE}"}</customFields>
+            <!-- MDC 데이터 중 필요한 것만 JSON 필드로 포함 -->
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+        </encoder>
+    </appender>
+
+    <!-- Profile 별 로그 설정 -->
+    <!-- 로컬 환경 -->
+    <springProfile name="local | default">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+        </root>
+        <!-- 디버깅시 패키지별 로그 레벨 조절 -->
+        <!-- <logger name="com.example.hub" level="DEBUG" /> -->
+    </springProfile>
+
+    <!-- 운영/스테이징 환경 -->
+    <springProfile name="prod | dev">
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE" />
+        </root>
+
+        <logger name="org.springframework" level="INFO" />
+        <logger name="org.hibernate.SQL" level="WARN" />
+        <logger name="org.apache.kafka" level="WARN" />
+        <logger name="com.netflix" level="WARN" />
+    </springProfile>
+
+</configuration>
