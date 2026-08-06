@@ -28,6 +28,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         ErrorResponse response = new ErrorResponse(
+                false,
                 CommonErrorCode.VALIDATION_FAILED.getStatus().value(),
                 CommonErrorCode.VALIDATION_FAILED.getCode(),
                 e.getBindingResult().getAllErrors().get(0).getDefaultMessage(),
@@ -41,6 +42,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException e) {
 
         ErrorResponse response = new ErrorResponse(
+                false,
                 CommonErrorCode.VALIDATION_FAILED.getStatus().value(),
                 CommonErrorCode.VALIDATION_FAILED.getCode(),
                 e.getConstraintViolations().iterator().next().getMessage(),
