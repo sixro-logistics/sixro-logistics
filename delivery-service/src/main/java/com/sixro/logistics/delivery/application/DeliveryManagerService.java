@@ -156,7 +156,7 @@ public class DeliveryManagerService {
                 .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_FOUND));
 
         // 변경 전 담당자 정보를 기준으로 요청자의 수정 권한 검증
-        validateUpdateAuthority(userRole, affiliationId, deliveryManager);
+        validateUpdateAndDeleteAuthority(userRole, affiliationId, deliveryManager);
 
         // 변경할 필드 존재 여부 검증
         UUID rhubId = managerUpdateReqDto.getHubId();
@@ -242,7 +242,7 @@ public class DeliveryManagerService {
         return new ManagerUpdateResDto(deliveryManager);
     }
 
-    private void validateUpdateAuthority(String userRole, UUID affiliationId, DeliveryManager deliveryManager) { // TODO: UserRole
+    private void validateUpdateAndDeleteAuthority(String userRole, UUID affiliationId, DeliveryManager deliveryManager) { // TODO: UserRole
         ManagerType targetManagerType = deliveryManager.getManagerType();
         UUID hubId = deliveryManager.getHubId();
 
@@ -257,4 +257,32 @@ public class DeliveryManagerService {
         // 나머지 모두 차단
         throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_FORBIDDEN);
     }
+
+    public void deleteDeliveryManager(UUID loginUserId, String userRole, UUID affiliationId, UUID deliveryManagerId) {
+        DeliveryManager deliveryManager = managerRepository.findById(deliveryManagerId)
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+
+        validateUpdateAndDeleteAuthority(userRole, affiliationId, deliveryManager);
+
+        if (deliveryManager.getManagerStatus() == ManagerStatus.IN_DELIVERY) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_HAS_ACTIVE_ASSIGNMENT);
+        }
+
+        if (deliveryManager.getManagerType() == ManagerType.COMPANY_DELIVERY) {
+            List<DeliveryStatus> completedStatuses = List.of(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED);
+            if (deliveryRepository.existsByDeliveryManager_DeliveryManagerIdAndDeliveryStatusNotIn(deliveryManagerId, completedStatuses)) {
+                throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_HAS_ACTIVE_ASSIGNMENT);
+            }
+        }
+        else { // ManagerType.HUB_DELIVERY
+            List<RouteStatus> completedStatuses = List.of(RouteStatus.HUB_ARRIVED, RouteStatus.CANCELLED, RouteStatus.FAILED);
+            if (deliveryRouteRepository.existsByDeliveryManager_DeliveryManagerIdAndRouteStatusNotIn(deliveryManagerId, completedStatuses)) {
+                throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_HAS_ACTIVE_ASSIGNMENT);
+            }
+        }
+
+        deliveryManager.softDelete(loginUserId);
+    }
+
+
 }

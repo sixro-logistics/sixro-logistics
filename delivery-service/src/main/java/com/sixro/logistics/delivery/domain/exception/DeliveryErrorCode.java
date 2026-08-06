@@ -61,6 +61,12 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "D009",
             "등록할 수 있는 배송 담당자 수를 초과했습니다."
+    ),
+
+    DELIVERY_MANAGER_HAS_ACTIVE_ASSIGNMENT(
+            HttpStatus.CONFLICT,
+            "D010",
+            "진행 중인 배정 업무가 존재합니다."
     );
 
     private final HttpStatus status;

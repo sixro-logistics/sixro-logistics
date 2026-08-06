@@ -5,6 +5,7 @@ import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.delivery.application.DeliveryManagerService;
 import com.sixro.logistics.delivery.presentation.dto.*;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -49,5 +50,17 @@ public class DeliveryManagerController {
             @PathVariable UUID deliveryManagerId,
             @Valid @RequestBody ManagerUpdateReqDto managerUpdateReqDto) {
         return CommonResponse.success("배송 담당자 정보가 수정되었습니다.", managerService.updateDeliveryManager(userRole, affiliationId, deliveryManagerId, managerUpdateReqDto));
+    }
+
+    // 배송 담당자 삭제
+    @DeleteMapping("/{deliveryManagerId}")
+    public ResponseEntity<Void> deleteDeliveryManager(
+            @RequestHeader(HeaderConstants.USER_ID) UUID loginUserId,
+            @RequestHeader(HeaderConstants.USER_ROLE) String userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID deliveryManagerId) {
+        managerService.deleteDeliveryManager(loginUserId, userRole, affiliationId, deliveryManagerId);
+
+        return ResponseEntity.noContent().build();
     }
 }
