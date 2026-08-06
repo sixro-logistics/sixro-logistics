@@ -80,7 +80,7 @@ public class AuthController {
                     description = "C999 - 서버 내부 오류"
             )
     })
-    @PostMapping("/sign-up")
+    @PostMapping("/signup")
     public CommonResponse<SignUpResponse> signUp(
             @Valid @RequestBody SignUpRequest request
     ) {
