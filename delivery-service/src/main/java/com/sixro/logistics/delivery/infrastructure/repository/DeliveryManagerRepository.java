@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.infrastructure;
+package com.sixro.logistics.delivery.infrastructure.repository;
 
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.enums.ManagerStatus;

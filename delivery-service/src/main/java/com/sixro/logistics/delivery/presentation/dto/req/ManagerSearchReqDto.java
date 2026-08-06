@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.presentation.dto;
+package com.sixro.logistics.delivery.presentation.dto.req;
 
 import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerType;
