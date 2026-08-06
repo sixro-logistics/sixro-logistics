@@ -1,0 +1,30 @@
+spring:
+  config:
+    # 로컬 테스트에서는 프로젝트 루트의 .env 사용
+    # CI에서는 파일이 없어도 아래 테스트 기본값 사용
+    import: "optional:file:../.env[.properties]"
+
+  data:
+    redis:
+      # CI Redis 컨테이너도 동일한 인증정보로 실행해야 함
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+jwt:
+  issuer: auth-service
+  private-key-path: src/test/resources/keys/test-private-key.pem
+  public-key-path: src/test/resources/keys/test-public-key.pem
+  access-token-expiration: 30m
+  refresh-token-expiration: 8h
