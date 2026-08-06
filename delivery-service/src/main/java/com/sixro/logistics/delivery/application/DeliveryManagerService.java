@@ -2,6 +2,7 @@ package com.sixro.logistics.delivery.application;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
+import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
@@ -13,11 +14,15 @@ import com.sixro.logistics.delivery.infrastructure.DeliveryRepository;
 import com.sixro.logistics.delivery.infrastructure.DeliveryRouteRepository;
 import com.sixro.logistics.delivery.presentation.dto.*;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -284,5 +289,67 @@ public class DeliveryManagerService {
         deliveryManager.softDelete(loginUserId);
     }
 
+    @Transactional(readOnly = true)
+    public Page<DeliveryManager> searchAllDeliveryManagers(String userRole, UUID affiliationId, ManagerSearchReqDto searchReqDto, Pageable pageable) {
+        // 1. 조회 권한 및 범위 검증
+        if (!"MASTER_ADMIN".equals(userRole) && !"HUB_ADMIN".equals(userRole)) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_FORBIDDEN);
+        }
 
+        if ("HUB_ADMIN".equals(userRole) && affiliationId == null) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_FORBIDDEN);
+        }
+
+        // 2. 잘못된 정렬 요청 검증
+        List<Sort.Order> sortOrders = pageable.getSort().stream().toList();
+        if (sortOrders.size() != 1) {
+            throw new BaseException(CommonErrorCode.INVALID_REQUEST);
+        }
+
+        Sort.Order sortOrder = sortOrders.get(0);
+        String sortField = sortOrder.getProperty();
+        Set<String> allowedSortFields = Set.of("createdAt", "updatedAt");
+
+        if (!allowedSortFields.contains(sortField)) {
+            throw new BaseException(CommonErrorCode.INVALID_REQUEST);
+        }
+
+        // 3. 공통 페이지 정책 적용
+        Pageable vdPageable = PageUtil.toPageable(
+                pageable.getPageNumber(), pageable.getPageSize(),
+                sortOrder.getDirection().name(), sortOrder.getProperty());
+
+        // 4. 검색 조건 권한 검증
+        ManagerType requestedManagerType = searchReqDto.getManagerType();
+        UUID requestedHubId = searchReqDto.getHubId();
+
+        if ("HUB_ADMIN".equals(userRole)) {
+            if (requestedManagerType != null && requestedManagerType != ManagerType.COMPANY_DELIVERY) {
+                throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_FORBIDDEN);
+            }
+
+            if (requestedHubId != null && !requestedHubId.equals(affiliationId)) {
+                throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_FORBIDDEN);
+            }
+        }
+
+        // 5. 최종 검색 조건 계산
+        ManagerType fmanagerType;
+        UUID fhubId;
+        ManagerStatus fmanagerStatus = searchReqDto.getManagerStatus();
+        Integer fdeliverySequence = searchReqDto.getDeliverySequence();
+
+        if ("HUB_ADMIN".equals(userRole)) {
+            fmanagerType = ManagerType.COMPANY_DELIVERY;
+            fhubId = affiliationId;
+        }
+        else {
+            fmanagerType = requestedManagerType;
+            fhubId = requestedHubId;
+        }
+
+        // 6. Repository 조회
+
+        return managerRepository.searchDeliveryManagers(fmanagerType, fhubId, fmanagerStatus, fdeliverySequence, vdPageable);
+    }
 }

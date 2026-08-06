@@ -1,7 +1,10 @@
 package com.sixro.logistics.delivery.infrastructure;
 
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
+import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +36,18 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
             """, nativeQuery = true)
     Optional<Integer> findMaxCompanyDeliverySequenceIncludingDeleted(@Param("hubId") UUID hubId);
 
+
+    @Query("""
+          SELECT dm
+          FROM DeliveryManager dm
+          WHERE (:managerType IS NULL
+                 OR dm.managerType = :managerType)
+            AND (:hubId IS NULL
+                 OR dm.hubId = :hubId)
+            AND (:managerStatus IS NULL
+                 OR dm.managerStatus = :managerStatus)
+            AND (:deliverySequence IS NULL
+                 OR dm.deliverySequence = :deliverySequence)
+          """)
+    Page<DeliveryManager> searchDeliveryManagers(ManagerType managerType, UUID hubId, ManagerStatus managerStatus, Integer deliverySequence, Pageable pageable);
 }
