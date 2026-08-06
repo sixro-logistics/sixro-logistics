@@ -1,4 +1,4 @@
-package com.sixro.logistics.common.persistence.config;
+package com.sixro.logistics.hub.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
