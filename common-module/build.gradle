@@ -44,6 +44,9 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
+    // 서블릿 API
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testCompileOnly 'org.projectlombok:lombok'
