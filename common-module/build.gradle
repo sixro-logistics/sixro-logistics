@@ -19,15 +19,26 @@ repositories {
 }
 
 dependencies {
-    // ErrorCode, CommonResponse 등에서 HttpStatus 사용
+    // CommonResponse, ErrorCode 등에서 HttpStatus 사용
     api 'org.springframework:spring-web'
+
+    // 공통 Auto Configuration 작성에 필요한 Spring Boot API
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
     // BaseEntity와 JPA Auditing에 필요한 의존성
     implementation 'org.springframework.data:spring-data-jpa'
     implementation 'jakarta.persistence:jakarta.persistence-api'
 
-    // 공통 QuerydslConfig의 JPAQueryFactory
+    // QueryDSL 실행
     implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+
+    // BaseEntity의 Q 타입(QBaseEntity) 생성
+    annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+
+    // Auto Configuration 메타데이터 생성
+    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
