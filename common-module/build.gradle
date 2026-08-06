@@ -29,6 +29,9 @@ dependencies {
     // 공통 QuerydslConfig의 JPAQueryFactory
     implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
 
+    // 서블릿 API
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
