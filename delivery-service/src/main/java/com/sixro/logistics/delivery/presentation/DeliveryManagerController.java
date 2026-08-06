@@ -6,7 +6,6 @@ import com.sixro.logistics.delivery.application.DeliveryManagerService;
 import com.sixro.logistics.delivery.presentation.dto.ManagerCreateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.ManagerCreateResDto;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
