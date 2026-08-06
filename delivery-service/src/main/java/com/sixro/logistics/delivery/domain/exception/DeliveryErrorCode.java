@@ -45,6 +45,18 @@ public enum DeliveryErrorCode implements ErrorCode {
             "배송 담당자를 찾을 수 없습니다."
     ),
 
+    DELIVERY_MANAGER_UPDATE_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "D007",
+            "현재 상태에서는 담당자 정보를 변경할 수 없습니다."
+    ),
+
+    INVALID_DELIVERY_MANAGER_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "D008",
+            "허용되지 않은 담당자 상태 변경입니다."
+    ),
+
     DELIVERY_MANAGER_CAPACITY_EXCEEDED(
             HttpStatus.CONFLICT,
             "D009",

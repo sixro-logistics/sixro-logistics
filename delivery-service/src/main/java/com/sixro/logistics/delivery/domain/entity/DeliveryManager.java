@@ -35,7 +35,6 @@ public class DeliveryManager extends BaseEntity {
     @Column(nullable = false)
     private Integer deliverySequence;
 
-    // TODO: service에서 순번 배정 로직 작성하고 넘기기
     public static DeliveryManager create(UUID userId, UUID hubId, ManagerType managerType, Integer deliverySequence) {
         DeliveryManager deliveryManager = new DeliveryManager();
         deliveryManager.deliveryManagerId = userId;
@@ -45,6 +44,13 @@ public class DeliveryManager extends BaseEntity {
         deliveryManager.deliverySequence = deliverySequence;
 
         return deliveryManager;
+    }
+
+    public void update(UUID hubId, ManagerType managerType, ManagerStatus managerStatus, Integer deliverySequence) {
+        this.hubId = hubId;
+        this.managerType = managerType;
+        this.managerStatus = managerStatus;
+        this.deliverySequence = deliverySequence;
     }
 
 }

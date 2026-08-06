@@ -3,9 +3,7 @@ package com.sixro.logistics.delivery.presentation.controller;
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.delivery.application.DeliveryManagerService;
-import com.sixro.logistics.delivery.presentation.dto.ManagerCreateReqDto;
-import com.sixro.logistics.delivery.presentation.dto.ManagerCreateResDto;
-import com.sixro.logistics.delivery.presentation.dto.ManagerInfoResDto;
+import com.sixro.logistics.delivery.presentation.dto.*;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,5 +41,13 @@ public class DeliveryManagerController {
         return CommonResponse.success("배송 담당자가 조회되었습니다.",managerService.getDeliveryManager(loginUserId, userRole, affiliationId, deliveryManagerId));
     }
 
-
+    // 배송 담당자 정보 수정
+    @PatchMapping("/{deliveryManagerId}")
+    public CommonResponse<ManagerUpdateResDto> updateDeliveryManager(
+            @RequestHeader(HeaderConstants.USER_ROLE) String userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID deliveryManagerId,
+            @Valid @RequestBody ManagerUpdateReqDto managerUpdateReqDto) {
+        return CommonResponse.success("배송 담당자 정보가 수정되었습니다.", managerService.updateDeliveryManager(userRole, affiliationId, deliveryManagerId, managerUpdateReqDto));
+    }
 }
