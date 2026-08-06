@@ -1,9 +1,9 @@
 package com.sixro.logistics.inventory.application.service;
 
+import com.sixro.logistics.inventory.application.command.InventoryCreateCommand;
+import com.sixro.logistics.inventory.application.result.InventoryCreateResult;
 import com.sixro.logistics.inventory.domain.entity.Inventory;
 import com.sixro.logistics.inventory.domain.repository.InventoryRepository;
-import com.sixro.logistics.inventory.presentation.dto.request.InventoryCreateRequestDto;
-import com.sixro.logistics.inventory.presentation.dto.response.InventoryCreateResponseDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,8 +38,8 @@ class InventoryServiceTest {
         UUID productId = UUID.randomUUID();
         Integer stock = 100;
 
-        InventoryCreateRequestDto requestDto
-                = new InventoryCreateRequestDto(hubId, productId, stock);
+        InventoryCreateCommand createCommand
+                = new InventoryCreateCommand(hubId, productId, stock);
 
         Inventory inventory
                 = Inventory.create(hubId, productId, stock);
@@ -54,15 +54,15 @@ class InventoryServiceTest {
                 .willReturn(inventory);
 
         // when
-        InventoryCreateResponseDto responseDto
-                = inventoryService.createInventory(requestDto);
+        InventoryCreateResult createResult
+                = inventoryService.createInventory(createCommand);
 
         // then
-        assertThat(responseDto).isNotNull();
-        assertThat(responseDto.inventoryId()).isNotNull();
-        assertThat(responseDto.hubId()).isEqualTo(requestDto.hubId());
-        assertThat(responseDto.productId()).isEqualTo(requestDto.productId());
-        assertThat(responseDto.stock()).isEqualTo(requestDto.stock());
+        assertThat(createResult).isNotNull();
+        assertThat(createResult.inventoryId()).isNotNull();
+        assertThat(createResult.hubId()).isEqualTo(createCommand.hubId());
+        assertThat(createResult.productId()).isEqualTo(createCommand.productId());
+        assertThat(createResult.stock()).isEqualTo(createCommand.stock());
 
         ArgumentCaptor<Inventory> captor =
                 ArgumentCaptor.forClass(Inventory.class);

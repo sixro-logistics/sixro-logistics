@@ -1,7 +1,6 @@
 package com.sixro.logistics.inventory.presentation.dto.response;
 
-import com.sixro.logistics.inventory.domain.entity.Inventory;
-
+import com.sixro.logistics.inventory.application.result.InventoryCreateResult;
 import java.util.UUID;
 
 public record InventoryCreateResponseDto(
@@ -11,11 +10,11 @@ public record InventoryCreateResponseDto(
         Integer stock
 ) {
 
-    public static InventoryCreateResponseDto from(Inventory inventory){
-        return new InventoryCreateResponseDto(inventory.getId(),
-                inventory.getHubId(),
-                inventory.getProductId(),
-                inventory.getStock());
+    public static InventoryCreateResponseDto from(InventoryCreateResult createResult){
+        return new InventoryCreateResponseDto(createResult.inventoryId(),
+                createResult.hubId(),
+                createResult.productId(),
+                createResult.stock());
     }
 
 }

@@ -1,14 +1,12 @@
 package com.sixro.logistics.inventory.application.facade;
 
+import com.sixro.logistics.inventory.application.command.InventoryCreateCommand;
+import com.sixro.logistics.inventory.application.result.InventoryCreateResult;
 import com.sixro.logistics.inventory.application.service.InventoryService;
 import com.sixro.logistics.inventory.infrastructure.client.hub.HubClient;
 import com.sixro.logistics.inventory.infrastructure.client.hub.HubClientResponse;
 import com.sixro.logistics.inventory.infrastructure.client.product.ProductClient;
 import com.sixro.logistics.inventory.infrastructure.client.product.ProductClientResponse;
-import com.sixro.logistics.inventory.presentation.dto.request.InventoryCreateRequestDto;
-import com.sixro.logistics.inventory.presentation.dto.response.InventoryCreateResponseDto;
-import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,14 +18,13 @@ public class InventoryFacade {
     private final HubClient hubClient;
     private final ProductClient productClient;
 
-    @Transactional
-    public InventoryCreateResponseDto createInventory(@Valid InventoryCreateRequestDto requestDto) {
+    public InventoryCreateResult createInventory(InventoryCreateCommand createCommand) {
         /*
         HubClientResponse hub = hubClient.getHub(requestDto.hubId());
         ProductClientResponse product = productClient.getProduct(requestDto.productId());
         validateAuthority(hub, product);
         */
-        return inventoryService.createInventory(requestDto);
+        return inventoryService.createInventory(createCommand);
     }
 
     private void validateAuthority(HubClientResponse hub, ProductClientResponse product) {

@@ -1,6 +1,6 @@
 package com.sixro.logistics.inventory.presentation.dto.request;
 
-import com.sixro.logistics.inventory.domain.entity.Inventory;
+import com.sixro.logistics.inventory.application.command.InventoryCreateCommand;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
@@ -16,5 +16,9 @@ public record InventoryCreateRequestDto(
         @Min(value = 1, message = "재고는 1 이상이어야 합니다.")
         Integer stock
 ) {
+
+        public InventoryCreateCommand toCommand(){
+                return new InventoryCreateCommand(hubId, productId, stock);
+        }
 
 }
