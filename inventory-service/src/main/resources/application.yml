@@ -20,3 +20,12 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:19090/eureka/
+
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
