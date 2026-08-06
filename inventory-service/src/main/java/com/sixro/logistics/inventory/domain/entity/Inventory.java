@@ -18,7 +18,7 @@ import java.util.UUID;
                         columnNames = {"hub_id", "product_id"}
                 )
         }/*,
-        schema = ""
+        schema = "inventory"
         */
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -53,6 +53,10 @@ public class Inventory /* extends BaseEntity */{
     }
 
     public void decreaseHubStock(Integer quantity){
+        if(quantity == null || quantity < 1){
+            throw new BaseException(InventoryErrorCode.INVALID_QUANTITY);
+        }
+
         if(stock < quantity){
             throw new BaseException(InventoryErrorCode.OUT_OF_STOCK);
         }

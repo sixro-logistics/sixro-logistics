@@ -28,6 +28,12 @@ public enum InventoryErrorCode implements ErrorCode {
             "정렬 방향은 asc, desc만 가능합니다."
     ),
 
+    INVALID_QUANTITY(
+            HttpStatus.BAD_REQUEST,
+            "I009",
+            "수량은 1 이상이어야 합니다."
+    ),
+
     // 403
     FORBIDDEN(
             HttpStatus.FORBIDDEN,
