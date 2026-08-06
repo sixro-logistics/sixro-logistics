@@ -1,4 +1,9 @@
 package com.sixro.logistics.inventory.infrastructure.client.product;
 
-public class ProductClientResponse {
+import java.util.UUID;
+
+public record ProductClientResponse(
+        UUID productId,
+        UUID companyId
+) {
 }

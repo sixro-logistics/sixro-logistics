@@ -1,4 +1,9 @@
 package com.sixro.logistics.inventory.infrastructure.client.hub;
 
-public class HubClientResponse {
+import java.util.UUID;
+
+public record HubClientResponse(
+        UUID hubId
+        //HubStatus hubStatus
+) {
 }
