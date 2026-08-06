@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.presentation;
+package com.sixro.logistics.delivery.presentation.controller;
 
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
@@ -42,4 +42,6 @@ public class DeliveryManagerController {
             @PathVariable UUID deliveryManagerId) {
         return CommonResponse.success("배송 담당자가 조회되었습니다.",managerService.getDeliveryManager(loginUserId, userRole, affiliationId, deliveryManagerId));
     }
+
+
 }
