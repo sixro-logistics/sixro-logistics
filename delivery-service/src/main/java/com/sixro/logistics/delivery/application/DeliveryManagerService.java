@@ -1,7 +1,6 @@
 package com.sixro.logistics.delivery.application;
 
 import com.sixro.logistics.common.core.exception.BaseException;
-import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.enums.ManagerType;
 import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
@@ -12,9 +11,6 @@ import com.sixro.logistics.delivery.presentation.dto.ManagerInfoResDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -85,23 +81,25 @@ public class DeliveryManagerService {
     }
 
     private int assignDeliverySequence(ManagerType managerType, UUID hubId) {
-        List<Integer> usedSequences;
+        long activeManagerCount;
+        int maxSequence;
 
         if (managerType == ManagerType.HUB_DELIVERY) {
-            usedSequences = managerRepository.findHubDeliveryUsedSequences(ManagerType.HUB_DELIVERY);
+            activeManagerCount = managerRepository.countByManagerTypeAndHubIdIsNull(ManagerType.HUB_DELIVERY);
+            maxSequence = managerRepository.findMaxHubDeliverySequenceIncludingDeleted()
+                    .orElse(-1);
         }
         else {
-            usedSequences = managerRepository.findCompanyDeliveryUsedSequences(ManagerType.COMPANY_DELIVERY, hubId);
+            activeManagerCount = managerRepository.countByManagerTypeAndHubId(ManagerType.COMPANY_DELIVERY, hubId);
+            maxSequence = managerRepository.findMaxCompanyDeliverySequenceIncludingDeleted(hubId)
+                    .orElse(-1);
         }
 
-        Set<Integer> usedSequenceSet = new HashSet<>(usedSequences);
-
-        for (int sequence = 1; sequence <= MAX_DELIVERY_MANAGER_COUNT; sequence++) {
-            if (!usedSequenceSet.contains(sequence)) {
-                return sequence;
-            }
+        if (activeManagerCount >= MAX_DELIVERY_MANAGER_COUNT) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_CAPACITY_EXCEEDED);
         }
-        throw new BaseException(CommonErrorCode.CONFLICT);
+
+        return maxSequence + 1;
     }
 
     @Transactional(readOnly = true)

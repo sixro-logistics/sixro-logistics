@@ -43,6 +43,12 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.NOT_FOUND,
             "D006",
             "배송 담당자를 찾을 수 없습니다."
+    ),
+
+    DELIVERY_MANAGER_CAPACITY_EXCEEDED(
+            HttpStatus.CONFLICT,
+            "D009",
+            "등록할 수 있는 배송 담당자 수를 초과했습니다."
     );
 
     private final HttpStatus status;
