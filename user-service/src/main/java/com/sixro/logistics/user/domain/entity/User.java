@@ -68,6 +68,9 @@ public class User extends BaseEntity {
     @Column(name = "role", nullable = false, length = 50)
     private UserRole role;
 
+    /**
+     * product, hub 서비스에서 가입 승인시 검증합니다.
+     */
     @Column(name = "affiliation_id")
     private UUID affiliationId;
 
@@ -307,6 +310,13 @@ public class User extends BaseEntity {
      *
      * <p>실제 Hub 또는 Company 존재 여부는 내부 API 연동 후 추가 검증합니다.</p>
      */
+    /*
+     * TODO(integration):
+     * Hub/Company Service 내부 API가 준비된 이후
+     * affiliationId의 실제 존재 여부를 Application 계층에서 검증합니다.
+     *
+     * Entity에서는 role과 affiliationType 조합 규칙만 검증합니다.
+     */
     private static void validateAffiliation(
             UserRole role,
             UUID affiliationId,
@@ -348,10 +358,5 @@ public class User extends BaseEntity {
             );
         }
 
-        /*
-         * TODO OpenFeign
-         * affiliationType이 HUB이면 Hub Service에서 affiliationId 존재 여부 확인
-         * affiliationType이 COMPANY이면 Company Service에서 affiliationId 존재 여부 확인
-         */
     }
 }
