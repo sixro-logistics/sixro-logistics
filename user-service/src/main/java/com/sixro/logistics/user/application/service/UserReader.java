@@ -41,4 +41,11 @@ public class UserReader {
 
         return user;
     }
+
+    public User getActiveByUsername(String username) {
+        return userRepository.findActiveByUsername(username)
+                .orElseThrow(() ->
+                        new BaseException(UserErrorCode.USER_NOT_FOUND)
+                );
+    }
 }

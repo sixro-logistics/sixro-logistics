@@ -1,6 +1,9 @@
 package com.sixro.logistics.user.application.service;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.user.application.dto.InternalDeliveryUserResult;
+import com.sixro.logistics.user.application.dto.InternalUserAuthResult;
+import com.sixro.logistics.user.application.dto.InternalUserStatusResult;
 import com.sixro.logistics.user.application.dto.UserResult;
 import com.sixro.logistics.user.domain.exception.UserErrorCode;
 import com.sixro.logistics.user.domain.model.UserRole;
@@ -51,6 +54,37 @@ public class UserQueryService {
 
         return userRepository.search(condition, pageable)
                 .map(UserResult::from);
+    }
+
+    /**
+     * Auth Service 로그인 검증용 내부 조회입니다.
+     */
+    public InternalUserAuthResult getAuthInfo(String username) {
+        return InternalUserAuthResult.from(
+                userReader.getActiveByUsername(username)
+        );
+    }
+
+    /**
+     * Auth Service의 Access Token 재발급 시
+     * 최신 사용자 상태, 권한 및 소속 정보를 조회합니다.
+     */
+    public InternalUserStatusResult getInternalUserStatus(UUID userId) {
+        return InternalUserStatusResult.from(
+                userReader.getAccessibleUser(userId)
+        );
+    }
+
+    /**
+     * Delivery Service에서 배송 담당자 생성 및 검증에 필요한
+     * 사용자 정보를 조회합니다.
+     */
+    public InternalDeliveryUserResult getDeliveryUser(
+            UUID userId
+    ) {
+        return InternalDeliveryUserResult.from(
+                userReader.getAccessibleUser(userId)
+        );
     }
 
     private void validateMasterAdmin(UserRole requesterRole) {
