@@ -11,7 +11,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  * <p>QueryDSL의 JPAQueryFactory는 common-module의
  * QuerydslAutoConfiguration을 통해 자동 등록됩니다.</p>
  */
-@EnableJpaAuditing(auditorAwareRef = "auditorAware")
+
+@EnableJpaAuditing(auditorAwareRef = "customAuditorAware")
 @EnableFeignClients
 @SpringBootApplication
 public class UserServiceApplication {

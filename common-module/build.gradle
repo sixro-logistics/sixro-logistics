@@ -22,6 +22,9 @@ dependencies {
     // CommonResponse, ErrorCode 등에서 HttpStatus 사용
     api 'org.springframework:spring-web'
 
+    // JSON 직렬화 어노테이션
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+
     // 공통 Auto Configuration 작성에 필요한 Spring Boot API
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
