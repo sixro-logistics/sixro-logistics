@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class OrderQueryRepository {
 
-    private final JPAQueryFactory jpaQueryFactory;
+    private final JPAQueryFactory queryFactory;
 
 }

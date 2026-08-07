@@ -29,7 +29,12 @@ public record OrderCreateResponseDto(
                 result.orderStatus(),
                 result.orderItems().stream()
                         .map(item -> new OrderItemResponseDto(
-                                item.productId(), item.quantity()))
+                                item.productId(),
+                                item.productName(),
+                                item.productPrice(),
+                                item.quantity(),
+                                item.companyId()
+                        ))
                         .toList()
         );
     }

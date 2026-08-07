@@ -32,27 +32,27 @@ public class OrderItem /* extends BaseEntity */ {
     @Column(name = "product_price", nullable = false, updatable = false)
     private Integer productPrice;
 
+    @Column(nullable = false)
+    private Integer quantity;
+
     // 공급업체는 수정이 불가하여 필요 없으면 나중에 삭제
     @Column(name = "company_id", nullable = false, updatable = false)
     private UUID companyId;
-
-    @Column(nullable = false)
-    private Integer quantity;
 
     private OrderItem(
             UUID orderId,
             UUID productId,
             String productName,
             Integer productPrice,
-            UUID companyId,
-            Integer quantity
+            Integer quantity,
+            UUID companyId
     ) {
         this.orderId = orderId;
         this.productId = productId;
         this.productName = productName;
         this.productPrice = productPrice;
-        this.companyId = companyId;
         this.quantity = quantity;
+        this.companyId = companyId;
     }
 
     public static OrderItem create(
@@ -60,8 +60,8 @@ public class OrderItem /* extends BaseEntity */ {
             UUID productId,
             String productName,
             Integer productPrice,
-            UUID companyId,
-            Integer quantity
+            Integer quantity,
+            UUID companyId
     ) {
         if (quantity == null || quantity < 1) {
             throw new BaseException(OrderErrorCode.INVALID_QUANTITY);
@@ -72,8 +72,8 @@ public class OrderItem /* extends BaseEntity */ {
                 productId,
                 productName,
                 productPrice,
-                companyId,
-                quantity
+                quantity,
+                companyId
         );
     }
 

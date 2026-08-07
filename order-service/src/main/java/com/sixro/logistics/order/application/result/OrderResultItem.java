@@ -4,6 +4,9 @@ import java.util.UUID;
 
 public record OrderResultItem(
         UUID productId,
-        Integer quantity
+        String productName,
+        Integer productPrice,
+        Integer quantity,
+        UUID companyId
 ) {
 }

@@ -3,10 +3,9 @@ package com.sixro.logistics.order.application.facade;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.order.application.command.OrderCommandItem;
 import com.sixro.logistics.order.application.command.OrderCreateCommand;
-import com.sixro.logistics.order.application.model.CompanyInfo;
-import com.sixro.logistics.order.application.model.HubInfo;
-import com.sixro.logistics.order.application.model.InventoryInfo;
-import com.sixro.logistics.order.application.model.ProductInfo;
+import com.sixro.logistics.order.application.command.OrderCreateServiceCommand;
+import com.sixro.logistics.order.application.command.OrderCreateServiceItem;
+import com.sixro.logistics.order.application.model.*;
 import com.sixro.logistics.order.application.port.*;
 import com.sixro.logistics.order.application.result.OrderCreateResult;
 import com.sixro.logistics.order.application.service.OrderService;
@@ -35,59 +34,96 @@ public class OrderFacade {
     public OrderCreateResult createOrder(
             UUID userId, UserRole userRole, OrderCreateCommand command) {
 
-        HubInfo hubInfo = hubQueryPort.getHub(command.hubId());
+        // TO DO: 허브, 업체, 상품 서비스 API 호출
+        /*HubInfo hubInfo = hubQueryPort.getHub(command.hubId());
         CompanyInfo receiverCompanyInfo
-                = companyQueryPort.getCompany(command.receiverCompanyId());
+                = companyQueryPort.getCompany(command.receiverCompanyId());*/
 
         List<UUID> productIds = command.orderItems().stream()
                 .map(OrderCommandItem::productId)
                 .toList();
 
-        List<ProductInfo> productInfos = productQueryPort.getProducts(productIds);
+        /*List<ProductInfo> productInfos = productQueryPort.getProducts(productIds);*/
 
-        List<InventoryInfo> inventoryInfos
+        InventoryInfo inventoryInfo
                 = inventoryQueryPort.getInventories(command.hubId(), productIds);
 
-        validate(command, hubInfo, receiverCompanyInfo, productInfos, inventoryInfos);
+        //validate(command, hubInfo, receiverCompanyInfo, productInfos, inventoryInfo);
 
-        return orderService.createOrder(command);
+        /*Map<UUID, ProductInfo> productMap = productInfos.stream()
+                .collect(Collectors.toMap(
+                        ProductInfo::productId,
+                        Function.identity()
+                ));
+
+        List<OrderCreateServiceItem> items =
+                command.orderItems().stream()
+                        .map(item -> {
+                            ProductInfo product = productMap.get(item.productId());
+
+                            return new OrderCreateServiceItem(
+                                    item.productId(),
+                                    product.productName(),
+                                    product.price(),
+                                    product.companyId(),
+                                    item.quantity()
+                            );
+                        })
+                        .toList();*/
+
+        List<OrderCreateServiceItem> items =
+                command.orderItems().stream()
+                        .map(item -> {
+
+                            return new OrderCreateServiceItem(
+                                    item.productId(),
+                                    "테스트 상품",
+                                    15000,
+                                    UUID.randomUUID(),
+                                    item.quantity()
+                            );
+                        })
+                        .toList();
+
+        OrderCreateServiceCommand serviceCommand =
+                new OrderCreateServiceCommand(
+                        command.hubId(),
+                        userId,
+                        command.receiverCompanyId(),
+                        "배송 주소",
+                        command.deliveryDeadline(),
+                        command.requests(),
+                        items
+                );
+
+        return orderService.createOrder(serviceCommand);
     }
 
     private void validate(OrderCreateCommand command,
                           HubInfo hubInfo, CompanyInfo companyInfo,
-                          List<ProductInfo> productInfo, List<InventoryInfo> inventoryInfos) {
-
-        // 생각해보니까 이건 OrderCreateFacade로 클래스명 변경할 수도
+                          List<ProductInfo> productInfo, InventoryInfo inventoryInfo) {
 
         // 상품이 모두 존재하고 삭제되지 않은 상태여야 함
         if(command.orderItems().size() != productInfo.size()){
             throw new BaseException(OrderErrorCode.PRODUCT_NOT_FOUND);
         }
 
-        // 상품들이 모두 동일한 허브에 소속되어 있어야 함
-        if (inventoryInfos.stream()
-                .map(InventoryInfo::hubId)
-                .distinct()
-                .count() > 1) {
-            throw new BaseException(OrderErrorCode.DIFFERENT_HUB_PRODUCT);
-        }
-
         // 해당 허브에 상품의 재고가 모두 존재하고 삭제되지 않은 상태여야 함
-        if(command.orderItems().size() != inventoryInfos.size()){
+        if(command.orderItems().size() != inventoryInfo.inventories().size()){
             throw new BaseException(OrderErrorCode.INVENTORY_NOT_FOUND);
         }
 
         // 허브의 해당 상품 재고가 주문 수량 이상이어야 함
-        Map<UUID, InventoryInfo> inventoryMap = inventoryInfos.stream()
+        Map<UUID, InventoryItemInfo> inventoryMap = inventoryInfo.inventories().stream()
                 .collect(Collectors.toMap(
-                        InventoryInfo::productId,
+                        InventoryItemInfo::productId,
                         Function.identity()
                 ));
 
         for (OrderCommandItem item : command.orderItems()) {
-            InventoryInfo inventory = inventoryMap.get(item.productId());
+            InventoryItemInfo inventory = inventoryMap.get(item.productId());
 
-            if (inventory == null || inventory.stock() < item.quantity()) {
+            if (inventory.stock() < item.quantity()) {
                 throw new BaseException(OrderErrorCode.OUT_OF_STOCK);
             }
         }

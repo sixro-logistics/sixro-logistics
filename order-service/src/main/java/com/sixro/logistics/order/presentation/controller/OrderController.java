@@ -24,12 +24,13 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<CommonResponse<OrderCreateResponseDto>> createOrder(
-            @RequestHeader(HeaderConstants.USER_ID) UUID userId,
-            @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
+            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
+            @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,*/
             @Valid @RequestBody OrderCreateRequestDto requestDto){
 
+        // TODO: Gateway에서 전달받은 인증 헤더로 대체
         OrderCreateResult createResult
-                = orderFacade.createOrder(userId, userRole, requestDto.toCommand());
+                = orderFacade.createOrder(UUID.randomUUID(), UserRole.HUB_ADMIN, requestDto.toCommand());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
