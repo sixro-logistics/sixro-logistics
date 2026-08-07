@@ -1,15 +1,18 @@
-package com.sixro.logistics.order.application.facade;
+package com.sixro.logistics.order.application.facade.order;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.order.application.command.OrderCommandItem;
 import com.sixro.logistics.order.application.command.OrderCreateCommand;
 import com.sixro.logistics.order.application.command.OrderCreateServiceCommand;
 import com.sixro.logistics.order.application.command.OrderCreateServiceItem;
+import com.sixro.logistics.order.application.mapper.order.OrderEventMapper;
 import com.sixro.logistics.order.application.model.*;
 import com.sixro.logistics.order.application.port.*;
 import com.sixro.logistics.order.application.result.OrderCreateResult;
-import com.sixro.logistics.order.application.service.OrderService;
+import com.sixro.logistics.order.application.service.order.OrderService;
+import com.sixro.logistics.order.application.service.outbox.OutboxService;
 import com.sixro.logistics.order.common.model.UserRole;
+import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
 import com.sixro.logistics.order.exception.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ public class OrderFacade {
     private final InventoryQueryPort inventoryQueryPort;
 
     private final OrderService orderService;
+    private final OutboxService outboxService;
 
     public OrderCreateResult createOrder(
             UUID userId, UserRole userRole, OrderCreateCommand command) {
@@ -96,7 +100,14 @@ public class OrderFacade {
                         items
                 );
 
-        return orderService.createOrder(serviceCommand);
+        OrderCreateResult result = orderService.createOrder(serviceCommand);
+
+        OrderCreatedEvent event =
+                OrderEventMapper.toEvent(result);
+
+        outboxService.save(event);
+
+        return result;
     }
 
     private void validate(OrderCreateCommand command,
