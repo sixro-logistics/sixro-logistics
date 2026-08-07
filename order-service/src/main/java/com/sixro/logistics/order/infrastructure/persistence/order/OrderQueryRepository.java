@@ -1,4 +1,4 @@
-package com.sixro.logistics.order.infrastructure.persistence;
+package com.sixro.logistics.order.infrastructure.persistence.order;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;

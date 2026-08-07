@@ -1,6 +1,5 @@
-package com.sixro.logistics.order.domain.entity;
+package com.sixro.logistics.order.domain.entity.order;
 
-import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

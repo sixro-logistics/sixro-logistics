@@ -1,4 +1,4 @@
-package com.sixro.logistics.order.domain.entity;
+package com.sixro.logistics.order.domain.entity.order;
 
 public enum OrderStatus {
     CREATED,

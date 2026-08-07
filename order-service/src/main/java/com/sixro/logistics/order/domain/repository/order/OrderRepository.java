@@ -1,11 +1,9 @@
-package com.sixro.logistics.order.domain.repository;
+package com.sixro.logistics.order.domain.repository.order;
 
-import com.sixro.logistics.order.domain.entity.Order;
-import com.sixro.logistics.order.domain.entity.OrderItem;
+import com.sixro.logistics.order.domain.entity.order.Order;
+import com.sixro.logistics.order.domain.entity.order.OrderItem;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 public interface OrderRepository {
 

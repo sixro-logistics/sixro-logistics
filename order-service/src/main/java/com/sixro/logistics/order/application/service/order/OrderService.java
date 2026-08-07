@@ -1,11 +1,11 @@
-package com.sixro.logistics.order.application.service;
+package com.sixro.logistics.order.application.service.order;
 
 import com.sixro.logistics.order.application.command.OrderCreateServiceCommand;
 import com.sixro.logistics.order.application.result.OrderCreateResult;
 import com.sixro.logistics.order.application.result.OrderResultItem;
-import com.sixro.logistics.order.domain.entity.Order;
-import com.sixro.logistics.order.domain.entity.OrderItem;
-import com.sixro.logistics.order.domain.repository.OrderRepository;
+import com.sixro.logistics.order.domain.entity.order.Order;
+import com.sixro.logistics.order.domain.entity.order.OrderItem;
+import com.sixro.logistics.order.domain.repository.order.OrderRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,9 +43,13 @@ public class OrderService {
         List<OrderItem> createdItems = orderRepository.saveAllOrderItems(orderItems);
 
         return new OrderCreateResult(
-                order.getId(), order.getHubId(), order.getReceiverCompanyId(),
-                order.getDeliveryAddress(), order.getDeliveryDeadline(), order.getRequests(),
-                order.getOrderStatus(),
+                createdOrder.getId(),
+                createdOrder.getHubId(),
+                createdOrder.getReceiverCompanyId(),
+                createdOrder.getDeliveryAddress(),
+                createdOrder.getDeliveryDeadline(),
+                createdOrder.getRequests(),
+                createdOrder.getOrderStatus(),
                 createdItems.stream().map(item -> new OrderResultItem(
                         item.getProductId(),
                         item.getProductName(),

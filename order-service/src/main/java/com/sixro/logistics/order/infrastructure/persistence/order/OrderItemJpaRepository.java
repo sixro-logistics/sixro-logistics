@@ -1,6 +1,6 @@
-package com.sixro.logistics.order.infrastructure.persistence;
+package com.sixro.logistics.order.infrastructure.persistence.order;
 
-import com.sixro.logistics.order.domain.entity.OrderItem;
+import com.sixro.logistics.order.domain.entity.order.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;

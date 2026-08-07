@@ -1,8 +1,7 @@
 package com.sixro.logistics.order.presentation.controller;
 
-import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
-import com.sixro.logistics.order.application.facade.OrderFacade;
+import com.sixro.logistics.order.application.facade.order.OrderFacade;
 import com.sixro.logistics.order.application.result.OrderCreateResult;
 import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.presentation.dto.request.OrderCreateRequestDto;
@@ -28,7 +27,7 @@ public class OrderController {
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,*/
             @Valid @RequestBody OrderCreateRequestDto requestDto){
 
-        // TODO: Gateway에서 전달받은 인증 헤더로 대체
+        // TO DO: Gateway에서 전달받은 인증 헤더로 대체
         OrderCreateResult createResult
                 = orderFacade.createOrder(UUID.randomUUID(), UserRole.HUB_ADMIN, requestDto.toCommand());
 

@@ -1,8 +1,7 @@
 package com.sixro.logistics.order.presentation.dto.response;
 
 import com.sixro.logistics.order.application.result.OrderCreateResult;
-import com.sixro.logistics.order.domain.entity.OrderStatus;
-import jakarta.persistence.criteria.Order;
+import com.sixro.logistics.order.domain.entity.order.OrderStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;

@@ -1,8 +1,8 @@
-package com.sixro.logistics.order.infrastructure.persistence;
+package com.sixro.logistics.order.infrastructure.persistence.order;
 
-import com.sixro.logistics.order.domain.entity.Order;
-import com.sixro.logistics.order.domain.entity.OrderItem;
-import com.sixro.logistics.order.domain.repository.OrderRepository;
+import com.sixro.logistics.order.domain.entity.order.Order;
+import com.sixro.logistics.order.domain.entity.order.OrderItem;
+import com.sixro.logistics.order.domain.repository.order.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 

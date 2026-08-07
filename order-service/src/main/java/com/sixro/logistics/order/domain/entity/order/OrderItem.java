@@ -1,4 +1,4 @@
-package com.sixro.logistics.order.domain.entity;
+package com.sixro.logistics.order.domain.entity.order;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.order.exception.OrderErrorCode;
