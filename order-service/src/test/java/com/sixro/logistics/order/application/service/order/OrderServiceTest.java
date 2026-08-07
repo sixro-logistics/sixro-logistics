@@ -3,8 +3,10 @@ package com.sixro.logistics.order.application.service.order;
 import com.sixro.logistics.order.application.command.OrderCreateServiceCommand;
 import com.sixro.logistics.order.application.command.OrderCreateServiceItem;
 import com.sixro.logistics.order.application.result.OrderCreateResult;
+import com.sixro.logistics.order.application.service.outbox.OutboxService;
 import com.sixro.logistics.order.domain.entity.order.Order;
 import com.sixro.logistics.order.domain.entity.order.OrderItem;
+import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
 import com.sixro.logistics.order.domain.repository.order.OrderRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +29,9 @@ class OrderServiceTest {
 
     @Mock
     private OrderRepository orderRepository;
+
+    @Mock
+    private OutboxService outboxService;
 
     @InjectMocks
     private OrderService orderService;
@@ -85,14 +90,16 @@ class OrderServiceTest {
                 orderService.createOrder(command);
 
         // then
-        verify(orderRepository, times(1))
-                .save(any(Order.class));
+        verify(orderRepository).save(any(Order.class));
 
         ArgumentCaptor<List<OrderItem>> captor =
                 ArgumentCaptor.forClass(List.class);
 
         verify(orderRepository)
                 .saveAllOrderItems(captor.capture());
+
+        verify(outboxService)
+                .save(any(OrderCreatedEvent.class));
 
         List<OrderItem> savedItems = captor.getValue();
 
@@ -111,10 +118,8 @@ class OrderServiceTest {
         assertThat(result.receiverCompanyId()).isEqualTo(receiverCompanyId);
 
         assertThat(result.orderItems()).hasSize(1);
-
         assertThat(result.orderItems().getFirst().productId())
                 .isEqualTo(productId);
-
         assertThat(result.orderItems().getFirst().quantity())
                 .isEqualTo(3);
     }
