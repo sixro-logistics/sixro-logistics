@@ -1,8 +1,10 @@
 package com.sixro.logistics.order.infrastructure.client.inventory;
 
 import java.util.List;
+import java.util.UUID;
 
 public record InventoryClientResponse(
-        List<InventoryClientInventory> inventories
+        UUID hubId,
+        List<InventoryClientItem> inventories
 ) {
 }

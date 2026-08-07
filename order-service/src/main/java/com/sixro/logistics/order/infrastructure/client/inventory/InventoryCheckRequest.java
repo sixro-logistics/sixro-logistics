@@ -5,6 +5,6 @@ import java.util.UUID;
 
 public record InventoryCheckRequest(
         UUID hubId,
-        List<UUID> productId
+        List<UUID> productIds
 ) {
 }

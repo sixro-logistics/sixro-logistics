@@ -7,6 +7,6 @@ import java.util.UUID;
 
 public interface InventoryQueryPort {
 
-    List<InventoryInfo> getInventories(UUID hubId, List<UUID> productIds);
+    InventoryInfo getInventories(UUID hubId, List<UUID> productIds);
 
 }
