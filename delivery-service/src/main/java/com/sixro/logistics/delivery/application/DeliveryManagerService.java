@@ -177,30 +177,23 @@ public class DeliveryManagerService {
             throw new BaseException(CommonErrorCode.INVALID_REQUEST);
         }
 
-        // 현재 배송 중인 담당자의 수정 요청은 모두 차단
-        if (deliveryManager.getManagerStatus().equals(ManagerStatus.IN_DELIVERY)) {
-            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_UPDATE_NOT_ALLOWED);
-        }
-
-        // IN_DELIVERY 상태를 직접 지정하는 요청 차단
-        if (rmanagerStatus == ManagerStatus.IN_DELIVERY)
-            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_STATUS_TRANSITION);
-
-
+        // 최종 담당자 유형
         ManagerType fmanagerType = (rmanagerType == null) ? deliveryManager.getManagerType() : rmanagerType;
 
-        // 최종 담당자 유형 기준 유형-허브 조합 검증
+        // 최종 소속 허브
         UUID fhubId;
         if (fmanagerType.equals(ManagerType.HUB_DELIVERY)){ // hub는 소속허브 없어야 함
-            if (rhubId != null)
-                throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_TYPE_HUB_MISMATCH);
-            fhubId = null;
+            fhubId = rhubId;
         }
         else { // f=ManagerType.COMPANY_DELIVERY. company는 무조건 허브가 있어야 함
             fhubId = (rhubId != null) ? rhubId : deliveryManager.getHubId();
-            if (fhubId==null)
-                throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_TYPE_HUB_MISMATCH);
         }
+
+        // 최종 담당자 상태
+        ManagerStatus fmanagerStatus = (rmanagerStatus == null) ? deliveryManager.getManagerStatus() : rmanagerStatus;
+
+        // 엔티티 내부 조건 검증
+        deliveryManager.validateUpdateConditions(fhubId, fmanagerType, fmanagerStatus);
 
         // HUB_ADMIN: 변경 후 정보도 수정 가능 범위인지 검증
         if ("HUB_ADMIN".equals(userRole)) {
@@ -209,8 +202,6 @@ public class DeliveryManagerService {
                 throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_FORBIDDEN);
             }
         }
-
-        ManagerStatus fmanagerStatus = (rmanagerStatus == null) ? deliveryManager.getManagerStatus() : rmanagerStatus;
 
         // 타입/허브변경 여부 체크
         boolean managerGroupChanged =

@@ -1,8 +1,10 @@
 package com.sixro.logistics.delivery.domain.entity;
 
+import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerType;
+import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -51,6 +53,30 @@ public class DeliveryManager extends BaseEntity {
         this.managerType = managerType;
         this.managerStatus = managerStatus;
         this.deliverySequence = deliverySequence;
+    }
+
+    public void validateUpdateConditions(UUID hubId, ManagerType managerType, ManagerStatus managerStatus) {
+        // 현재 배송 중인 담당자의 수정 요청은 모두 차단
+        if (this.managerStatus.equals(ManagerStatus.IN_DELIVERY)) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_UPDATE_NOT_ALLOWED);
+        }
+
+        // IN_DELIVERY 상태를 직접 지정하는 요청 차단
+        if (managerStatus == ManagerStatus.IN_DELIVERY)
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_STATUS_TRANSITION);
+
+        // 담당자 유형 기준 유형-허브 조합 검증
+        if (managerType == ManagerType.HUB_DELIVERY && hubId != null) {
+            throw new BaseException(
+                    DeliveryErrorCode.DELIVERY_MANAGER_TYPE_HUB_MISMATCH
+            );
+        }
+        if (managerType == ManagerType.COMPANY_DELIVERY && hubId == null) {
+            throw new BaseException(
+                    DeliveryErrorCode.DELIVERY_MANAGER_TYPE_HUB_MISMATCH
+            );
+        }
+
     }
 
 }
