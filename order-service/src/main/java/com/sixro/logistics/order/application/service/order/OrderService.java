@@ -1,10 +1,13 @@
 package com.sixro.logistics.order.application.service.order;
 
 import com.sixro.logistics.order.application.command.OrderCreateServiceCommand;
+import com.sixro.logistics.order.application.mapper.order.OrderEventMapper;
 import com.sixro.logistics.order.application.result.OrderCreateResult;
 import com.sixro.logistics.order.application.result.OrderResultItem;
+import com.sixro.logistics.order.application.service.outbox.OutboxService;
 import com.sixro.logistics.order.domain.entity.order.Order;
 import com.sixro.logistics.order.domain.entity.order.OrderItem;
+import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
 import com.sixro.logistics.order.domain.repository.order.OrderRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import java.util.List;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OutboxService outboxService;
 
     @Transactional
     public OrderCreateResult createOrder(OrderCreateServiceCommand command) {
@@ -42,7 +46,7 @@ public class OrderService {
 
         List<OrderItem> createdItems = orderRepository.saveAllOrderItems(orderItems);
 
-        return new OrderCreateResult(
+        OrderCreateResult result =  new OrderCreateResult(
                 createdOrder.getId(),
                 createdOrder.getHubId(),
                 createdOrder.getReceiverCompanyId(),
@@ -58,5 +62,13 @@ public class OrderService {
                         item.getCompanyId()
                 )).toList()
         );
+
+        OrderCreatedEvent event =
+                OrderEventMapper.toEvent(createdOrder, createdItems);
+
+        outboxService.save(event);
+
+        return result;
     }
+
 }

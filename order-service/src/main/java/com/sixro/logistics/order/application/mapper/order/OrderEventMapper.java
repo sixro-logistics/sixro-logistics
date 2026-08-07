@@ -1,20 +1,26 @@
 package com.sixro.logistics.order.application.mapper.order;
 
-import com.sixro.logistics.order.application.result.OrderCreateResult;
+import com.sixro.logistics.order.domain.entity.order.Order;
+import com.sixro.logistics.order.domain.entity.order.OrderItem;
 import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
 import com.sixro.logistics.order.domain.event.order.OrderCreatedItem;
 
+import java.util.List;
+
 public class OrderEventMapper {
 
-    public static OrderCreatedEvent toEvent(OrderCreateResult result) {
+    public static OrderCreatedEvent toEvent(
+            Order order,
+            List<OrderItem> orderItems
+    ) {
 
         return new OrderCreatedEvent(
-                result.orderId(),
-                result.hubId(),
-                result.orderItems().stream()
+                order.getId(),
+                order.getHubId(),
+                orderItems.stream()
                         .map(item -> new OrderCreatedItem(
-                                item.productId(),
-                                item.quantity()
+                                item.getProductId(),
+                                item.getQuantity()
                         ))
                         .toList()
         );
