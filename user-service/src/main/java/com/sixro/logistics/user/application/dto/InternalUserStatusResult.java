@@ -8,7 +8,8 @@ import com.sixro.logistics.user.domain.model.UserStatus;
 import java.util.UUID;
 
 /**
- * 내부 서비스가 현재 사용자 권한과 상태를 확인할 때 사용하는 결과입니다.
+ * Auth Service의 토큰 재발급 시
+ * 최신 사용자 상태, 권한 및 소속을 확인하기 위한 내부 조회 결과입니다.
  */
 public record InternalUserStatusResult(
         UUID userId,

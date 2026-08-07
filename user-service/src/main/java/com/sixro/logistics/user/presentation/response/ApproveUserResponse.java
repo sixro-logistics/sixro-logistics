@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * 사용자 가입 승인 결과 응답입니다.
+ * MASTER_ADMIN의 사용자 가입 승인 처리 결과를 반환하는 응답 DTO입니다.
  */
 public record ApproveUserResponse(
         UUID userId,

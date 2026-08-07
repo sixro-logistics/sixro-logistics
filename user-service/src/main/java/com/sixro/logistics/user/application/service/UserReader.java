@@ -42,6 +42,12 @@ public class UserReader {
         return user;
     }
 
+    /**
+     * username으로 Soft Delete되지 않은 사용자를 조회합니다.
+     *
+     * <p>가입 승인 상태(PENDING, APPROVED, REJECTED)는 필터링하지 않으며,
+     * 로그인 허용 여부는 사용자 상태를 전달받은 Auth Service에서 판단합니다.</p>
+     */
     public User getActiveByUsername(String username) {
         return userRepository.findActiveByUsername(username)
                 .orElseThrow(() ->
