@@ -25,6 +25,29 @@ public record ErrorResponse(
 ) {
 
     /**
+     * requestId를 사용하지 않는 기존 서비스와의 호환을 위한 생성자입니다.
+     *
+     * <p>기존의 5개 인자 생성 방식은 유지하면서,
+     * requestId는 null로 설정합니다.</p>
+     */
+    public ErrorResponse(
+            boolean success,
+            int status,
+            String code,
+            String message,
+            LocalDateTime timestamp
+    ) {
+        this(
+                success,
+                status,
+                code,
+                message,
+                null,
+                timestamp
+        );
+    }
+
+    /**
      * Request ID 없이 공통 오류 응답을 생성합니다.
      *
      * <p>필드 생성 로직의 중복을 방지하기 위해
