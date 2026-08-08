@@ -9,16 +9,17 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLRestriction;
-import org.locationtech.jts.geom.Point;
 
 import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "p_hub")
+@Table(schema = "hub_schema", name = "p_hub")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLRestriction("is_deleted = false")
 public class Hub extends BaseEntity {
+
+    private static final int MIN_CAPACITY = 10_000; // 최소 CAPA는 일일 10,000 박스
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -31,8 +32,8 @@ public class Hub extends BaseEntity {
     @Embedded
     private Address address;
 
-    @Column(name = "location", nullable = false, columnDefinition = "geometry(Point, 4326)")
-    private Point location;
+    @Embedded
+    private Location location;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "hub_zone", nullable = false, length = 20)
@@ -46,23 +47,23 @@ public class Hub extends BaseEntity {
     private HubStatus hubStatus;
 
     @Builder
-    public Hub(String hubName, Address address, Point location, HubZone hubZone, int maxCapacity) {
-        validateCapacity(maxCapacity);
-
+    public Hub(String hubName, Address address, Location location, HubZone hubZone, int maxCapacity) {
         this.hubName = hubName;
         this.address = address;
         this.location = location;
         this.hubZone = hubZone;
-        this.maxCapacity = maxCapacity;
         this.hubStatus = HubStatus.ACTIVE; // 신규 허브는 기본적으로 ACTIVE 상태
+
+        assignMaxCapacity(maxCapacity);
     }
 
-    public void update(String hubName, Address address, Point location, HubZone hubZone, int maxCapacity) {
+    public void update(String hubName, Address address, Location location, HubZone hubZone, int maxCapacity) {
         this.hubName = hubName;
         this.address = address;
         this.location = location;
         this.hubZone = hubZone;
-        this.maxCapacity = maxCapacity;
+
+        assignMaxCapacity(maxCapacity);
     }
 
     public void changeStatus(HubStatus newStatus) {
@@ -73,11 +74,12 @@ public class Hub extends BaseEntity {
         this.hubStatus = newStatus;
     }
 
-    private static final int MIN_CAPACITY = 10_000; // 최소 CAPA는 일일 10,000 박스
-
-    private void validateCapacity(int maxCapacity) {
+    private void assignMaxCapacity(int maxCapacity) {
+        // 최소 maxCapacity 검증
         if (maxCapacity < MIN_CAPACITY) {
             throw new BaseException(HubErrorCode.INVALID_MAX_CAPACITY);
         }
+
+        this.maxCapacity = maxCapacity;
     }
 }

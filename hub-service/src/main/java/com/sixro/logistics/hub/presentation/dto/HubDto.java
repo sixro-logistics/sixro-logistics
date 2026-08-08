@@ -2,9 +2,10 @@ package com.sixro.logistics.hub.presentation.dto;
 
 import com.sixro.logistics.hub.domain.model.HubStatus;
 import com.sixro.logistics.hub.domain.model.HubZone;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+
 import java.util.UUID;
 
 public class HubDto {
@@ -12,23 +13,25 @@ public class HubDto {
     public record CreateRequest(
             @NotBlank String hubName,
             @NotBlank String zipcode,
-            @NotBlank String address,
+            @NotBlank String roadAddress,
+            String jibunAddress,
             String detailAddress,
             @NotNull Double longitude,
             @NotNull Double latitude,
             @NotNull HubZone hubZone,
-            @Positive int maxCapacity
+            @Min(10_000) int maxCapacity
     ) {}
 
     public record UpdateRequest(
             @NotBlank String hubName,
             @NotBlank String zipcode,
-            @NotBlank String address,
+            @NotBlank String roadAddress,
+            String jibunAddress,
             String detailAddress,
             @NotNull Double longitude,
             @NotNull Double latitude,
             @NotNull HubZone hubZone,
-            @Positive int maxCapacity
+            @Min(10_000) int maxCapacity
     ) {}
 
     public record StatusUpdateRequest(
@@ -39,7 +42,8 @@ public class HubDto {
             UUID hubId,
             String hubName,
             String zipcode,
-            String address,
+            String roadAddress,
+            String jibunAddress,
             String detailAddress,
             Double longitude,
             Double latitude,

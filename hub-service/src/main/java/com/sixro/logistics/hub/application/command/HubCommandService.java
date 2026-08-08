@@ -5,6 +5,7 @@ import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.hub.domain.exception.HubErrorCode;
 import com.sixro.logistics.hub.domain.model.Address;
 import com.sixro.logistics.hub.domain.model.Hub;
+import com.sixro.logistics.hub.domain.model.Location;
 import com.sixro.logistics.hub.domain.repository.HubRepository;
 import com.sixro.logistics.hub.presentation.auth.Requester;
 import com.sixro.logistics.hub.presentation.dto.HubDto;
@@ -35,8 +36,8 @@ public class HubCommandService {
 
         Hub hub = Hub.builder()
                 .hubName(request.hubName())
-                .address(Address.of(request.zipcode(), request.address(), request.detailAddress()))
-                .location(createPoint(request.longitude(), request.latitude()))
+                .address(Address.of(request.zipcode(), request.roadAddress(), request.jibunAddress(), request.detailAddress()))
+                .location(Location.of(request.longitude(), request.latitude()))
                 .hubZone(request.hubZone())
                 .maxCapacity(request.maxCapacity())
                 .build();
@@ -56,8 +57,8 @@ public class HubCommandService {
 
         hub.update(
                 request.hubName(),
-                Address.of(request.zipcode(), request.address(), request.detailAddress()),
-                createPoint(request.longitude(), request.latitude()),
+                Address.of(request.zipcode(), request.roadAddress(), request.jibunAddress(), request.detailAddress()),
+                Location.of(request.longitude(), request.latitude()),
                 request.hubZone(),
                 request.maxCapacity()
         );

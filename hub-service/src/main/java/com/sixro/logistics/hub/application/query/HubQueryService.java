@@ -56,10 +56,11 @@ public class HubQueryService {
                 hub.getId(),
                 hub.getHubName(),
                 hub.getAddress().getZipcode(),
-                hub.getAddress().getAddress(),
+                hub.getAddress().getRoadAddress(),
+                hub.getAddress().getJibunAddress(),
                 hub.getAddress().getDetailAddress(),
-                hub.getLocation().getX(), // Longitude
-                hub.getLocation().getY(), // Latitude
+                hub.getLocation().getLongitude(),
+                hub.getLocation().getLatitude(),
                 hub.getHubZone(),
                 hub.getMaxCapacity(),
                 hub.getHubStatus()
