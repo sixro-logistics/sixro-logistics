@@ -38,13 +38,7 @@ public class UserQueryRepositoryImpl implements UserQueryRepository {
     ) {
         List<User> content = queryFactory
                 .selectFrom(user)
-                .where(
-                        user.isDeleted.isFalse(),
-                        usernameContains(condition.username()),
-                        roleEq(condition.role()),
-                        userStatusEq(condition.userStatus()),
-                        affiliationTypeEq(condition.affiliationType())
-                )
+                .where(searchConditions(condition))
                 .orderBy(resolveOrder(pageable))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -53,13 +47,7 @@ public class UserQueryRepositoryImpl implements UserQueryRepository {
         Long total = queryFactory
                 .select(user.count())
                 .from(user)
-                .where(
-                        user.isDeleted.isFalse(),
-                        usernameContains(condition.username()),
-                        roleEq(condition.role()),
-                        userStatusEq(condition.userStatus()),
-                        affiliationTypeEq(condition.affiliationType())
-                )
+                .where(searchConditions(condition))
                 .fetchOne();
 
         return new PageImpl<>(
@@ -67,6 +55,18 @@ public class UserQueryRepositoryImpl implements UserQueryRepository {
                 pageable,
                 total == null ? 0L : total
         );
+    }
+
+    private BooleanExpression[] searchConditions(
+            UserSearchCondition condition
+    ) {
+        return new BooleanExpression[]{
+                user.isDeleted.isFalse(),
+                usernameContains(condition.username()),
+                roleEq(condition.role()),
+                userStatusEq(condition.userStatus()),
+                affiliationTypeEq(condition.affiliationType())
+        };
     }
 
     private BooleanExpression usernameContains(String username) {

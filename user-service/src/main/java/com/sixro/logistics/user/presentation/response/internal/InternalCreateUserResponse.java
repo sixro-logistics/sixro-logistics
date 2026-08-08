@@ -1,4 +1,4 @@
-package com.sixro.logistics.user.presentation.response;
+package com.sixro.logistics.user.presentation.response.internal;
 
 import com.sixro.logistics.user.application.dto.UserResult;
 import com.sixro.logistics.user.domain.model.UserRole;
@@ -7,7 +7,8 @@ import com.sixro.logistics.user.domain.model.UserStatus;
 import java.util.UUID;
 
 /**
- * 내부 사용자 생성 결과를 Auth Service에 반환하는 응답 DTO입니다.
+ * Auth Service의 회원가입 요청 처리 후
+ * 생성된 사용자 정보를 반환하는 내부 응답 DTO입니다.
  */
 public record InternalCreateUserResponse(
         UUID userId,
