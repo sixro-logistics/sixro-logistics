@@ -1,6 +1,8 @@
 package com.sixro.logistics.hub.presentation.auth;
 
 import com.sixro.logistics.common.constant.HeaderConstants;
+import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.stereotype.Component;
@@ -29,10 +31,44 @@ public class RequesterArgumentResolver implements HandlerMethodArgumentResolver 
         String affiliationType = request.getHeader(HeaderConstants.AFFILIATION_TYPE);
         String affiliationIdStr = request.getHeader(HeaderConstants.AFFILIATION_ID);
 
-        // Gateway를 거치지 않은 요청 방어
-        UUID userId = userIdStr != null ? UUID.fromString(userIdStr) : null;
-        UUID affiliationId = affiliationIdStr != null ? UUID.fromString(affiliationIdStr) : null;
+        // 공통 필수 헤더 검증
+        if (userIdStr == null || userIdStr.isBlank() || role == null || role.isBlank()) {
+            throw new BaseException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        UUID userId = parseUuid(userIdStr);
+        UUID affiliationId = null;
+
+        // Role 컨텍스트 검증
+        switch (role) {
+            case "MASTER_ADMIN" -> {
+                // MASTER_ADMIN 은 null 사용 (user-service 정책 반영)
+                affiliationType = null;
+                affiliationId = null;
+            }
+            case "HUB_ADMIN" -> {
+                // HUB_ADMIN은 소속 정보 필수
+                if (affiliationType == null || affiliationType.isBlank() ||
+                        affiliationIdStr == null || affiliationIdStr.isBlank()) {
+                    throw new BaseException(CommonErrorCode.INVALID_REQUEST);
+                }
+                affiliationId = parseUuid(affiliationIdStr);
+            }
+            default -> {
+                // 정의되지 않은 역할
+                throw new BaseException(CommonErrorCode.INVALID_REQUEST);
+            }
+        }
 
         return new Requester(userId, role, affiliationType, affiliationId);
+    }
+
+    // UUID 파싱 예외 (IllegalArgumentException)
+    private UUID parseUuid(String uuidStr) {
+        try {
+            return UUID.fromString(uuidStr);
+        } catch (IllegalArgumentException e) {
+            throw new BaseException(CommonErrorCode.INVALID_PARAMETER);
+        }
     }
 }
