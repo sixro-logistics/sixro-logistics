@@ -12,12 +12,14 @@ import java.util.UUID;
  *
  * @param userId     토큰 소유 사용자 식별자
  * @param role       토큰 발급 시점의 사용자 권한
- * @param jwtId      토큰을 고유하게 식별하는 JWT ID
+ * @param sessionId  토큰이 속한 로그인 세션 식별자(같은 로그인에서 발급된 AT / RT가 공유, 새 로그인 시 기존 세션 전체 무효화)
+ * @param jwtId      토큰을 고유하게 식별하는 JWT ID(Access Token blacklist에 사용)
  * @param expiration 토큰 만료 시각
  */
 public record JwtClaims(
         UUID userId,
         UserRole role,
+        UUID sessionId,
         String jwtId,
         Instant expiration
 ) {
