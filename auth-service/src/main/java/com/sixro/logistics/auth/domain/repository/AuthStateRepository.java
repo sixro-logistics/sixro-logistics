@@ -28,4 +28,17 @@ public interface AuthStateRepository {
             String accessTokenJwtId,
             Duration accessTokenTtl
     );
+
+    /**
+     * 현재 Refresh Token hash가 요청 hash와 일치하는 경우에만
+     * 새로운 Refresh Token hash로 교체하고 Session TTL을 갱신합니다.
+     *
+     * @return 교체에 성공하면 true, 현재 저장값이 없거나 일치하지 않으면 false
+     */
+    boolean rotateRefreshToken(
+            UUID userId,
+            String currentRefreshTokenHash,
+            String newRefreshTokenHash,
+            Duration ttl
+    );
 }

@@ -9,10 +9,8 @@ import com.sixro.logistics.auth.application.dto.TokenResult;
 import com.sixro.logistics.auth.domain.exception.AuthErrorCode;
 import com.sixro.logistics.auth.domain.exception.AuthException;
 import com.sixro.logistics.auth.domain.model.AffiliationType;
-import com.sixro.logistics.auth.domain.model.RefreshToken;
 import com.sixro.logistics.auth.domain.model.TokenPair;
 import com.sixro.logistics.auth.domain.model.UserStatus;
-import com.sixro.logistics.auth.domain.repository.AccessTokenBlacklistRepository;
 import com.sixro.logistics.auth.domain.repository.AuthStateRepository;
 import com.sixro.logistics.auth.domain.repository.RefreshTokenRepository;
 import com.sixro.logistics.auth.domain.repository.SessionRepository;
@@ -66,7 +64,6 @@ public class AuthCommandService {
     private final JwtProvider jwtProvider;
 
     private final RefreshTokenRepository refreshTokenRepository;
-    private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
     private final SessionRepository sessionRepository;
     private final AuthStateRepository authStateRepository;
 
@@ -156,8 +153,8 @@ public class AuthCommandService {
      * <p>Refresh Token에 저장되어 있던 과거 role을 신뢰하지 않고,
      * User Service에서 현재 사용자 상태와 권한을 다시 조회합니다.</p>
      *
-     * <p>따라서 Refresh Token 발급 이후 사용자의 권한이 변경되었더라도
-     * 최신 권한을 기준으로 새로운 Access Token을 발급합니다.</p>
+     * <p>Refresh Token 검증과 Rotation은 Redis Lua Script를 통해
+     * 원자적으로 처리하여 동일 Refresh Token의 동시 재사용을 차단합니다.</p>
      */
     public TokenResult reissue(
             ReissueTokenCommand command
@@ -176,18 +173,7 @@ public class AuthCommandService {
         );
 
         /*
-         * 2. Redis에 저장된 Refresh Token hash와
-         * 요청받은 Refresh Token의 hash가 일치하는지 확인합니다.
-         *
-         * 이미 Rotation된 이전 Refresh Token은 여기서 차단됩니다.
-         */
-        validateSavedRefreshToken(
-                refreshClaims.userId(),
-                command.refreshToken()
-        );
-
-        /*
-         * 3. Refresh Token이 현재 로그인 세션에 속하는지 확인합니다.
+         * 2. Refresh Token이 현재 로그인 세션에 속하는지 확인합니다.
          *
          * 동일 사용자가 새로 로그인하여 sessionId가 변경된 경우
          * 이전 Refresh Token은 사용할 수 없습니다.
@@ -198,19 +184,19 @@ public class AuthCommandService {
         );
 
         /*
-         * 4. User Service에서 최신 사용자 상태,
+         * 3. User Service에서 최신 사용자 상태,
          * 권한 및 소속 정보를 조회합니다.
          */
         InternalUserStatusResponse user =
                 getUserStatus(refreshClaims.userId());
 
         /*
-         * 5. 현재 로그인 가능한 사용자 상태인지 확인합니다.
+         * 4. 현재 로그인 가능한 사용자 상태인지 확인합니다.
          */
         validateReissueUser(user);
 
         /*
-         * 6. 최신 사용자 권한으로 Token Pair를 다시 발급합니다.
+         * 5. 최신 사용자 권한으로 Token Pair를 다시 발급합니다.
          *
          * 재발급은 새로운 로그인이 아니므로
          * 기존 sessionId는 그대로 유지합니다.
@@ -226,37 +212,46 @@ public class AuthCommandService {
                 );
 
         /*
-         * 7. Refresh Token Rotation
-         *
-         * 새로운 Refresh Token hash로 기존 Redis 값을 교체하여
-         * 이전 Refresh Token을 다시 사용할 수 없도록 합니다.
+         * 6. 요청받은 기존 Refresh Token과
+         * 새로 발급한 Refresh Token을 각각 해시합니다.
          */
-        saveRefreshToken(
-                user.userId(),
-                newTokenPair.refreshToken()
-        );
+        String currentRefreshTokenHash =
+                tokenHashProvider.hash(
+                        command.refreshToken()
+                );
+
+        String newRefreshTokenHash =
+                tokenHashProvider.hash(
+                        newTokenPair.refreshToken()
+                );
 
         /*
-         * 새로운 Refresh Token의 만료 시간이 다시 설정되었으므로
-         * 동일한 sessionId의 TTL도 Refresh Token 만료시간에 맞춰 갱신합니다.
+         * 7. Redis Lua Script를 통해 Refresh Token을 원자적으로 Rotation합니다.
+         *
+         * Redis에 저장된 현재 Refresh Token hash가
+         * 요청받은 Refresh Token hash와 일치하는 경우에만
+         * 새로운 Refresh Token hash로 교체합니다.
+         *
+         * 동시에 Session TTL도 새 Refresh Token 수명에 맞춰 갱신합니다.
          */
-        saveSession(
-                user.userId(),
-                refreshClaims.sessionId()
-        );
+        boolean rotated =
+                authStateRepository.rotateRefreshToken(
+                        user.userId(),
+                        currentRefreshTokenHash,
+                        newRefreshTokenHash,
+                        jwtProvider.getRefreshTokenExpiration()
+                );
 
         /*
-         * TODO(auth):
-         * Refresh Token 검증과 Rotation을 서로 분리된 Redis 연산으로 처리하면
-         * 동시에 동일 Refresh Token으로 재발급 요청이 들어오는 경우
-         * Race Condition이 발생할 수 있습니다.
-         *
-         * 추후 Redis Lua Script 또는 원자적 Compare-And-Set 방식으로
-         * 검증과 교체를 하나의 연산으로 처리하는 것을 검토합니다.
-         *
-         * 이미 Rotation된 Refresh Token의 재사용을 감지한 경우
-         * 탈취 가능성을 고려하여 사용자 세션 전체를 폐기하는 정책도 검토합니다.
+         * 이미 사용된 Refresh Token이거나,
+         * 새 로그인/로그아웃 등으로 Redis 상태가 변경된 경우
+         * Rotation에 실패합니다.
          */
+        if (!rotated) {
+            throw new AuthException(
+                    AuthErrorCode.INVALID_REFRESH_TOKEN
+            );
+        }
 
         return toTokenResult(newTokenPair);
     }
@@ -644,39 +639,6 @@ public class AuthCommandService {
                     AuthErrorCode.INVALID_REFRESH_TOKEN
             );
         }
-    }
-
-    /**
-     * Refresh Token을 해시한 후
-     * Refresh Token의 만료 시간과 함께 Redis에 저장합니다.
-     */
-    private void saveRefreshToken(
-            UUID userId,
-            String refreshToken
-    ) {
-        refreshTokenRepository.save(
-                new RefreshToken(
-                        userId,
-                        tokenHashProvider.hash(refreshToken),
-                        jwtProvider.getRefreshTokenExpiration()
-                )
-        );
-    }
-
-    /**
-     * 현재 로그인 세션을 Redis에 저장합니다.
-     *
-     * <p>Session의 TTL은 Refresh Token의 수명과 동일하게 설정합니다.</p>
-     */
-    private void saveSession(
-            UUID userId,
-            UUID sessionId
-    ) {
-        sessionRepository.save(
-                userId,
-                sessionId,
-                jwtProvider.getRefreshTokenExpiration()
-        );
     }
 
     /**

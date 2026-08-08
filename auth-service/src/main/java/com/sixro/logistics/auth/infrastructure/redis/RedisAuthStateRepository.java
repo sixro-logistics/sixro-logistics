@@ -30,6 +30,9 @@ public class RedisAuthStateRepository
     private static final DefaultRedisScript<Long> LOGOUT_SCRIPT =
             createScript("redis/logout.lua");
 
+    private static final DefaultRedisScript<Long> REISSUE_SCRIPT =
+            createScript("redis/reissue.lua");
+
     private final StringRedisTemplate redisTemplate;
 
     /**
@@ -141,4 +144,26 @@ public class RedisAuthStateRepository
     private String blacklistKey(String jwtId) {
         return BLACKLIST_PREFIX + jwtId;
     }
+
+    @Override
+    public boolean rotateRefreshToken(
+            UUID userId,
+            String currentRefreshTokenHash,
+            String newRefreshTokenHash,
+            Duration ttl
+    ) {
+        Long result = redisTemplate.execute(
+                REISSUE_SCRIPT,
+                List.of(
+                        refreshKey(userId),
+                        sessionKey(userId)
+                ),
+                currentRefreshTokenHash,
+                newRefreshTokenHash,
+                String.valueOf(ttl.toMillis())
+        );
+
+        return Long.valueOf(1L).equals(result);
+    }
+
 }
