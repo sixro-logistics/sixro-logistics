@@ -17,6 +17,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Location {
 
+    // PostGIS Point 생성을 위한 Factory (SRID 4326: WGS84 위경도 좌표계)
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Column(name = "longitude", nullable = false)

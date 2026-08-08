@@ -1,5 +1,6 @@
 package com.sixro.logistics.hub.presentation.dto;
 
+import com.sixro.logistics.hub.application.command.HubCommand;
 import com.sixro.logistics.hub.domain.model.HubStatus;
 import com.sixro.logistics.hub.domain.model.HubZone;
 import jakarta.validation.constraints.Min;
@@ -20,7 +21,15 @@ public class HubDto {
             @NotNull Double latitude,
             @NotNull HubZone hubZone,
             @Min(10_000) int maxCapacity
-    ) {}
+    ) {
+
+        public HubCommand.Create toCommand() {
+            return new HubCommand.Create(
+                    this.hubName, this.zipcode, this.roadAddress, this.jibunAddress,
+                    this.detailAddress, this.longitude, this.latitude, this.hubZone, this.maxCapacity
+            );
+        }
+    }
 
     public record UpdateRequest(
             @NotBlank String hubName,
@@ -32,11 +41,22 @@ public class HubDto {
             @NotNull Double latitude,
             @NotNull HubZone hubZone,
             @Min(10_000) int maxCapacity
-    ) {}
+    ) {
+        public HubCommand.Update toCommand() {
+            return new HubCommand.Update(
+                    this.hubName, this.zipcode, this.roadAddress, this.jibunAddress,
+                    this.detailAddress, this.longitude, this.latitude, this.hubZone, this.maxCapacity
+            );
+        }
+    }
 
     public record StatusUpdateRequest(
             @NotNull HubStatus hubStatus
-    ) {}
+    ) {
+        public HubCommand.ChangeStatus toCommand() {
+            return new HubCommand.ChangeStatus(this.hubStatus);
+        }
+    }
 
     public record Response(
             UUID hubId,

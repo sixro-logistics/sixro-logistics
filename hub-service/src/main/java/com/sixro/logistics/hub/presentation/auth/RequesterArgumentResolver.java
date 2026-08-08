@@ -3,6 +3,7 @@ package com.sixro.logistics.hub.presentation.auth;
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
+import com.sixro.logistics.hub.application.command.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.stereotype.Component;
@@ -18,7 +19,7 @@ public class RequesterArgumentResolver implements HandlerMethodArgumentResolver 
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        return parameter.getParameterType().equals(Requester.class);
+        return parameter.getParameterType().equals(UserContext.class);
     }
 
     @Override
@@ -60,7 +61,7 @@ public class RequesterArgumentResolver implements HandlerMethodArgumentResolver 
             }
         }
 
-        return new Requester(userId, role, affiliationType, affiliationId);
+        return new UserContext(userId, role, affiliationType, affiliationId);
     }
 
     // UUID 파싱 예외 (IllegalArgumentException)

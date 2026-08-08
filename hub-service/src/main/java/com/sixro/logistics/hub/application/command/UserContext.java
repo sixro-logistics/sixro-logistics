@@ -1,8 +1,8 @@
-package com.sixro.logistics.hub.presentation.auth;
+package com.sixro.logistics.hub.application.command;
 
 import java.util.UUID;
 
-public record Requester(
+public record UserContext(
         UUID userId,
         String role,
         String affiliationType,

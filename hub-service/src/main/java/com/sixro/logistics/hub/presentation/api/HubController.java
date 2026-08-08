@@ -6,7 +6,7 @@ import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.hub.application.command.HubCommandService;
 import com.sixro.logistics.hub.application.query.HubQueryService;
 import com.sixro.logistics.hub.domain.model.HubZone;
-import com.sixro.logistics.hub.presentation.auth.Requester;
+import com.sixro.logistics.hub.application.command.UserContext;
 import com.sixro.logistics.hub.presentation.auth.RequireRole;
 import com.sixro.logistics.hub.presentation.dto.HubDto;
 import jakarta.validation.Valid;
@@ -31,10 +31,9 @@ public class HubController {
     @PostMapping
     @RequireRole({"MASTER_ADMIN"})
     public CommonResponse<HubDto.Response> createHub(
-            @Valid @RequestBody HubDto.CreateRequest request,
-            Requester requester
+            @Valid @RequestBody HubDto.CreateRequest request
     ) {
-        UUID hubId = hubCommandService.createHub(request);
+        UUID hubId = hubCommandService.createHub(request.toCommand());
         HubDto.Response response = hubQueryService.getHub(hubId);
         return CommonResponse.created("허브가 성공적으로 등록되었습니다.", response);
     }
@@ -68,10 +67,9 @@ public class HubController {
     @RequireRole({"MASTER_ADMIN"})
     public CommonResponse<HubDto.Response> updateHub(
             @PathVariable("hub_id") UUID hubId,
-            @Valid @RequestBody HubDto.UpdateRequest request,
-            Requester requester
+            @Valid @RequestBody HubDto.UpdateRequest request
     ) {
-        UUID updatedHubId = hubCommandService.updateHub(hubId, request);
+        UUID updatedHubId = hubCommandService.updateHub(hubId, request.toCommand());
         HubDto.Response response = hubQueryService.getHub(updatedHubId);
         return CommonResponse.success("허브 정보가 수정되었습니다.", response);
     }
@@ -81,9 +79,9 @@ public class HubController {
     public CommonResponse<HubDto.Response> changeHubStatus(
             @PathVariable("hub_id") UUID hubId,
             @Valid @RequestBody HubDto.StatusUpdateRequest request,
-            Requester requester
+            UserContext userContext
     ) {
-        UUID updatedHubId = hubCommandService.changeHubStatus(hubId, request, requester);
+        UUID updatedHubId = hubCommandService.changeHubStatus(hubId, request.toCommand(), userContext);
         HubDto.Response response = hubQueryService.getHub(updatedHubId);
         return CommonResponse.success("허브 상태가 변경되었습니다.", response);
     }
@@ -92,8 +90,8 @@ public class HubController {
     @RequireRole({"MASTER_ADMIN"})
     public CommonResponse<Void> deleteHub(
             @PathVariable("hub_id") UUID hubId,
-            Requester requester) {
-        hubCommandService.deleteHub(hubId, requester);
+            UserContext userContext) {
+        hubCommandService.deleteHub(hubId, userContext);
         return CommonResponse.success("허브가 성공적으로 삭제되었습니다.");
     }
 
