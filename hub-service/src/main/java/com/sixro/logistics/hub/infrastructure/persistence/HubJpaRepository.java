@@ -25,12 +25,13 @@ public interface HubJpaRepository extends JpaRepository<Hub, UUID> {
      * - CLOSED(폐쇄), MAINTENANCE(점검중) 상태는 배송을 받을 수 없으므로 제외
      * - LIMIT 1로 가장 가까운 1건만 조회 (GiST 인덱스 최적화)
      */
-    @Query(value = "SELECT " +
+    @Query(value =
+            "SELECT " +
             "h.hub_id AS hubId, " +
             "h.hub_name AS hubName, " +
             "h.hub_status AS hubStatus, " +
             "ST_DistanceSphere(h.location::geometry, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geometry) AS distanceInMeters " +
-            "FROM p_hub h " +
+            "FROM hub_schema.p_hub h " +
             "WHERE h.hub_status NOT IN ('CLOSED', 'MAINTENANCE') " +
             "AND h.is_deleted = false " +
             "ORDER BY distanceInMeters ASC " +

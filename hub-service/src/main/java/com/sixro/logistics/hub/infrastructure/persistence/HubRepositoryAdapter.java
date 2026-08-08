@@ -42,7 +42,7 @@ public class HubRepositoryAdapter implements HubRepository {
     public Optional<HubWithDistance> findNearestHubWithDistance(double longitude, double latitude) {
         return hubJpaRepository.findNearestHubWithDistance(longitude, latitude)
                 .map(projection -> new HubWithDistance(
-                        projection.getId(),
+                        projection.getHubId(),
                         projection.getHubName(),
                         projection.getHubStatus(),
                         projection.getDistanceInMeters()
