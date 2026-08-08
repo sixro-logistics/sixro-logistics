@@ -3,92 +3,130 @@ name: CI Pipeline
 on:
   pull_request:
     branches: [ "develop", "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+
+# CI 진행 중에 새로운 push가 올라오는 경우, 이전 CI 워크플로우를 취소하여 리소스 절약
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# GitHub repo 읽기 권한만 부여
+permissions:
+  contents: read
 
 jobs:
-  test:
-    name: Build and Test
+  build_and_test:
+    name: Build & Test
     runs-on: ubuntu-latest
+
+    # 타임 아웃 15분 설정
+    timeout-minutes: 15
+
     steps:
-      - name: Checkout Code
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # 어떤 파일이 변경되었는지 비교하기 위해 전체 커밋 히스토리를 가져오기
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle' # 다음 CI 실행 시 속도를 높이기 위해 패키지 캐싱
+          distribution: temurin
+          java-version: 21
 
-      # 현재 PR에서 '어떤 파일들이 수정되었는지' 목록 확인
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4 # Gradle 캐싱 및 빌드 최적화
+
+      # PR이 올라오면 변경된 파일을 확인해서 해당 서비스만 build
       - name: Get changed files
         if: github.event_name == 'pull_request'
         id: changed-files
         uses: tj-actions/changed-files@v44
 
-      # 수정된 서비스만 테스트 결정
       - name: Determine affected modules
         id: analyze
         env:
           EVENT_NAME: ${{ github.event_name }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        shell: bash
         run: |
-          # 배포 직전(main 병합하는 경우)에는 안전을 위해 전체 테스트
-          if [ "$EVENT_NAME" == "push" ]; then
-            echo "[INFO] Main 브랜치 병합 감지: 배포 전 전체 테스트를 진행합니다."
-            echo "TASKS=test" >> $GITHUB_OUTPUT
+
+          # main에 push되면 전체 build
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            echo "TASKS=build" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           RUN_ALL=false
-          CHANGED_SERVICES=""
+          MODULES=()
 
-          # 수정된 파일들을 하나씩 확인
           for file in $CHANGED_FILES; do
-            # 공통 모듈이나 루트 설정 파일이 바뀌었다면 전체 테스트
-            if [[ "$file" == common-module/* ]] || [[ "$file" == settings.gradle ]] || [[ "$file" == build.gradle ]] || [[ "$file" == gradle/* ]]; then
-              RUN_ALL=true
-              break
+
+            # common-module, root 의 gradle 설정, workflows 변경시, 전체 build
+            case "$file" in
+              common-module/*|settings.gradle|build.gradle|gradle/*|.github/workflows/*)
+                RUN_ALL=true
+                break
+                ;;
+            esac
+
+            # 서비스 모듈명 추출 후 build.gradle 존재하면 추가
+            module=$(echo "$file" | cut -d/ -f1)
+
+            if [[ -f "$module/build.gradle" ]]; then
+              MODULES+=("$module")
             fi
 
-            # 파일 경로에서 맨 앞의 서비스명만 추출 후 확인
-            MODULE=$(echo "$file" | cut -d'/' -f1)
-
-            if [ -d "$MODULE" ] && [ -f "$MODULE/build.gradle" ]; then
-              CHANGED_SERVICES="$CHANGED_SERVICES $MODULE"
-            fi
           done
 
-          # 최종적으로 실행할 테스트 명령어를 조합합니다.
-          if [ "$RUN_ALL" = true ]; then
-            echo "[INFO] 공통 설정(common-module 등)이 변경되었습니다. 전체 모듈 테스트를 진행합니다."
-            echo "TASKS=test" >> $GITHUB_OUTPUT
-          else
-            # 중복된 서비스 이름을 제거
-            UNIQUE_SERVICES=$(echo "$CHANGED_SERVICES" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-
-            if [ -z "$UNIQUE_SERVICES" ]; then
-              echo "[INFO] 백엔드 코드 변경사항이 없습니다. 테스트를 건너뜁니다."
-              echo "TASKS=none" >> $GITHUB_OUTPUT
-            else
-              # 변경된 서비스들만 모아서 테스트 명령어를 만듭니다. (예: :user-service:test :order-service:test)
-              GRADLE_TASKS=""
-              for service in $UNIQUE_SERVICES; do
-                GRADLE_TASKS="$GRADLE_TASKS :$service:test"
-              done
-              echo "[INFO] 변경된 서비스만 격리하여 테스트를 진행합니다: $GRADLE_TASKS"
-              echo "TASKS=$GRADLE_TASKS" >> $GITHUB_OUTPUT
-            fi
+          if [[ "$RUN_ALL" == true ]]; then
+            echo "TASKS=build" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-      - name: Grant execute permission for gradlew
+          # 모듈 목록에서 중복 제거
+          UNIQUE=$(printf "%s\n" "${MODULES[@]}" | sort -u)
+
+          # 변경된 백엔드 모듈이 없다면 CI 종료
+          if [[ -z "$UNIQUE" ]]; then
+            echo "TASKS=none" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          TASKS=""
+
+          # 변경된 특정 서비스만 build
+          while IFS= read -r module
+          do
+            [[ -z "$module" ]] && continue
+            TASKS="$TASKS :$module:build"
+          done <<< "$UNIQUE"
+
+          echo "TASKS=$TASKS" >> $GITHUB_OUTPUT
+
+      - name: Grant execute permission
         if: steps.analyze.outputs.TASKS != 'none'
         run: chmod +x gradlew
 
-      # 테스트 수행
-      - name: Run Tests
+      - name: Run Build
         if: steps.analyze.outputs.TASKS != 'none'
-        run: ./gradlew ${{ steps.analyze.outputs.TASKS }}
+        run: ./gradlew ${{ steps.analyze.outputs.TASKS }} --parallel --build-cache
+
+      # 만약 빌드/테스트가 실패시, 에러 리포트 파일 GitHub Actions에 업로드
+      - name: Upload Test Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
