@@ -24,7 +24,7 @@ import com.sixro.logistics.user.presentation.response.MyUserResponse;
 import com.sixro.logistics.user.presentation.response.RejectUserResponse;
 import com.sixro.logistics.user.presentation.response.UpdateUserResponse;
 import com.sixro.logistics.user.presentation.response.UserDetailResponse;
-import com.sixro.logistics.user.presentation.response.UserSummaryResponse;
+import com.sixro.logistics.user.presentation.response.UserListResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -124,7 +124,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "C999 - 서버 내부 오류")
     })
     @GetMapping
-    public CommonResponse<PageResponse<UserSummaryResponse>> searchUsers(
+    public CommonResponse<PageResponse<UserListResponse>> searchUsers(
             @Parameter(description = "사용자명 검색어") @RequestParam(required = false) String username,
             @Parameter(description = "사용자 권한") @RequestParam(required = false) UserRole role,
             @Parameter(description = "가입 심사 상태") @RequestParam(required = false) UserStatus userStatus,
@@ -154,9 +154,9 @@ public class UserController {
                 requesterRole
         );
 
-        PageResponse<UserSummaryResponse> response = PageResponse.from(
+        PageResponse<UserListResponse> response = PageResponse.from(
                 resultPage,
-                UserSummaryResponse::from
+                UserListResponse::from
         );
 
         return CommonResponse.success("사용자 목록 조회에 성공했습니다.", response);

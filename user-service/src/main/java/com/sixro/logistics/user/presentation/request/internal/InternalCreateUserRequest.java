@@ -1,4 +1,4 @@
-package com.sixro.logistics.user.presentation.request;
+package com.sixro.logistics.user.presentation.request.internal;
 
 import com.sixro.logistics.user.application.command.CreateUserCommand;
 import com.sixro.logistics.user.domain.model.AffiliationType;

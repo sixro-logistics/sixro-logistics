@@ -7,24 +7,27 @@ import com.sixro.logistics.user.domain.model.UserStatus;
 
 import java.util.UUID;
 
-public record UserSummaryResponse(
+/**
+ * MASTER_ADMIN이 사용자 목록을 조회할 때 사용하는 응답 DTO입니다.
+ */
+public record UserListResponse(
         UUID userId,
         String username,
         String slackId,
         UserRole role,
-        AffiliationType affiliationType,
         UUID affiliationId,
+        AffiliationType affiliationType,
         UserStatus userStatus
 ) {
 
-    public static UserSummaryResponse from(UserResult result) {
-        return new UserSummaryResponse(
+    public static UserListResponse from(UserResult result) {
+        return new UserListResponse(
                 result.userId(),
                 result.username(),
                 result.slackId(),
                 result.role(),
-                result.affiliationType(),
                 result.affiliationId(),
+                result.affiliationType(),
                 result.userStatus()
         );
     }
