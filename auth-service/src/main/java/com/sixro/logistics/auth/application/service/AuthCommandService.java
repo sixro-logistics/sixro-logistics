@@ -13,6 +13,7 @@ import com.sixro.logistics.auth.domain.model.RefreshToken;
 import com.sixro.logistics.auth.domain.model.TokenPair;
 import com.sixro.logistics.auth.domain.model.UserStatus;
 import com.sixro.logistics.auth.domain.repository.AccessTokenBlacklistRepository;
+import com.sixro.logistics.auth.domain.repository.AuthStateRepository;
 import com.sixro.logistics.auth.domain.repository.RefreshTokenRepository;
 import com.sixro.logistics.auth.domain.repository.SessionRepository;
 import com.sixro.logistics.auth.infrastructure.client.UserServiceClient;
@@ -67,6 +68,7 @@ public class AuthCommandService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
     private final SessionRepository sessionRepository;
+    private final AuthStateRepository authStateRepository;
 
     private final TokenHashProvider tokenHashProvider;
 
@@ -133,26 +135,17 @@ public class AuthCommandService {
                 sessionId
         );
 
-        /*
-         * Refresh Token 원문은 Redis에 저장하지 않고
-         * 해시값만 저장합니다.
-         */
-        saveRefreshToken(
+        String refreshTokenHash =
+                tokenHashProvider.hash(
+                        tokenPair.refreshToken()
+                );
+
+        authStateRepository.saveLoginState(
                 user.userId(),
-                tokenPair.refreshToken()
+                refreshTokenHash,
+                sessionId,
+                jwtProvider.getRefreshTokenExpiration()
         );
-
-        saveSession(
-                user.userId(),
-                sessionId
-        );
-
-
-        /*
-         * TODO(auth):
-         * Refresh Token 저장과 Session 저장 사이의 부분 실패를 방지하기 위해
-         * Redis Transaction 또는 Lua Script 적용을 검토합니다.
-         */
 
         return toTokenResult(tokenPair);
     }
@@ -320,32 +313,30 @@ public class AuthCommandService {
                         refreshClaims
                 );
 
-        /*
-         * 5. 정상 Refresh Token 검증이 완료된 후
-         * Refresh Token과 현재 로그인 Session을 삭제합니다.
-         */
-        refreshTokenRepository.deleteByUserId(
-                refreshClaims.userId()
-        );
+        String accessTokenJwtId = null;
+        Duration accessTokenTtl = null;
 
-        sessionRepository.deleteByUserId(
-                refreshClaims.userId()
-        );
-
-        /*
-         * 6. Access Token이 아직 유효한 경우에만
-         * 남은 유효시간 동안 blacklist에 등록합니다.
-         */
         if (accessClaims != null) {
-            blacklistAccessToken(accessClaims);
+            Duration remaining = Duration.between(
+                    Instant.now(),
+                    accessClaims.expiration()
+            );
+
+            if (!remaining.isNegative()
+                    && !remaining.isZero()) {
+                accessTokenJwtId =
+                        accessClaims.jwtId();
+
+                accessTokenTtl =
+                        remaining;
+            }
         }
 
-        /*
-         * TODO(auth):
-         * Refresh Token 삭제, Session 삭제,
-         * Access Token blacklist 등록 사이의 부분 실패를 방지하기 위해
-         * Redis Transaction 또는 Lua Script 적용을 검토합니다.
-         */
+        authStateRepository.clearLoginState(
+                refreshClaims.userId(),
+                accessTokenJwtId,
+                accessTokenTtl
+        );
     }
 
     /**
@@ -386,31 +377,6 @@ public class AuthCommandService {
 
             throw exception;
         }
-    }
-
-    /**
-     * 아직 유효한 Access Token의 jti를
-     * 남은 유효시간 동안 Redis blacklist에 저장합니다.
-     */
-    private void blacklistAccessToken(
-            JwtClaims accessClaims
-    ) {
-        Duration remaining = Duration.between(
-                Instant.now(),
-                accessClaims.expiration()
-        );
-
-        /*
-         * 만료 시각과 현재 시각의 경계 상황을 방어합니다.
-         */
-        if (remaining.isNegative() || remaining.isZero()) {
-            return;
-        }
-
-        accessTokenBlacklistRepository.save(
-                accessClaims.jwtId(),
-                remaining
-        );
     }
 
     /**
