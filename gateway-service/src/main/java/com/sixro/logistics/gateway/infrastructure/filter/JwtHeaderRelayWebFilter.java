@@ -1,7 +1,7 @@
 package com.sixro.logistics.gateway.infrastructure.filter;
 
 import com.sixro.logistics.common.constant.HeaderConstants;
-import com.sixro.logistics.gateway.domain.exception.AuthErrorCode;
+import com.sixro.logistics.gateway.domain.exception.GatewaySecurityErrorCode;
 import com.sixro.logistics.gateway.infrastructure.exception.GatewayErrorResponseWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -10,25 +10,21 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+import java.util.UUID;
+
 /**
- * JWT 인증이 완료된 요청의 Claim을 내부 서비스에서 사용할 Header로 변환합니다.
+ * JWT 인증이 완료된 요청의 Claim을 내부 서비스용 Header로 변환합니다.
  *
- * <p>Gateway만 JWT를 검증하고,
- * 내부 서비스(User, Hub, Company 등)는 Gateway가 전달한 Header를 신뢰합니다.</p>
+ * <p>클라이언트가 전달한 내부 인증 Header를 제거한 뒤,
+ * Gateway에서 검증된 JWT Claim을 기반으로 Header를 다시 설정합니다.</p>
  *
+ * <p>내부 서비스는 외부에서 직접 접근할 수 없도록 네트워크 수준에서도
+ * Gateway 경유만 허용해야 합니다.</p>
  */
 @RequiredArgsConstructor
 public class JwtHeaderRelayWebFilter implements WebFilter {
-    /**
-     * TODO 최종 인프라 택1 적용방법 검토
-     * 내부 서비스는 외부 네트워크에서 직접 접근 불가
-     * 방화벽/보안 그룹/Kubernetes NetworkPolicy로 Gateway 경유만 허용
-     * 내부 서비스에서도 Gateway 호출 여부를 추가 검증
-    */
-    /**
-     * Access Token에 저장된 사용자 권한 Claim 이름
-     */
-    // TODO AUTH, USER SERVICE 개발 후 재점검
+
     private static final String ROLE_CLAIM = "role";
 
     private final GatewayErrorResponseWriter errorResponseWriter;
@@ -38,36 +34,33 @@ public class JwtHeaderRelayWebFilter implements WebFilter {
             ServerWebExchange exchange,
             WebFilterChain chain
     ) {
-        /*
-         * 먼저 외부에서 전달한 내부 전용 Header를 제거합니다.
-         *
-         * JWT 인증이 완료된 경우에는
-         * Claim을 내부 Header로 변환합니다.
-         *
-         * 공개 API처럼 인증 객체가 없는 요청은
-         * Header만 제거한 뒤 그대로 전달합니다.
-         */
         ServerWebExchange sanitizedExchange =
                 removeInternalHeaders(exchange);
 
+        /*
+         * Optional 변환은 Mono<Void> 뒤에 switchIfEmpty를 적용했을 때
+         * 필터 체인이 중복 실행될 수 있는 문제를 방지합니다.
+         */
         return sanitizedExchange.getPrincipal()
                 .ofType(JwtAuthenticationToken.class)
-                .flatMap(authentication ->
-                        relayHeaders(
-                                sanitizedExchange,
-                                chain,
-                                authentication
+                .map(Optional::of)
+                .defaultIfEmpty(Optional.empty())
+                .flatMap(authentication -> authentication
+                        .map(jwtAuthentication ->
+                                relayHeaders(
+                                        sanitizedExchange,
+                                        chain,
+                                        jwtAuthentication
+                                )
                         )
-                )
-                .switchIfEmpty(
-                        Mono.defer(() ->
+                        .orElseGet(() ->
                                 chain.filter(sanitizedExchange)
                         )
                 );
     }
 
     /**
-     * JWT Claim을 내부 서비스에서 사용하는 Header로 변환합니다.
+     * 검증된 JWT Claim을 내부 서비스에서 사용하는 Header로 변환합니다.
      */
     private Mono<Void> relayHeaders(
             ServerWebExchange exchange,
@@ -78,28 +71,24 @@ public class JwtHeaderRelayWebFilter implements WebFilter {
         String role = authentication.getToken()
                 .getClaimAsString(ROLE_CLAIM);
 
-        /*
-         * JWT 서명은 유효하지만 프로젝트에서 필수로 사용하는 Claim이
-         * 존재하지 않는 경우 잘못된 Access Token으로 처리합니다.
-         */
-        if (userId == null || userId.isBlank()
-                || role == null || role.isBlank()) {
-
+        if (!hasRequiredClaims(userId, role)
+                || !isValidUuid(userId)) {
             return errorResponseWriter.write(
                     exchange,
-                    AuthErrorCode.INVALID_ACCESS_TOKEN
+                    GatewaySecurityErrorCode.INVALID_ACCESS_TOKEN
             );
         }
 
-        /*
-         * 검증이 완료된 Claim만 내부 Header로 생성합니다.
-         * 이후 User / Hub / Company Service는 JWT를 다시 검증하지 않고
-         * Gateway가 전달한 Header를 사용합니다.
-         */
         ServerWebExchange mutatedExchange = exchange.mutate()
                 .request(request -> request.headers(headers -> {
-                    headers.set(HeaderConstants.USER_ID, userId);
-                    headers.set(HeaderConstants.USER_ROLE, role);
+                    headers.set(
+                            HeaderConstants.USER_ID,
+                            userId
+                    );
+                    headers.set(
+                            HeaderConstants.USER_ROLE,
+                            role
+                    );
                 }))
                 .build();
 
@@ -107,10 +96,35 @@ public class JwtHeaderRelayWebFilter implements WebFilter {
     }
 
     /**
-     * 외부에서 전달한 내부 전용 Header를 제거합니다.
+     * 프로젝트에서 필수로 사용하는 JWT Claim이 존재하는지 확인합니다.
+     */
+    private boolean hasRequiredClaims(
+            String userId,
+            String role
+    ) {
+        return userId != null
+                && !userId.isBlank()
+                && role != null
+                && !role.isBlank();
+    }
+
+    /**
+     * 사용자 식별자가 UUID 형식인지 확인합니다.
+     */
+    private boolean isValidUuid(String userId) {
+        try {
+            UUID.fromString(userId);
+            return true;
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
+    /**
+     * 클라이언트가 전달한 내부 인증용 Header를 제거합니다.
      *
-     * <p>클라이언트가 X-User-Id 등을 임의로 조작하여
-     * 내부 서비스를 속이는 Header Spoofing 공격을 방지합니다.</p>
+     * <p>외부 사용자가 내부 Header를 임의로 설정하는 Header Spoofing을
+     * 방지하기 위해 JWT Claim을 전달하기 전에 모두 제거합니다.</p>
      */
     private ServerWebExchange removeInternalHeaders(
             ServerWebExchange exchange

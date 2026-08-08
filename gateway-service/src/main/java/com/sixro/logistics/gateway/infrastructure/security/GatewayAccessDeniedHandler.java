@@ -1,6 +1,6 @@
 package com.sixro.logistics.gateway.infrastructure.security;
 
-import com.sixro.logistics.gateway.domain.exception.AuthErrorCode;
+import com.sixro.logistics.gateway.domain.exception.GatewaySecurityErrorCode;
 import com.sixro.logistics.gateway.infrastructure.exception.GatewayErrorResponseWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,7 +29,7 @@ public class GatewayAccessDeniedHandler implements ServerAccessDeniedHandler {
     ) {
         return errorResponseWriter.write(
                 exchange,
-                AuthErrorCode.ACCESS_DENIED
+                GatewaySecurityErrorCode.ACCESS_DENIED
         );
     }
 }
