@@ -70,4 +70,4 @@ logging:
     org.springframework.boot.context.config: DEBUG
 
   pattern:
-    console: '%clr(%-5level){green} [traceId=%X{traceId:-}, spanId=%X{spanId:-}] %clr(%logger{36}.%M()){cyan}: %msg%n'
+    console: '%clr(%-5level){green} [traceId=%X{traceId:-}, spanId=%X{spanId:-}] %clr(%logger{36}){cyan}: %msg%n'
