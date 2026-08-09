@@ -5,9 +5,15 @@ import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.delivery.application.command.GetDeliveryCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveriesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryStatusCommand;
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
+import com.sixro.logistics.delivery.application.result.DeliveryStatusResult;
 import com.sixro.logistics.delivery.domain.entity.Delivery;
+import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
+import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
+import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
+import com.sixro.logistics.delivery.domain.enums.ManagerType;
 import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import com.sixro.logistics.delivery.domain.port.DeliveryRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
@@ -19,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -44,6 +51,106 @@ public class DeliveryService {
         validateGetAuthority(command, delivery);
 
         return new DeliveryResult(delivery);
+    }
+
+    public DeliveryStatusResult updateDeliveryStatus(UpdateDeliveryStatusCommand command) {
+        // 배송 조회
+        Delivery delivery = deliveryRepositoryPort.findById(command.getDeliveryId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 변경 권한 검증
+        validateUpdateAuthority(command, delivery);
+
+        // 역할별 변경 범위 검증
+        validateRoleStatusAuthority(command);
+
+        // 동일 상태 요청 처리
+        DeliveryStatus previousStatus = delivery.getDeliveryStatus();
+        if (previousStatus == command.getDeliveryStatus()) {
+            return new DeliveryStatusResult(delivery, previousStatus, delivery.getUpdatedAt(), delivery.getUpdatedBy());
+        }
+
+        // 직접 변경 가능 상태 검증
+        validateDirectUpdateStatus(command.getDeliveryStatus());
+
+        // 업체 배송 담당자 배정 검증
+        if (command.getDeliveryStatus() == DeliveryStatus.COMPANY_DELIVERY_IN_PROGRESS) {
+            validateCompanyDeliveryManager(delivery);
+        }
+
+        // 배송 상태 변경
+        LocalDateTime changedAt = LocalDateTime.now();
+        delivery.updateStatus(command.getDeliveryStatus());
+
+        // 배송 취소 전파
+        if (command.getDeliveryStatus() == DeliveryStatus.CANCELLED) {
+            List<DeliveryRoute> waitingRoutes = deliveryRouteRepositoryPort.findAllWaitingByDeliveryId(delivery.getDeliveryId());
+            waitingRoutes.forEach(DeliveryRoute::cancelByDelivery);
+        }
+
+        // 배송 상태 변경 이벤트 발행
+        // TODO: 트랜잭션 커밋 후 DeliveryStatusChangedEvent 발행
+
+        // 변경사항 반영 및 응답 변환
+        deliveryRepositoryPort.flush();
+        return new DeliveryStatusResult(delivery, previousStatus, changedAt, command.getLoginUserId());
+    }
+
+    private void validateUpdateAuthority(UpdateDeliveryStatusCommand command, Delivery delivery) {
+        if ("MASTER_ADMIN".equals(command.getUserRole())) {
+            return;
+        }
+        if ("HUB_ADMIN".equals(command.getUserRole())) {
+            boolean isRelatedHub = command.getAffiliationId() != null
+                    && (Objects.equals(command.getAffiliationId(), delivery.getOriginHubId())
+                    || Objects.equals(command.getAffiliationId(), delivery.getDestHubId()));
+            if (isRelatedHub) {
+                return;
+            }
+        }
+        if ("DELIVERY_MANAGER".equals(command.getUserRole())) {
+            DeliveryManager deliveryManager = delivery.getDeliveryManager();
+            if (deliveryManager == null || deliveryManager.getManagerType() != ManagerType.COMPANY_DELIVERY) {
+                throw new BaseException(DeliveryErrorCode.COMPANY_DELIVERY_MANAGER_NOT_ASSIGNED);
+            }
+            if (Objects.equals(command.getLoginUserId(), deliveryManager.getDeliveryManagerId())) {
+                return;
+            }
+        }
+
+        throw new BaseException(DeliveryErrorCode.DELIVERY_STATUS_UPDATE_FORBIDDEN);
+    }
+
+    private void validateDirectUpdateStatus(DeliveryStatus deliveryStatus) {
+        if (deliveryStatus == DeliveryStatus.HUB_WAITING || deliveryStatus == DeliveryStatus.HUB_IN_TRANSIT
+                || deliveryStatus == DeliveryStatus.DESTINATION_HUB_ARRIVED) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_STATUS_TRANSITION);
+        }
+    }
+
+    private void validateRoleStatusAuthority(UpdateDeliveryStatusCommand command) {
+        DeliveryStatus deliveryStatus = command.getDeliveryStatus();
+
+        if ("MASTER_ADMIN".equals(command.getUserRole())) {
+            return;
+        }
+        if ("HUB_ADMIN".equals(command.getUserRole()) && deliveryStatus != DeliveryStatus.CANCELLED) {
+            return;
+        }
+        if ("DELIVERY_MANAGER".equals(command.getUserRole())
+                && (deliveryStatus == DeliveryStatus.COMPANY_DELIVERY_IN_PROGRESS
+                || deliveryStatus == DeliveryStatus.DELIVERED)) {
+            return;
+        }
+
+        throw new BaseException(DeliveryErrorCode.DELIVERY_STATUS_UPDATE_FORBIDDEN);
+    }
+
+    private void validateCompanyDeliveryManager(Delivery delivery) {
+        DeliveryManager deliveryManager = delivery.getDeliveryManager();
+        if (deliveryManager == null || deliveryManager.getManagerType() != ManagerType.COMPANY_DELIVERY) {
+            throw new BaseException(DeliveryErrorCode.COMPANY_DELIVERY_MANAGER_NOT_ASSIGNED);
+        }
     }
 
     private void validateGetAuthority(GetDeliveryCommand command, Delivery delivery) {

@@ -33,4 +33,8 @@ public class DeliveryRepositoryAdapter implements DeliveryRepositoryPort {
         return deliveryQueryRepository.search(condition, pageable);
     }
 
+    @Override
+    public void flush() {
+        deliveryRepository.flush();
+    }
 }

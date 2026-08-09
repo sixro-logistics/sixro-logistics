@@ -1,7 +1,9 @@
 package com.sixro.logistics.delivery.domain.entity;
 
+import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
+import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -68,5 +70,26 @@ public class Delivery extends BaseEntity {
 
     public void deliveryFailed() {
         this.deliveryStatus = DeliveryStatus.FAILED;
+    }
+
+    public void updateStatus(DeliveryStatus deliveryStatus) {
+        if (this.deliveryStatus == deliveryStatus) {
+            return;
+        }
+        if (!canTransitTo(deliveryStatus)) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_STATUS_TRANSITION);
+        }
+
+        this.deliveryStatus = deliveryStatus;
+    }
+
+    private boolean canTransitTo(DeliveryStatus deliveryStatus) {
+        return switch (this.deliveryStatus) {
+            case HUB_WAITING -> deliveryStatus == DeliveryStatus.CANCELLED || deliveryStatus == DeliveryStatus.FAILED;
+            case HUB_IN_TRANSIT -> deliveryStatus == DeliveryStatus.FAILED;
+            case DESTINATION_HUB_ARRIVED -> deliveryStatus == DeliveryStatus.COMPANY_DELIVERY_IN_PROGRESS || deliveryStatus == DeliveryStatus.FAILED;
+            case COMPANY_DELIVERY_IN_PROGRESS -> deliveryStatus == DeliveryStatus.DELIVERED || deliveryStatus == DeliveryStatus.FAILED;
+            case DELIVERED, CANCELLED, FAILED -> false;
+        };
     }
 }

@@ -121,6 +121,24 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "D019",
             "허브 배송 담당자가 배정되지 않았습니다."
+    ),
+
+    DELIVERY_STATUS_UPDATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D020",
+            "해당 배송의 상태를 변경할 권한이 없습니다."
+    ),
+
+    INVALID_DELIVERY_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "D021",
+            "변경할 수 없는 배송 상태입니다."
+    ),
+
+    COMPANY_DELIVERY_MANAGER_NOT_ASSIGNED(
+            HttpStatus.CONFLICT,
+            "D022",
+            "업체 배송 담당자가 배정되지 않았습니다."
     );
 
     private final HttpStatus status;

@@ -74,6 +74,14 @@ public class DeliveryRoute extends BaseEntity {
         }
     }
 
+    public void cancelByDelivery() {
+        if (this.routeStatus != RouteStatus.HUB_TRANSIT_WAITING) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_ROUTE_STATUS_TRANSITION);
+        }
+
+        this.routeStatus = RouteStatus.CANCELLED;
+    }
+
     private boolean canTransitTo(RouteStatus routeStatus) {
         return switch (this.routeStatus) {
             case HUB_TRANSIT_WAITING -> routeStatus == RouteStatus.HUB_IN_TRANSIT || routeStatus == RouteStatus.FAILED;

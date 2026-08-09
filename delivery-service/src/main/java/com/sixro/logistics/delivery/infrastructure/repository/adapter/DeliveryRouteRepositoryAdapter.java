@@ -2,6 +2,7 @@ package com.sixro.logistics.delivery.infrastructure.repository.adapter;
 
 import com.sixro.logistics.delivery.domain.DeliveryRouteSearchCondition;
 import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
+import com.sixro.logistics.delivery.domain.enums.RouteStatus;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
 import com.sixro.logistics.delivery.infrastructure.repository.DeliveryRouteQueryRepository;
 import com.sixro.logistics.delivery.infrastructure.repository.DeliveryRouteRepository;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,6 +34,12 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     @Override
     public Optional<DeliveryRoute> findByDeliveryIdAndRouteSequence(UUID deliveryId, Integer routeSequence) {
         return deliveryRouteRepository.findByDelivery_DeliveryIdAndRouteSequence(deliveryId, routeSequence);
+    }
+
+    @Override
+    public List<DeliveryRoute> findAllWaitingByDeliveryId(UUID deliveryId) {
+        return deliveryRouteRepository.findAllByDelivery_DeliveryIdAndRouteStatus(
+                deliveryId, RouteStatus.HUB_TRANSIT_WAITING);
     }
 
     @Override

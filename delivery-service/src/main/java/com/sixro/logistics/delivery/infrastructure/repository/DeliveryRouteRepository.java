@@ -18,5 +18,7 @@ public interface DeliveryRouteRepository extends JpaRepository<DeliveryRoute, UU
 
     Optional<DeliveryRoute> findByDelivery_DeliveryIdAndRouteSequence(UUID deliveryId, Integer routeSequence);
 
+    List<DeliveryRoute> findAllByDelivery_DeliveryIdAndRouteStatus(UUID deliveryId, RouteStatus routeStatus);
+
     boolean existsByDelivery_DeliveryIdAndRouteSequenceGreaterThan(UUID deliveryId, Integer routeSequence);
 }
