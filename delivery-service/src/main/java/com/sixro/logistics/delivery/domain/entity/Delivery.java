@@ -76,6 +76,27 @@ public class Delivery extends BaseEntity {
         this.deliveryManager = deliveryManager;
     }
 
+    public void updateInfo(String deliveryAddress, LocalDateTime deliveryDeadline, String requests, String recipientName, String recipientSlackId) {
+        if (this.deliveryStatus != DeliveryStatus.HUB_WAITING) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_STATUS_TRANSITION);
+        }
+        if (deliveryAddress != null) {
+            this.deliveryAddress = deliveryAddress;
+        }
+        if (deliveryDeadline != null) {
+            this.deliveryDeadline = deliveryDeadline;
+        }
+        if (requests != null) {
+            this.requests = requests;
+        }
+        if (recipientName != null) {
+            this.recipientName = recipientName;
+        }
+        if (recipientSlackId != null) {
+            this.recipientSlackId = recipientSlackId;
+        }
+    }
+
     public void updateStatus(DeliveryStatus deliveryStatus) {
         if (this.deliveryStatus == deliveryStatus) {
             return;

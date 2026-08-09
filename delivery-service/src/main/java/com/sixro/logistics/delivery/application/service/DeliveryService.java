@@ -5,8 +5,10 @@ import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.delivery.application.command.GetDeliveryCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveriesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryInfoCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryStatusCommand;
+import com.sixro.logistics.delivery.application.result.DeliveryInfoUpdateResult;
 import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignmentResult;
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
@@ -130,6 +132,53 @@ public class DeliveryService {
         delivery.assignDeliveryManager(deliveryManager);
         deliveryRepositoryPort.flush();
         return new DeliveryManagerAssignmentResult(delivery, previousDeliveryManagerId);
+    }
+
+    public DeliveryInfoUpdateResult updateDeliveryInfo(UpdateDeliveryInfoCommand command) {
+        // 배송 잠금 조회
+        Delivery delivery = deliveryRepositoryPort.findByIdForUpdate(command.getDeliveryId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 배송 정보 수정 권한 검증
+        validateDeliveryInfoUpdateAuthority(command);
+
+        // 배송 상태 검증
+        validateDeliveryInfoUpdateStatus(delivery);
+
+        // 변경할 필드 및 납품기한 검증
+        validateDeliveryInfoUpdateCommand(command);
+
+        // 배송 정보 수정 및 응답 변환
+        delivery.updateInfo(command.getDeliveryAddress(), command.getDeliveryDeadline(), command.getRequests(),
+                command.getRecipientName(), command.getRecipientSlackId());
+        deliveryRepositoryPort.flush();
+        return new DeliveryInfoUpdateResult(delivery);
+    }
+
+    private void validateDeliveryInfoUpdateAuthority(UpdateDeliveryInfoCommand command) {
+        if ("MASTER_ADMIN".equals(command.getUserRole())) {
+            return;
+        }
+
+        throw new BaseException(DeliveryErrorCode.DELIVERY_INFO_UPDATE_FORBIDDEN);
+    }
+
+    private void validateDeliveryInfoUpdateStatus(Delivery delivery) {
+        if (delivery.getDeliveryStatus() != DeliveryStatus.HUB_WAITING) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_STATUS_TRANSITION);
+        }
+    }
+
+    private void validateDeliveryInfoUpdateCommand(UpdateDeliveryInfoCommand command) {
+        boolean hasNoChanges = command.getDeliveryAddress() == null && command.getDeliveryDeadline() == null
+                && command.getRequests() == null && command.getRecipientName() == null
+                && command.getRecipientSlackId() == null;
+        if (hasNoChanges) {
+            throw new BaseException(CommonErrorCode.INVALID_REQUEST);
+        }
+        if (command.getDeliveryDeadline() != null && !command.getDeliveryDeadline().isAfter(LocalDateTime.now())) {
+            throw new BaseException(CommonErrorCode.INVALID_REQUEST);
+        }
     }
 
     private void validateDeliveryManagerUpdateAuthority(UpdateDeliveryManagerCommand command, Delivery delivery) {

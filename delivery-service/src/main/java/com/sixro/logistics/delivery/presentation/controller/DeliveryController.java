@@ -6,16 +6,20 @@ import com.sixro.logistics.common.core.response.PageResponse;
 import com.sixro.logistics.delivery.application.service.DeliveryService;
 import com.sixro.logistics.delivery.application.command.GetDeliveryCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveriesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryInfoCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryStatusCommand;
+import com.sixro.logistics.delivery.application.result.DeliveryInfoUpdateResult;
 import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignmentResult;
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
 import com.sixro.logistics.delivery.application.result.DeliveryStatusResult;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliverySearchReqDto;
+import com.sixro.logistics.delivery.presentation.dto.req.DeliveryInfoUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryManagerUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryStatusUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryInfoResDto;
+import com.sixro.logistics.delivery.presentation.dto.res.DeliveryInfoUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryManagerUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliverySearchResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryStatusUpdateResDto;
@@ -89,6 +93,23 @@ public class DeliveryController {
         DeliveryManagerAssignmentResult result = deliveryService.updateDeliveryManager(command);
 
         return CommonResponse.success("업체 배송 담당자가 배정 또는 변경되었습니다.", new DeliveryManagerUpdateResDto(result));
+    }
+
+    @PatchMapping("/{deliveryId}")
+    public CommonResponse<DeliveryInfoUpdateResDto> updateDeliveryInfo(
+            @RequestHeader(HeaderConstants.USER_ID) UUID loginUserId,
+            @RequestHeader(HeaderConstants.USER_ROLE) String userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID deliveryId,
+            @Valid @RequestBody DeliveryInfoUpdateReqDto requestDto) {
+
+        UpdateDeliveryInfoCommand command = new UpdateDeliveryInfoCommand(
+                deliveryId, requestDto.getDeliveryAddress(), requestDto.getDeliveryDeadline(), requestDto.getRequests(),
+                requestDto.getRecipientName(), requestDto.getRecipientSlackId(), loginUserId, userRole, affiliationId);
+
+        DeliveryInfoUpdateResult result = deliveryService.updateDeliveryInfo(command);
+
+        return CommonResponse.success("배송 정보가 수정되었습니다.", new DeliveryInfoUpdateResDto(result));
     }
 
     @GetMapping

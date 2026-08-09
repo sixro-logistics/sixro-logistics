@@ -181,6 +181,12 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.FORBIDDEN,
             "D029",
             "해당 배송의 담당자를 배정할 권한이 없습니다."
+    ),
+
+    DELIVERY_INFO_UPDATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D030",
+            "해당 배송 정보를 수정할 권한이 없습니다."
     );
 
     private final HttpStatus status;
