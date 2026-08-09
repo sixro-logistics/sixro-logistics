@@ -10,11 +10,15 @@ import com.sixro.logistics.delivery.application.result.DeliveryRouteResult;
 import com.sixro.logistics.delivery.application.result.DeliveryRouteStatusResult;
 import com.sixro.logistics.delivery.domain.DeliveryRouteSearchCondition;
 import com.sixro.logistics.delivery.domain.entity.Delivery;
+import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
 import com.sixro.logistics.delivery.domain.enums.DeliverySearchScope;
 import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
+import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
+import com.sixro.logistics.delivery.domain.enums.ManagerType;
 import com.sixro.logistics.delivery.domain.enums.RouteStatus;
 import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
+import com.sixro.logistics.delivery.domain.port.DeliveryManagerRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,9 +37,12 @@ import java.util.UUID;
 public class DeliveryRouteService {
 
     private final DeliveryRouteRepositoryPort deliveryRouteRepositoryPort;
+    private final DeliveryManagerRepositoryPort deliveryManagerRepositoryPort;
 
-    public DeliveryRouteService(DeliveryRouteRepositoryPort deliveryRouteRepositoryPort) {
+    public DeliveryRouteService(DeliveryRouteRepositoryPort deliveryRouteRepositoryPort,
+                                DeliveryManagerRepositoryPort deliveryManagerRepositoryPort) {
         this.deliveryRouteRepositoryPort = deliveryRouteRepositoryPort;
+        this.deliveryManagerRepositoryPort = deliveryManagerRepositoryPort;
     }
 
     @Transactional(readOnly = true)
@@ -50,7 +57,7 @@ public class DeliveryRouteService {
 
     public DeliveryRouteStatusResult updateDeliveryRouteStatus(UpdateDeliveryRouteStatusCommand command) {
         // 배송 경로 조회
-        DeliveryRoute deliveryRoute = deliveryRouteRepositoryPort.findById(command.getDeliveryRouteId())
+        DeliveryRoute deliveryRoute = deliveryRouteRepositoryPort.findByIdForUpdate(command.getDeliveryRouteId())
                 .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_NOT_FOUND));
         Delivery delivery = deliveryRoute.getDelivery();
 
@@ -61,9 +68,14 @@ public class DeliveryRouteService {
         validateDeliveryStatus(delivery);
         deliveryRoute.validateStatusTransition(command.getRouteStatus());
 
-        // 이동 시작 조건 검증
+        // 담당자 상태 변경 준비
+        DeliveryManager deliveryManager = null;
         if (command.getRouteStatus() == RouteStatus.HUB_IN_TRANSIT) {
-            validateStartConditions(deliveryRoute);
+            deliveryManager = validateStartConditions(deliveryRoute);
+        }
+        else if (deliveryRoute.getRouteStatus() == RouteStatus.HUB_IN_TRANSIT
+                && (command.getRouteStatus() == RouteStatus.HUB_ARRIVED || command.getRouteStatus() == RouteStatus.FAILED)) {
+            deliveryManager = findAssignedManagerForUpdate(deliveryRoute);
         }
 
         // 첫/마지막 경로 계산
@@ -75,6 +87,7 @@ public class DeliveryRouteService {
         DeliveryStatus previousDeliveryStatus = delivery.getDeliveryStatus();
         LocalDateTime changedAt = LocalDateTime.now();
         deliveryRoute.updateStatus(command.getRouteStatus(), changedAt);
+        updateDeliveryManagerStatus(deliveryManager, command.getRouteStatus());
         updateDeliveryStatus(delivery, command.getRouteStatus(), isFirstRoute, isLastRoute);
 
         // 배송 상태 변경 이벤트 발행
@@ -117,15 +130,23 @@ public class DeliveryRouteService {
         }
     }
 
-    private void validateStartConditions(DeliveryRoute deliveryRoute) {
+    private DeliveryManager validateStartConditions(DeliveryRoute deliveryRoute) {
         // 담당자 배정 검증
         if (deliveryRoute.getDeliveryManager() == null) {
             throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_MANAGER_NOT_ASSIGNED);
         }
 
+        DeliveryManager deliveryManager = findAssignedManagerForUpdate(deliveryRoute);
+        if (deliveryManager.getManagerType() != ManagerType.HUB_DELIVERY) {
+            throw new BaseException(DeliveryErrorCode.INVALID_ASSIGNED_DELIVERY_MANAGER_TYPE);
+        }
+        if (deliveryManager.getManagerStatus() != ManagerStatus.AVAILABLE) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_AVAILABLE);
+        }
+
         // 첫 번째 경로 확인
         if (deliveryRoute.getRouteSequence() <= 1) {
-            return;
+            return deliveryManager;
         }
 
         // 이전 경로 완료 검증
@@ -135,6 +156,31 @@ public class DeliveryRouteService {
 
         if (previousRoute.getRouteStatus() != RouteStatus.HUB_ARRIVED) {
             throw new BaseException(DeliveryErrorCode.PREVIOUS_DELIVERY_ROUTE_NOT_COMPLETED);
+        }
+
+        return deliveryManager;
+    }
+
+    private DeliveryManager findAssignedManagerForUpdate(DeliveryRoute deliveryRoute) {
+        if (deliveryRoute.getDeliveryManager() == null) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_MANAGER_NOT_ASSIGNED);
+        }
+
+        return deliveryManagerRepositoryPort.findByIdForUpdate(
+                        deliveryRoute.getDeliveryManager().getDeliveryManagerId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_MANAGER_NOT_ASSIGNED));
+    }
+
+    private void updateDeliveryManagerStatus(DeliveryManager deliveryManager, RouteStatus routeStatus) {
+        if (deliveryManager == null) {
+            return;
+        }
+        if (routeStatus == RouteStatus.HUB_IN_TRANSIT) {
+            deliveryManager.startDelivery();
+            return;
+        }
+        if (routeStatus == RouteStatus.HUB_ARRIVED || routeStatus == RouteStatus.FAILED) {
+            deliveryManager.finishDelivery();
         }
     }
 

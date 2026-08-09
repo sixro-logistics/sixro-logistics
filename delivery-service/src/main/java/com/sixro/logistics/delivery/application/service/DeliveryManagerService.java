@@ -108,12 +108,12 @@ public class DeliveryManagerService {
         if (managerType == ManagerType.HUB_DELIVERY) {
             activeManagerCount = managerRepository.countByManagerTypeAndHubIdIsNull(ManagerType.HUB_DELIVERY);
             maxSequence = managerRepository.findMaxHubDeliverySequenceIncludingDeleted()
-                    .orElse(-1);
+                    .orElse(0);
         }
         else {
             activeManagerCount = managerRepository.countByManagerTypeAndHubId(ManagerType.COMPANY_DELIVERY, hubId);
             maxSequence = managerRepository.findMaxCompanyDeliverySequenceIncludingDeleted(hubId)
-                    .orElse(-1);
+                    .orElse(0);
         }
 
         if (activeManagerCount >= MAX_DELIVERY_MANAGER_COUNT) {
