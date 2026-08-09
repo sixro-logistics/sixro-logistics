@@ -10,5 +10,8 @@ import java.util.UUID;
 
 @Repository
 public interface DeliveryRouteRepository extends JpaRepository<DeliveryRoute, UUID> {
+
     boolean existsByDeliveryManager_DeliveryManagerIdAndRouteStatusNotIn(UUID deliveryManagerId, List<RouteStatus> completedStatuses);
+
+    boolean existsByDelivery_DeliveryIdAndDeliveryManager_DeliveryManagerId(UUID deliveryId, UUID deliveryManagerId);
 }

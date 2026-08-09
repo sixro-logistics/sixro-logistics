@@ -26,6 +26,12 @@ public class Delivery extends BaseEntity {
     private UUID orderId;
 
     @Column(nullable = false, updatable = false)
+    private UUID supplierCompanyId;
+
+    @Column(nullable = false, updatable = false)
+    private UUID recipientCompanyId;
+
+    @Column(nullable = false, updatable = false)
     private UUID originHubId;
 
     @Column(nullable = false)

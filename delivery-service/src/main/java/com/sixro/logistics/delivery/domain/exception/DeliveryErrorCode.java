@@ -67,6 +67,18 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "D010",
             "진행 중인 배정 업무가 존재합니다."
+    ),
+
+    DELIVERY_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D011",
+            "해당 배송에 접근할 권한이 없습니다."
+    ),
+
+    DELIVERY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "D012",
+            "배송을 찾을 수 없습니다."
     );
 
     private final HttpStatus status;
