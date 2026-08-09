@@ -36,7 +36,7 @@ public class DeliveryQueryRepositoryImpl implements DeliveryQueryRepository {
     public Page<Delivery> search(DeliverySearchCondition condition, Pageable pageable) {
         List<Delivery> content = queryFactory
                 .selectFrom(delivery)
-                .leftJoin(delivery.deliveryManager, deliveryManager).fetchJoin()
+                .leftJoin(delivery.deliveryManager, deliveryManager)
                 .where(searchConditions(condition))
                 .orderBy(resolveOrder(pageable))
                 .offset(pageable.getOffset())

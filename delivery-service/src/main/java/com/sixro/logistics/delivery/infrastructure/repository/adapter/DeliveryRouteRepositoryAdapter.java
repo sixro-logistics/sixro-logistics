@@ -1,8 +1,12 @@
 package com.sixro.logistics.delivery.infrastructure.repository.adapter;
 
+import com.sixro.logistics.delivery.domain.DeliveryRouteSearchCondition;
 import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
+import com.sixro.logistics.delivery.infrastructure.repository.DeliveryRouteQueryRepository;
 import com.sixro.logistics.delivery.infrastructure.repository.DeliveryRouteRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -12,14 +16,22 @@ import java.util.UUID;
 public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPort {
 
     private final DeliveryRouteRepository deliveryRouteRepository;
+    private final DeliveryRouteQueryRepository deliveryRouteQueryRepository;
 
-    public DeliveryRouteRepositoryAdapter(DeliveryRouteRepository deliveryRouteRepository) {
+    public DeliveryRouteRepositoryAdapter(DeliveryRouteRepository deliveryRouteRepository,
+                                          DeliveryRouteQueryRepository deliveryRouteQueryRepository) {
         this.deliveryRouteRepository = deliveryRouteRepository;
+        this.deliveryRouteQueryRepository = deliveryRouteQueryRepository;
     }
 
     @Override
     public Optional<DeliveryRoute> findById(UUID deliveryRouteId) {
         return deliveryRouteRepository.findById(deliveryRouteId);
+    }
+
+    @Override
+    public Page<DeliveryRoute> searchDeliveryRoutes(DeliveryRouteSearchCondition condition, Pageable pageable) {
+        return deliveryRouteQueryRepository.search(condition, pageable);
     }
 
     @Override
