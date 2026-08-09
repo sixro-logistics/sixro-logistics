@@ -78,9 +78,8 @@ public class SecurityConfig {
      * Gateway의 공개 API, 인증 필요 API, 예외 처리 및
      * 커스텀 보안 필터 실행 순서를 구성합니다.
      *
-     * <p>현재는 공개 API를 제외한 모든 요청에 JWT 인증만 적용합니다.
-     * 역할별 1차 인가 정책은 User, Hub, Delivery API 권한 규칙이
-     * 확정된 이후 추가합니다.</p>
+     * 담당 허브, 소속 업체, 리소스 소유자, 본인 여부 등의
+     * 세부 인가는 각 Downstream Service에서 최종 검증합니다.
      */
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(
@@ -167,6 +166,8 @@ public class SecurityConfig {
                                 "/api/v1/users/*"
                         )
                         .hasRole("MASTER_ADMIN")
+
+                        // TODO 다른 서비스 Role 인가 → 필요 시 후속 확장
 
                         /*
                          * 사용자 정보 수정 / 비활성화 등은
