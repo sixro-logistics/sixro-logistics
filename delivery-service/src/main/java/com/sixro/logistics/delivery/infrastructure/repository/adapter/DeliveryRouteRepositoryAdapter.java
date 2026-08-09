@@ -30,6 +30,11 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     }
 
     @Override
+    public Optional<DeliveryRoute> findByDeliveryIdAndRouteSequence(UUID deliveryId, Integer routeSequence) {
+        return deliveryRouteRepository.findByDelivery_DeliveryIdAndRouteSequence(deliveryId, routeSequence);
+    }
+
+    @Override
     public Page<DeliveryRoute> searchDeliveryRoutes(DeliveryRouteSearchCondition condition, Pageable pageable) {
         return deliveryRouteQueryRepository.search(condition, pageable);
     }
@@ -38,5 +43,16 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     public boolean existsAssignedDeliveryManager(UUID deliveryId, UUID deliveryManagerId) {
         return deliveryRouteRepository
                 .existsByDelivery_DeliveryIdAndDeliveryManager_DeliveryManagerId(deliveryId, deliveryManagerId);
+    }
+
+    @Override
+    public boolean existsByDeliveryIdAndRouteSequenceGreaterThan(UUID deliveryId, Integer routeSequence) {
+        return deliveryRouteRepository
+                .existsByDelivery_DeliveryIdAndRouteSequenceGreaterThan(deliveryId, routeSequence);
+    }
+
+    @Override
+    public void flush() {
+        deliveryRouteRepository.flush();
     }
 }

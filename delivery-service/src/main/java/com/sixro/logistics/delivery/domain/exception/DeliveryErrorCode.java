@@ -93,10 +93,34 @@ public enum DeliveryErrorCode implements ErrorCode {
             "배송 경로 조회 권한이 없습니다."
     ),
 
+    DELIVERY_ROUTE_UPDATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D015",
+            "해당 배송 경로를 변경할 권한이 없습니다."
+    ),
+
     DELIVERY_ROUTE_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "D016",
             "배송 경로를 찾을 수 없습니다."
+    ),
+
+    INVALID_DELIVERY_ROUTE_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "D017",
+            "변경할 수 없는 배송 경로 상태입니다."
+    ),
+
+    PREVIOUS_DELIVERY_ROUTE_NOT_COMPLETED(
+            HttpStatus.CONFLICT,
+            "D018",
+            "이전 배송 경로가 아직 완료되지 않았습니다."
+    ),
+
+    DELIVERY_ROUTE_MANAGER_NOT_ASSIGNED(
+            HttpStatus.CONFLICT,
+            "D019",
+            "허브 배송 담당자가 배정되지 않았습니다."
     );
 
     private final HttpStatus status;

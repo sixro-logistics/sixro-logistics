@@ -5,11 +5,15 @@ import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.delivery.application.command.GetDeliveryRouteCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveryRoutesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryRouteStatusCommand;
 import com.sixro.logistics.delivery.application.result.DeliveryRouteResult;
+import com.sixro.logistics.delivery.application.result.DeliveryRouteStatusResult;
 import com.sixro.logistics.delivery.domain.DeliveryRouteSearchCondition;
 import com.sixro.logistics.delivery.domain.entity.Delivery;
 import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
 import com.sixro.logistics.delivery.domain.enums.DeliverySearchScope;
+import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
+import com.sixro.logistics.delivery.domain.enums.RouteStatus;
 import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
 import org.springframework.data.domain.Page;
@@ -18,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -41,6 +46,115 @@ public class DeliveryRouteService {
         validateGetAuthority(command, deliveryRoute);
 
         return new DeliveryRouteResult(deliveryRoute);
+    }
+
+    public DeliveryRouteStatusResult updateDeliveryRouteStatus(UpdateDeliveryRouteStatusCommand command) {
+        // 배송 경로 조회
+        DeliveryRoute deliveryRoute = deliveryRouteRepositoryPort.findById(command.getDeliveryRouteId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_NOT_FOUND));
+        Delivery delivery = deliveryRoute.getDelivery();
+
+        // 변경 권한 검증
+        validateUpdateAuthority(command, deliveryRoute);
+
+        // 배송 및 경로 상태 검증
+        validateDeliveryStatus(delivery);
+        deliveryRoute.validateStatusTransition(command.getRouteStatus());
+
+        // 이동 시작 조건 검증
+        if (command.getRouteStatus() == RouteStatus.HUB_IN_TRANSIT) {
+            validateStartConditions(deliveryRoute);
+        }
+
+        // 첫/마지막 경로 계산
+        boolean isFirstRoute = deliveryRoute.getRouteSequence() == 1;
+        boolean isLastRoute = command.getRouteStatus() == RouteStatus.HUB_ARRIVED &&
+                !deliveryRouteRepositoryPort.existsByDeliveryIdAndRouteSequenceGreaterThan(delivery.getDeliveryId(), deliveryRoute.getRouteSequence());
+
+        // 배송 경로 및 배송 상태 변경
+        DeliveryStatus previousDeliveryStatus = delivery.getDeliveryStatus();
+        LocalDateTime changedAt = LocalDateTime.now();
+        deliveryRoute.updateStatus(command.getRouteStatus(), changedAt);
+        updateDeliveryStatus(delivery, command.getRouteStatus(), isFirstRoute, isLastRoute);
+
+        // 배송 상태 변경 이벤트 발행
+        if (previousDeliveryStatus != delivery.getDeliveryStatus()) {
+            // TODO: 트랜잭션 커밋 후 DeliveryStatusChangedEvent 발행
+        }
+
+        // 변경사항 반영 및 응답 변환
+        deliveryRouteRepositoryPort.flush();
+        return new DeliveryRouteStatusResult(deliveryRoute);
+    }
+
+    private void validateUpdateAuthority(UpdateDeliveryRouteStatusCommand command, DeliveryRoute deliveryRoute) {
+        if ("MASTER_ADMIN".equals(command.getUserRole())) {
+            return;
+        }
+        if ("HUB_ADMIN".equals(command.getUserRole())) {
+            boolean isRelatedHub = command.getAffiliationId() != null
+                    && (Objects.equals(command.getAffiliationId(), deliveryRoute.getOriginHubId())
+                    || Objects.equals(command.getAffiliationId(), deliveryRoute.getDestHubId()));
+            if (isRelatedHub) {
+                return;
+            }
+        }
+        if ("DELIVERY_MANAGER".equals(command.getUserRole())) {
+            boolean isAssignedManager = command.getLoginUserId() != null && deliveryRoute.getDeliveryManager() != null
+                    && Objects.equals(command.getLoginUserId(), deliveryRoute.getDeliveryManager().getDeliveryManagerId());
+            if (isAssignedManager) {
+                return;
+            }
+        }
+
+        throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_UPDATE_FORBIDDEN);
+    }
+
+    private void validateDeliveryStatus(Delivery delivery) {
+        if (delivery.getDeliveryStatus() != DeliveryStatus.HUB_WAITING
+                && delivery.getDeliveryStatus() != DeliveryStatus.HUB_IN_TRANSIT) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_ROUTE_STATUS_TRANSITION);
+        }
+    }
+
+    private void validateStartConditions(DeliveryRoute deliveryRoute) {
+        // 담당자 배정 검증
+        if (deliveryRoute.getDeliveryManager() == null) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_MANAGER_NOT_ASSIGNED);
+        }
+
+        // 첫 번째 경로 확인
+        if (deliveryRoute.getRouteSequence() <= 1) {
+            return;
+        }
+
+        // 이전 경로 완료 검증
+        DeliveryRoute previousRoute = deliveryRouteRepositoryPort.findByDeliveryIdAndRouteSequence(
+                        deliveryRoute.getDelivery().getDeliveryId(), deliveryRoute.getRouteSequence() - 1)
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.PREVIOUS_DELIVERY_ROUTE_NOT_COMPLETED));
+
+        if (previousRoute.getRouteStatus() != RouteStatus.HUB_ARRIVED) {
+            throw new BaseException(DeliveryErrorCode.PREVIOUS_DELIVERY_ROUTE_NOT_COMPLETED);
+        }
+    }
+
+    private void updateDeliveryStatus(Delivery delivery, RouteStatus routeStatus, boolean isFirstRoute, boolean isLastRoute) {
+        // 경로 실패 전파
+        if (routeStatus == RouteStatus.FAILED) {
+            delivery.deliveryFailed();
+            return;
+        }
+
+        // 첫 경로 이동 시작
+        if (routeStatus == RouteStatus.HUB_IN_TRANSIT && isFirstRoute) {
+            delivery.startHubTransit();
+            return;
+        }
+
+        // 마지막 경로 도착
+        if (routeStatus == RouteStatus.HUB_ARRIVED && isLastRoute) {
+            delivery.arriveDestinationHub();
+        }
     }
 
     private void validateGetAuthority(GetDeliveryRouteCommand command, DeliveryRoute deliveryRoute) {

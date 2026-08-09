@@ -12,7 +12,13 @@ public interface DeliveryRouteRepositoryPort {
 
     Optional<DeliveryRoute> findById(UUID deliveryRouteId);
 
+    Optional<DeliveryRoute> findByDeliveryIdAndRouteSequence(UUID deliveryId, Integer routeSequence);
+
     Page<DeliveryRoute> searchDeliveryRoutes(DeliveryRouteSearchCondition condition, Pageable pageable);
 
     boolean existsAssignedDeliveryManager(UUID deliveryId, UUID deliveryManagerId);
+
+    boolean existsByDeliveryIdAndRouteSequenceGreaterThan(UUID deliveryId, Integer routeSequence);
+
+    void flush();
 }

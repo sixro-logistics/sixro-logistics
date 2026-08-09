@@ -61,7 +61,7 @@ public class DeliveryService {
             return;
         }
         if ("COMPANY_MANAGER".equals(userRole)) { // 소속 업체와 관련된 주문의 배송이면 허용
-            // TODO: OrderCreatedEvent를 소비: 공급업체/수령업체 ID가 포함된 Delivery 생성이 되었음
+            // TODO: OrderConfirmedEvent를 소비: 공급업체/수령업체 ID가 포함된 Delivery 생성이 되었음
             validateCompanyManagerAuthority(command.getAffiliationId(), delivery);
             return;
         }

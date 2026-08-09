@@ -57,4 +57,16 @@ public class Delivery extends BaseEntity {
 
     @Column(length = 100, nullable = false)
     private String recipientSlackId;
+
+    public void startHubTransit() {
+        this.deliveryStatus = DeliveryStatus.HUB_IN_TRANSIT;
+    }
+
+    public void arriveDestinationHub() {
+        this.deliveryStatus = DeliveryStatus.DESTINATION_HUB_ARRIVED;
+    }
+
+    public void deliveryFailed() {
+        this.deliveryStatus = DeliveryStatus.FAILED;
+    }
 }
