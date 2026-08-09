@@ -5,13 +5,17 @@ import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.common.core.response.PageResponse;
 import com.sixro.logistics.delivery.application.command.GetDeliveryRouteCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveryRoutesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryRouteManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryRouteStatusCommand;
+import com.sixro.logistics.delivery.application.result.DeliveryRouteManagerResult;
 import com.sixro.logistics.delivery.application.result.DeliveryRouteResult;
 import com.sixro.logistics.delivery.application.result.DeliveryRouteStatusResult;
 import com.sixro.logistics.delivery.application.service.DeliveryRouteService;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryRouteSearchReqDto;
+import com.sixro.logistics.delivery.presentation.dto.req.DeliveryRouteManagerUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryRouteStatusUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryRouteInfoResDto;
+import com.sixro.logistics.delivery.presentation.dto.res.DeliveryRouteManagerUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryRouteStatusUpdateResDto;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -66,6 +70,23 @@ public class DeliveryRouteController {
         DeliveryRouteStatusResult result = deliveryRouteService.updateDeliveryRouteStatus(command);
 
         return CommonResponse.success("배송 경로 상태가 변경되었습니다.", new DeliveryRouteStatusUpdateResDto(result));
+    }
+
+    @PatchMapping("/{deliveryRouteId}/manager")
+    public CommonResponse<DeliveryRouteManagerUpdateResDto> updateDeliveryRouteManager(
+            @RequestHeader(HeaderConstants.USER_ID) UUID loginUserId,
+            @RequestHeader(HeaderConstants.USER_ROLE) String userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID deliveryRouteId,
+            @Valid @RequestBody DeliveryRouteManagerUpdateReqDto requestDto) {
+
+        UpdateDeliveryRouteManagerCommand command = new UpdateDeliveryRouteManagerCommand(
+                deliveryRouteId, requestDto.getDeliveryManagerId(), loginUserId, userRole, affiliationId);
+
+        DeliveryRouteManagerResult result = deliveryRouteService.updateDeliveryRouteManager(command);
+
+        return CommonResponse.success(
+                "허브 배송 담당자가 배정 또는 변경되었습니다.", new DeliveryRouteManagerUpdateResDto(result));
     }
 
     @GetMapping

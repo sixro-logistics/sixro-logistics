@@ -82,6 +82,10 @@ public class DeliveryRoute extends BaseEntity {
         this.routeStatus = RouteStatus.CANCELLED;
     }
 
+    public void assignDeliveryManager(DeliveryManager deliveryManager) {
+        this.deliveryManager = deliveryManager;
+    }
+
     private boolean canTransitTo(RouteStatus routeStatus) {
         return switch (this.routeStatus) {
             case HUB_TRANSIT_WAITING -> routeStatus == RouteStatus.HUB_IN_TRANSIT || routeStatus == RouteStatus.FAILED;

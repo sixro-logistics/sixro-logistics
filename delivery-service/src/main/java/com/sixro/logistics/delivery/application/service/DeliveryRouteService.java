@@ -5,7 +5,9 @@ import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.delivery.application.command.GetDeliveryRouteCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveryRoutesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryRouteManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryRouteStatusCommand;
+import com.sixro.logistics.delivery.application.result.DeliveryRouteManagerResult;
 import com.sixro.logistics.delivery.application.result.DeliveryRouteResult;
 import com.sixro.logistics.delivery.application.result.DeliveryRouteStatusResult;
 import com.sixro.logistics.delivery.domain.DeliveryRouteSearchCondition;
@@ -98,6 +100,66 @@ public class DeliveryRouteService {
         // 변경사항 반영 및 응답 변환
         deliveryRouteRepositoryPort.flush();
         return new DeliveryRouteStatusResult(deliveryRoute);
+    }
+
+    public DeliveryRouteManagerResult updateDeliveryRouteManager(UpdateDeliveryRouteManagerCommand command) {
+        // 배송 경로 잠금 조회
+        DeliveryRoute deliveryRoute = deliveryRouteRepositoryPort.findByIdForUpdate(command.getDeliveryRouteId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_NOT_FOUND));
+
+        // 담당자 배정 권한 검증
+        validateManagerUpdateAuthority(command, deliveryRoute);
+
+        // 동일 담당자 요청 처리
+        UUID previousDeliveryManagerId = deliveryRoute.getDeliveryManager() == null ? null : deliveryRoute.getDeliveryManager().getDeliveryManagerId();
+
+        if (Objects.equals(previousDeliveryManagerId, command.getDeliveryManagerId())) {
+            return new DeliveryRouteManagerResult(deliveryRoute, previousDeliveryManagerId);
+        }
+
+        // 경로 및 배송 상태 검증
+        validateManagerUpdateStatus(deliveryRoute);
+
+        // 배송 담당자 잠금 조회 및 검증
+        DeliveryManager deliveryManager = deliveryManagerRepositoryPort.findByIdForUpdate(command.getDeliveryManagerId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+        validateAssignableHubDeliveryManager(deliveryManager);
+
+        // 배송 담당자 배정 및 응답 변환
+        deliveryRoute.assignDeliveryManager(deliveryManager);
+        deliveryRouteRepositoryPort.flush();
+        return new DeliveryRouteManagerResult(deliveryRoute, previousDeliveryManagerId);
+    }
+
+    private void validateManagerUpdateAuthority(UpdateDeliveryRouteManagerCommand command, DeliveryRoute deliveryRoute) {
+        if ("MASTER_ADMIN".equals(command.getUserRole())) {
+            return;
+        }
+        if ("HUB_ADMIN".equals(command.getUserRole()) && command.getAffiliationId() != null
+                && Objects.equals(command.getAffiliationId(), deliveryRoute.getOriginHubId())) {
+            return;
+        }
+
+        throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_MANAGER_UPDATE_FORBIDDEN);
+    }
+
+    private void validateManagerUpdateStatus(DeliveryRoute deliveryRoute) {
+        DeliveryStatus deliveryStatus = deliveryRoute.getDelivery().getDeliveryStatus();
+        boolean isAssignableDelivery = deliveryStatus == DeliveryStatus.HUB_WAITING
+                || deliveryStatus == DeliveryStatus.HUB_IN_TRANSIT;
+
+        if (deliveryRoute.getRouteStatus() != RouteStatus.HUB_TRANSIT_WAITING || !isAssignableDelivery) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_MANAGER_UPDATE_NOT_ALLOWED);
+        }
+    }
+
+    private void validateAssignableHubDeliveryManager(DeliveryManager deliveryManager) {
+        if (deliveryManager.getManagerType() != ManagerType.HUB_DELIVERY) {
+            throw new BaseException(DeliveryErrorCode.INVALID_ASSIGNED_DELIVERY_MANAGER_TYPE);
+        }
+        if (deliveryManager.getManagerStatus() == ManagerStatus.OFF_DUTY) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_ASSIGNABLE);
+        }
     }
 
     private void validateUpdateAuthority(UpdateDeliveryRouteStatusCommand command, DeliveryRoute deliveryRoute) {
