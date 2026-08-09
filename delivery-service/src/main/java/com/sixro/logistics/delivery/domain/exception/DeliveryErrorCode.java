@@ -159,7 +159,7 @@ public enum DeliveryErrorCode implements ErrorCode {
             "배정할 수 없는 배송 담당자입니다."
     ),
 
-    DELIVERY_ROUTE_MANAGER_UPDATE_NOT_ALLOWED(
+    DELIVERY_MANAGER_ASSIGNMENT_NOT_ALLOWED(
             HttpStatus.CONFLICT,
             "D026",
             "현재 상태에서는 배송 담당자를 변경할 수 없습니다."
@@ -175,6 +175,12 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "D028",
             "현재 목적지 허브 소속 업체 배송 담당자가 아닙니다."
+    ),
+
+    DELIVERY_MANAGER_ASSIGNMENT_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D029",
+            "해당 배송의 담당자를 배정할 권한이 없습니다."
     );
 
     private final HttpStatus status;

@@ -5,7 +5,9 @@ import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.delivery.application.command.GetDeliveryCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveriesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryStatusCommand;
+import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignmentResult;
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
 import com.sixro.logistics.delivery.application.result.DeliveryStatusResult;
@@ -13,6 +15,7 @@ import com.sixro.logistics.delivery.domain.entity.Delivery;
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
 import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
+import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerType;
 import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import com.sixro.logistics.delivery.domain.port.DeliveryRepositoryPort;
@@ -98,6 +101,70 @@ public class DeliveryService {
         // 변경사항 반영 및 응답 변환
         deliveryRepositoryPort.flush();
         return new DeliveryStatusResult(delivery, previousStatus, changedAt, command.getLoginUserId());
+    }
+
+    public DeliveryManagerAssignmentResult updateDeliveryManager(UpdateDeliveryManagerCommand command) {
+        // 배송 잠금 조회
+        Delivery delivery = deliveryRepositoryPort.findByIdForUpdate(command.getDeliveryId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 담당자 배정 권한 검증
+        validateDeliveryManagerUpdateAuthority(command, delivery);
+
+        // 동일 담당자 요청 처리
+        UUID previousDeliveryManagerId = delivery.getDeliveryManager() == null
+                ? null : delivery.getDeliveryManager().getDeliveryManagerId();
+        if (Objects.equals(previousDeliveryManagerId, command.getDeliveryManagerId())) {
+            return new DeliveryManagerAssignmentResult(delivery, previousDeliveryManagerId);
+        }
+
+        // 배송 상태 검증
+        validateDeliveryManagerUpdateStatus(delivery);
+
+        // 배송 담당자 잠금 조회 및 검증
+        DeliveryManager deliveryManager = deliveryManagerRepositoryPort.findByIdForUpdate(command.getDeliveryManagerId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+        validateAssignableCompanyDeliveryManager(delivery, deliveryManager);
+
+        // 업체 배송 담당자 배정 및 응답 변환
+        delivery.assignDeliveryManager(deliveryManager);
+        deliveryRepositoryPort.flush();
+        return new DeliveryManagerAssignmentResult(delivery, previousDeliveryManagerId);
+    }
+
+    private void validateDeliveryManagerUpdateAuthority(UpdateDeliveryManagerCommand command, Delivery delivery) {
+        if ("MASTER_ADMIN".equals(command.getUserRole())) {
+            return;
+        }
+        if ("HUB_ADMIN".equals(command.getUserRole()) && command.getAffiliationId() != null
+                && Objects.equals(command.getAffiliationId(), delivery.getDestHubId())) {
+            return;
+        }
+
+        throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_ASSIGNMENT_FORBIDDEN);
+    }
+
+    private void validateDeliveryManagerUpdateStatus(Delivery delivery) {
+        DeliveryStatus deliveryStatus = delivery.getDeliveryStatus();
+        boolean isAssignableStatus = deliveryStatus == DeliveryStatus.HUB_WAITING
+                || deliveryStatus == DeliveryStatus.HUB_IN_TRANSIT
+                || deliveryStatus == DeliveryStatus.DESTINATION_HUB_ARRIVED;
+
+        if (!isAssignableStatus) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_ASSIGNMENT_NOT_ALLOWED);
+        }
+    }
+
+    private void validateAssignableCompanyDeliveryManager(Delivery delivery, DeliveryManager deliveryManager) {
+        if (deliveryManager.getManagerType() != ManagerType.COMPANY_DELIVERY) {
+            throw new BaseException(DeliveryErrorCode.INVALID_ASSIGNED_DELIVERY_MANAGER_TYPE);
+        }
+        if (!Objects.equals(deliveryManager.getHubId(), delivery.getDestHubId())) {
+            throw new BaseException(DeliveryErrorCode.COMPANY_DELIVERY_MANAGER_HUB_MISMATCH);
+        }
+        if (deliveryManager.getManagerStatus() == ManagerStatus.OFF_DUTY) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_ASSIGNABLE);
+        }
     }
 
     private void validateUpdateAuthority(UpdateDeliveryStatusCommand command, Delivery delivery) {

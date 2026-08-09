@@ -6,13 +6,17 @@ import com.sixro.logistics.common.core.response.PageResponse;
 import com.sixro.logistics.delivery.application.service.DeliveryService;
 import com.sixro.logistics.delivery.application.command.GetDeliveryCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveriesCommand;
+import com.sixro.logistics.delivery.application.command.UpdateDeliveryManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryStatusCommand;
+import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignmentResult;
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
 import com.sixro.logistics.delivery.application.result.DeliveryStatusResult;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliverySearchReqDto;
+import com.sixro.logistics.delivery.presentation.dto.req.DeliveryManagerUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryStatusUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryInfoResDto;
+import com.sixro.logistics.delivery.presentation.dto.res.DeliveryManagerUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliverySearchResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryStatusUpdateResDto;
 import jakarta.validation.Valid;
@@ -69,6 +73,22 @@ public class DeliveryController {
         DeliveryStatusResult result = deliveryService.updateDeliveryStatus(command);
 
         return CommonResponse.success("배송 상태가 변경되었습니다.", new DeliveryStatusUpdateResDto(result));
+    }
+
+    @PatchMapping("/{deliveryId}/manager")
+    public CommonResponse<DeliveryManagerUpdateResDto> updateDeliveryManager(
+            @RequestHeader(HeaderConstants.USER_ID) UUID loginUserId,
+            @RequestHeader(HeaderConstants.USER_ROLE) String userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID deliveryId,
+            @Valid @RequestBody DeliveryManagerUpdateReqDto requestDto) {
+
+        UpdateDeliveryManagerCommand command = new UpdateDeliveryManagerCommand(
+                deliveryId, requestDto.getDeliveryManagerId(), loginUserId, userRole, affiliationId);
+
+        DeliveryManagerAssignmentResult result = deliveryService.updateDeliveryManager(command);
+
+        return CommonResponse.success("업체 배송 담당자가 배정 또는 변경되었습니다.", new DeliveryManagerUpdateResDto(result));
     }
 
     @GetMapping

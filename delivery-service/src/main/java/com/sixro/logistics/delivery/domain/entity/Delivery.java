@@ -72,6 +72,10 @@ public class Delivery extends BaseEntity {
         this.deliveryStatus = DeliveryStatus.FAILED;
     }
 
+    public void assignDeliveryManager(DeliveryManager deliveryManager) {
+        this.deliveryManager = deliveryManager;
+    }
+
     public void updateStatus(DeliveryStatus deliveryStatus) {
         if (this.deliveryStatus == deliveryStatus) {
             return;

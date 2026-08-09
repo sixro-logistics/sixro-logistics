@@ -149,7 +149,7 @@ public class DeliveryRouteService {
                 || deliveryStatus == DeliveryStatus.HUB_IN_TRANSIT;
 
         if (deliveryRoute.getRouteStatus() != RouteStatus.HUB_TRANSIT_WAITING || !isAssignableDelivery) {
-            throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_MANAGER_UPDATE_NOT_ALLOWED);
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_ASSIGNMENT_NOT_ALLOWED);
         }
     }
 
