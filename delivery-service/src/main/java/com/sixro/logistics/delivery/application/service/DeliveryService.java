@@ -15,6 +15,7 @@ import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignment
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
 import com.sixro.logistics.delivery.application.result.DeliveryStatusResult;
+import com.sixro.logistics.delivery.application.result.DeliveryTrackingResult;
 import com.sixro.logistics.delivery.domain.entity.Delivery;
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
@@ -60,9 +61,24 @@ public class DeliveryService {
         Delivery delivery = deliveryRepositoryPort.findById(command.getDeliveryId())
                 .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
-        validateGetAuthority(command, delivery);
+        validateDeliveryReadAuthority(command, delivery, DeliveryErrorCode.DELIVERY_FORBIDDEN);
 
         return new DeliveryResult(delivery);
+    }
+
+    @Transactional(readOnly = true)
+    public DeliveryTrackingResult getDeliveryTracking(GetDeliveryCommand command) {
+        // 배송 조회
+        Delivery delivery = deliveryRepositoryPort.findById(command.getDeliveryId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 배송 추적 조회 권한 검증
+        validateDeliveryReadAuthority(command, delivery, DeliveryErrorCode.DELIVERY_ROUTE_FORBIDDEN);
+
+        // 배송 경로 순번 오름차순 조회 및 응답 변환
+        List<DeliveryRoute> deliveryRoutes = deliveryRouteRepositoryPort
+                .findAllByDeliveryIdOrderByRouteSequenceAsc(delivery.getDeliveryId());
+        return new DeliveryTrackingResult(delivery, deliveryRoutes);
     }
 
     public DeliveryStatusResult updateDeliveryStatus(UpdateDeliveryStatusCommand command) {
@@ -369,57 +385,34 @@ public class DeliveryService {
         }
     }
 
-    private void validateGetAuthority(GetDeliveryCommand command, Delivery delivery) {
+    private void validateDeliveryReadAuthority(GetDeliveryCommand command, Delivery delivery, DeliveryErrorCode forbiddenErrorCode) {
         String userRole = command.getUserRole();
 
         if ("MASTER_ADMIN".equals(userRole)) {
             return;
         }
-        if ("HUB_ADMIN".equals(userRole)) { // 출발/도착허브의 ADMIN이면 허용
-            validateHubAdminAuthority(command.getAffiliationId(), delivery);
-            return;
+        boolean hasAuthority = false;
+        if ("HUB_ADMIN".equals(userRole)) {
+            hasAuthority = command.getAffiliationId() != null
+                    && (Objects.equals(command.getAffiliationId(), delivery.getOriginHubId())
+                    || Objects.equals(command.getAffiliationId(), delivery.getDestHubId()));
         }
-        if ("DELIVERY_MANAGER".equals(userRole)) {
-            validateDeliveryManagerAuthority(command.getLoginUserId(), delivery);
-            return;
+        else if ("DELIVERY_MANAGER".equals(userRole) && command.getLoginUserId() != null) {
+            boolean isAssignedDeliveryManager = delivery.getDeliveryManager() != null
+                    && Objects.equals(command.getLoginUserId(), delivery.getDeliveryManager().getDeliveryManagerId());
+            boolean isAssignedDeliveryRouteManager = deliveryRouteRepositoryPort
+                    .existsAssignedDeliveryManager(delivery.getDeliveryId(), command.getLoginUserId());
+            hasAuthority = isAssignedDeliveryManager || isAssignedDeliveryRouteManager;
         }
-        if ("COMPANY_MANAGER".equals(userRole)) { // 소속 업체와 관련된 주문의 배송이면 허용
-            // TODO: OrderConfirmedEvent를 소비: 공급업체/수령업체 ID가 포함된 Delivery 생성이 되었음
-            validateCompanyManagerAuthority(command.getAffiliationId(), delivery);
-            return;
+        else if ("COMPANY_MANAGER".equals(userRole)) {
+            // TODO: OrderConfirmedEvent 소비 시 공급업체/수령업체 ID가 포함된 Delivery 생성
+            hasAuthority = command.getAffiliationId() != null
+                    && (Objects.equals(command.getAffiliationId(), delivery.getSupplierCompanyId())
+                    || Objects.equals(command.getAffiliationId(), delivery.getRecipientCompanyId()));
         }
 
-        throw new BaseException(DeliveryErrorCode.DELIVERY_FORBIDDEN);
-    }
-
-    private void validateHubAdminAuthority(UUID affiliationId, Delivery delivery) {
-        boolean isRelatedHub = Objects.equals(affiliationId, delivery.getOriginHubId()) || Objects.equals(affiliationId, delivery.getDestHubId());
-
-        if (!isRelatedHub) {
-            throw new BaseException(DeliveryErrorCode.DELIVERY_FORBIDDEN);
-        }
-    }
-
-    private void validateDeliveryManagerAuthority(UUID loginUserId, Delivery delivery) {
-        // 최종 업체 배송 담당자인지
-        boolean isAssignedDeliveryManager = (delivery.getDeliveryManager() != null)
-                && Objects.equals(loginUserId, delivery.getDeliveryManager().getDeliveryManagerId());
-
-        // 포함된 배송경로에 업무가 있는 허브 배송 담당자인지
-        boolean isAssignedDeliveryRouteManager = loginUserId != null
-                && deliveryRouteRepositoryPort.existsAssignedDeliveryManager(delivery.getDeliveryId(), loginUserId);
-
-        if (!isAssignedDeliveryManager && !isAssignedDeliveryRouteManager) {
-            throw new BaseException(DeliveryErrorCode.DELIVERY_FORBIDDEN);
-        }
-    }
-
-    private void validateCompanyManagerAuthority(UUID affiliationId, Delivery delivery) {
-        boolean isRelatedCompany = affiliationId != null
-                && (Objects.equals(affiliationId, delivery.getSupplierCompanyId()) || Objects.equals(affiliationId, delivery.getRecipientCompanyId()));
-
-        if (!isRelatedCompany) {
-            throw new BaseException(DeliveryErrorCode.DELIVERY_FORBIDDEN);
+        if (!hasAuthority) {
+            throw new BaseException(forbiddenErrorCode);
         }
     }
 

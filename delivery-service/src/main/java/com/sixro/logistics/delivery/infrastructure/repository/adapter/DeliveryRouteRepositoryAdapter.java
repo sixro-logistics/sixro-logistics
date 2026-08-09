@@ -53,6 +53,11 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     }
 
     @Override
+    public List<DeliveryRoute> findAllByDeliveryIdOrderByRouteSequenceAsc(UUID deliveryId) {
+        return deliveryRouteRepository.findAllByDelivery_DeliveryIdOrderByRouteSequenceAsc(deliveryId);
+    }
+
+    @Override
     public Page<DeliveryRoute> searchDeliveryRoutes(DeliveryRouteSearchCondition condition, Pageable pageable) {
         return deliveryRouteQueryRepository.search(condition, pageable);
     }

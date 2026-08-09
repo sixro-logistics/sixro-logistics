@@ -16,6 +16,7 @@ import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignment
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
 import com.sixro.logistics.delivery.application.result.DeliveryStatusResult;
+import com.sixro.logistics.delivery.application.result.DeliveryTrackingResult;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliverySearchReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryInfoUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryManagerUpdateReqDto;
@@ -26,6 +27,7 @@ import com.sixro.logistics.delivery.presentation.dto.res.DeliveryInfoUpdateResDt
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryManagerUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliverySearchResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryStatusUpdateResDto;
+import com.sixro.logistics.delivery.presentation.dto.res.DeliveryTrackingResDto;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -65,6 +67,20 @@ public class DeliveryController {
         DeliveryResult result = deliveryService.getDelivery(command);
 
         return CommonResponse.success("배송을 조회했습니다.", new DeliveryInfoResDto(result));
+    }
+
+    @GetMapping("/{deliveryId}/tracking")
+    public CommonResponse<DeliveryTrackingResDto> getDeliveryTracking(
+            @RequestHeader(HeaderConstants.USER_ID) UUID loginUserId,
+            @RequestHeader(HeaderConstants.USER_ROLE) String userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID deliveryId) {
+
+        GetDeliveryCommand command = new GetDeliveryCommand(deliveryId, loginUserId, userRole, affiliationId);
+
+        DeliveryTrackingResult result = deliveryService.getDeliveryTracking(command);
+
+        return CommonResponse.success("배송 추적 정보를 조회했습니다.", new DeliveryTrackingResDto(result));
     }
 
     @PatchMapping("/{deliveryId}/status")
