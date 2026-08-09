@@ -19,6 +19,8 @@ public interface DeliveryRouteRepositoryPort {
 
     List<DeliveryRoute> findAllWaitingByDeliveryId(UUID deliveryId);
 
+    List<DeliveryRoute> findAllByDeliveryIdForUpdate(UUID deliveryId);
+
     Page<DeliveryRoute> searchDeliveryRoutes(DeliveryRouteSearchCondition condition, Pageable pageable);
 
     boolean existsAssignedDeliveryManager(UUID deliveryId, UUID deliveryManagerId);

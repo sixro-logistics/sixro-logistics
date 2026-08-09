@@ -4,11 +4,13 @@ import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.delivery.application.command.GetDeliveryCommand;
+import com.sixro.logistics.delivery.application.command.DeleteDeliveryCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveriesCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryInfoCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryStatusCommand;
 import com.sixro.logistics.delivery.application.result.DeliveryInfoUpdateResult;
+import com.sixro.logistics.delivery.application.result.DeliveryDeleteResult;
 import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignmentResult;
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
@@ -19,6 +21,7 @@ import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
 import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerType;
+import com.sixro.logistics.delivery.domain.enums.RouteStatus;
 import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import com.sixro.logistics.delivery.domain.port.DeliveryRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
@@ -153,6 +156,57 @@ public class DeliveryService {
                 command.getRecipientName(), command.getRecipientSlackId());
         deliveryRepositoryPort.flush();
         return new DeliveryInfoUpdateResult(delivery);
+    }
+
+    public DeliveryDeleteResult deleteDelivery(DeleteDeliveryCommand command) {
+        // 관련 배송 경로 잠금 조회
+        List<DeliveryRoute> deliveryRoutes = deliveryRouteRepositoryPort
+                .findAllByDeliveryIdForUpdate(command.getDeliveryId());
+
+        // 배송 잠금 조회
+        Delivery delivery = deliveryRepositoryPort.findByIdForUpdate(command.getDeliveryId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 배송 삭제 권한 검증
+        validateDeliveryDeleteAuthority(command, delivery);
+
+        // 배송 및 경로 상태 검증
+        validateDeliveryDeleteStatus(delivery, deliveryRoutes);
+
+        // 배송 경로 및 배송 논리 삭제
+        deliveryRoutes.forEach(deliveryRoute -> deliveryRoute.softDelete(command.getLoginUserId()));
+        delivery.softDelete(command.getLoginUserId());
+
+        // 변경사항 반영 및 응답 변환
+        deliveryRouteRepositoryPort.flush();
+        deliveryRepositoryPort.flush();
+        return new DeliveryDeleteResult(delivery, deliveryRoutes.size());
+    }
+
+    private void validateDeliveryDeleteAuthority(DeleteDeliveryCommand command, Delivery delivery) {
+        if ("MASTER_ADMIN".equals(command.getUserRole())) {
+            return;
+        }
+        if ("HUB_ADMIN".equals(command.getUserRole()) && command.getAffiliationId() != null
+                && (Objects.equals(command.getAffiliationId(), delivery.getOriginHubId())
+                || Objects.equals(command.getAffiliationId(), delivery.getDestHubId()))) {
+            return;
+        }
+
+        throw new BaseException(DeliveryErrorCode.DELIVERY_DELETE_FORBIDDEN);
+    }
+
+    private void validateDeliveryDeleteStatus(Delivery delivery, List<DeliveryRoute> deliveryRoutes) {
+        DeliveryStatus deliveryStatus = delivery.getDeliveryStatus();
+        boolean isDeletableStatus = deliveryStatus == DeliveryStatus.HUB_WAITING
+                || deliveryStatus == DeliveryStatus.CANCELLED
+                || deliveryStatus == DeliveryStatus.FAILED;
+        boolean hasInTransitRoute = deliveryRoutes.stream()
+                .anyMatch(deliveryRoute -> deliveryRoute.getRouteStatus() == RouteStatus.HUB_IN_TRANSIT);
+
+        if (!isDeletableStatus || hasInTransitRoute) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_DELETE_NOT_ALLOWED);
+        }
     }
 
     private void validateDeliveryInfoUpdateAuthority(UpdateDeliveryInfoCommand command) {

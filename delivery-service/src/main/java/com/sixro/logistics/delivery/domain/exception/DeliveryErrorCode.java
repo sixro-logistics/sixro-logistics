@@ -187,6 +187,18 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.FORBIDDEN,
             "D030",
             "해당 배송 정보를 수정할 권한이 없습니다."
+    ),
+
+    DELIVERY_DELETE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D031",
+            "해당 배송을 삭제할 권한이 없습니다."
+    ),
+
+    DELIVERY_DELETE_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "D032",
+            "현재 상태에서는 배송을 삭제할 수 없습니다."
     );
 
     private final HttpStatus status;

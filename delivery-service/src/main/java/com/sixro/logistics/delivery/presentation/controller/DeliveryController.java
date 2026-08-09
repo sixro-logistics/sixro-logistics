@@ -5,11 +5,13 @@ import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.common.core.response.PageResponse;
 import com.sixro.logistics.delivery.application.service.DeliveryService;
 import com.sixro.logistics.delivery.application.command.GetDeliveryCommand;
+import com.sixro.logistics.delivery.application.command.DeleteDeliveryCommand;
 import com.sixro.logistics.delivery.application.command.SearchDeliveriesCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryInfoCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryManagerCommand;
 import com.sixro.logistics.delivery.application.command.UpdateDeliveryStatusCommand;
 import com.sixro.logistics.delivery.application.result.DeliveryInfoUpdateResult;
+import com.sixro.logistics.delivery.application.result.DeliveryDeleteResult;
 import com.sixro.logistics.delivery.application.result.DeliveryManagerAssignmentResult;
 import com.sixro.logistics.delivery.application.result.DeliverySearchResult;
 import com.sixro.logistics.delivery.application.result.DeliveryResult;
@@ -19,6 +21,7 @@ import com.sixro.logistics.delivery.presentation.dto.req.DeliveryInfoUpdateReqDt
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryManagerUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.DeliveryStatusUpdateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryInfoResDto;
+import com.sixro.logistics.delivery.presentation.dto.res.DeliveryDeleteResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryInfoUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryManagerUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliverySearchResDto;
@@ -29,6 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -110,6 +114,20 @@ public class DeliveryController {
         DeliveryInfoUpdateResult result = deliveryService.updateDeliveryInfo(command);
 
         return CommonResponse.success("배송 정보가 수정되었습니다.", new DeliveryInfoUpdateResDto(result));
+    }
+
+    @DeleteMapping("/{deliveryId}")
+    public CommonResponse<DeliveryDeleteResDto> deleteDelivery(
+            @RequestHeader(HeaderConstants.USER_ID) UUID loginUserId,
+            @RequestHeader(HeaderConstants.USER_ROLE) String userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID deliveryId) {
+
+        DeleteDeliveryCommand command = new DeleteDeliveryCommand(deliveryId, loginUserId, userRole, affiliationId);
+
+        DeliveryDeleteResult result = deliveryService.deleteDelivery(command);
+
+        return CommonResponse.success("배송이 삭제되었습니다.", new DeliveryDeleteResDto(result));
     }
 
     @GetMapping
