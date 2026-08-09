@@ -21,12 +21,9 @@ public record UpdateUserRequest(
                 message = "Slack ID는 공백으로만 구성할 수 없습니다."
         )
         String slackId,
-
         UserRole role,
-
-        AffiliationType affiliationType,
-
-        UUID affiliationId
+        UUID affiliationId,
+        AffiliationType affiliationType
 ) {
 
     public UpdateUserCommand toCommand(
@@ -40,8 +37,8 @@ public record UpdateUserRequest(
                 requesterRole,
                 slackId,
                 role,
-                affiliationType,
-                affiliationId
+                affiliationId,
+                affiliationType
         );
     }
 }

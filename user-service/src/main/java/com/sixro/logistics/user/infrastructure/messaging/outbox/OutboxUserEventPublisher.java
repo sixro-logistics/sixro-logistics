@@ -3,9 +3,7 @@ package com.sixro.logistics.user.infrastructure.messaging.outbox;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sixro.logistics.user.application.event.UserEventPublisher;
-import com.sixro.logistics.user.domain.event.UserApprovedEvent;
-import com.sixro.logistics.user.domain.event.UserDeactivatedEvent;
-import com.sixro.logistics.user.domain.event.UserRejectedEvent;
+import com.sixro.logistics.user.domain.event.*;
 import com.sixro.logistics.user.domain.outbox.OutboxEvent;
 import com.sixro.logistics.user.domain.outbox.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +23,9 @@ public class OutboxUserEventPublisher
 
     private static final String AGGREGATE_TYPE = "USER";
 
+    private static final String USER_CREATED =
+            "USER_CREATED";
+
     private static final String USER_APPROVED =
             "USER_APPROVED";
 
@@ -34,8 +35,23 @@ public class OutboxUserEventPublisher
     private static final String USER_DEACTIVATED =
             "USER_DEACTIVATED";
 
+    private static final String USER_ROLE_CHANGED =
+            "USER_ROLE_CHANGED";
+
+    private static final String USER_AFFILIATION_CHANGED =
+            "USER_AFFILIATION_CHANGED";
+
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+
+    @Override
+    public void publish(UserCreatedEvent event) {
+        save(
+                event.userId(),
+                USER_CREATED,
+                event
+        );
+    }
 
     @Override
     public void publish(UserApprovedEvent event) {
@@ -60,6 +76,24 @@ public class OutboxUserEventPublisher
         save(
                 event.userId(),
                 USER_DEACTIVATED,
+                event
+        );
+    }
+
+    @Override
+    public void publish(UserRoleChangedEvent event) {
+        save(
+                event.userId(),
+                USER_ROLE_CHANGED,
+                event
+        );
+    }
+
+    @Override
+    public void publish(UserAffiliationChangedEvent event) {
+        save(
+                event.userId(),
+                USER_AFFILIATION_CHANGED,
                 event
         );
     }

@@ -5,16 +5,18 @@ import com.sixro.logistics.user.application.command.*;
 import com.sixro.logistics.user.application.dto.UserResult;
 import com.sixro.logistics.user.application.event.UserEventPublisher;
 import com.sixro.logistics.user.domain.entity.User;
-import com.sixro.logistics.user.domain.event.UserApprovedEvent;
-import com.sixro.logistics.user.domain.event.UserDeactivatedEvent;
-import com.sixro.logistics.user.domain.event.UserRejectedEvent;
+import com.sixro.logistics.user.domain.event.*;
 import com.sixro.logistics.user.domain.exception.UserErrorCode;
+import com.sixro.logistics.user.domain.model.AffiliationType;
 import com.sixro.logistics.user.domain.model.UserRole;
 import com.sixro.logistics.user.domain.model.UserStatus;
 import com.sixro.logistics.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * 사용자 수정, 승인, 거절, 비활성화 유스케이스를 처리합니다.
@@ -45,7 +47,7 @@ public class UserCommandService {
          * 회원가입 시점의 affiliationId 사전 검증 여부는 정책 확정 후 적용합니다.
          * - 가입 시점 검증은 선택, 승인 시점 검증은 필수
          *
-         * 단, 최종 승인 시점에는 Hub/Company Service 내부 API를 통해
+         * 단, 최종 승인 시점에는 'Hub/Company Service 내부 API'를 통해
          * affiliationId가 실제 존재하며 삭제되지 않은 소속인지 반드시 재검증합니다.
          */
 
@@ -60,17 +62,15 @@ public class UserCommandService {
 
         User savedUser = userRepository.save(user);
 
-        /*
-         * TODO Kafka 이벤트
-         * UserCreatedEvent 발행
-         *
-         * - userId
-         * - userStatus (PENDING)
-         * - role
-         * - affiliationType
-         * - affiliationId
-         * 관리자 승인 이후 UserApprovedEvent를 별도로 발행합니다.
-         */
+        userEventPublisher.publish(
+                new UserCreatedEvent(
+                        savedUser.getUserId(),
+                        savedUser.getUserStatus(),
+                        savedUser.getRole(),
+                        savedUser.getAffiliationId(),
+                        savedUser.getAffiliationType()
+                )
+        );
 
         return UserResult.from(savedUser);
     }
@@ -90,21 +90,50 @@ public class UserCommandService {
              * TODO(integration):
              * role 또는 affiliation 정보가 변경되는 경우,
              * 변경될 소속이 실제 존재하며 삭제되지 않았는지
-             * Hub/Company Service 내부 API를 통해 먼저 검증합니다.
+             * 'Hub/Company Service 내부 API'를 통해 먼저 검증합니다.
              */
+
+            UserRole previousRole = user.getRole();
+            UUID previousAffiliationId =
+                    user.getAffiliationId();
+            AffiliationType previousAffiliationType =
+                    user.getAffiliationType();
 
             user.updateByMaster(
                     command.slackId(),
                     command.role(),
-                    command.affiliationType(),
-                    command.affiliationId()
+                    command.affiliationId(),
+                    command.affiliationType()
             );
 
-            /*
-             * TODO Kafka 이벤트
-             * 역할 또는 소속이 변경된 경우 UserRoleChangedEvent 또는
-             * UserAffiliationChangedEvent 발행
-             */
+            if (previousRole != user.getRole()) {
+                userEventPublisher.publish(
+                        new UserRoleChangedEvent(
+                                user.getUserId(),
+                                previousRole,
+                                user.getRole()
+                        )
+                );
+            }
+
+            boolean affiliationChanged =
+                    previousAffiliationType != user.getAffiliationType()
+                            || !Objects.equals(
+                            previousAffiliationId,
+                            user.getAffiliationId()
+                    );
+
+            if (affiliationChanged) {
+                userEventPublisher.publish(
+                        new UserAffiliationChangedEvent(
+                                user.getUserId(),
+                                previousAffiliationId,
+                                previousAffiliationType,
+                                user.getAffiliationId(),
+                                user.getAffiliationType()
+                        )
+                );
+            }
 
             return UserResult.from(user);
         }
@@ -136,7 +165,7 @@ public class UserCommandService {
             /*
              * TODO(integration):
              * PENDING 사용자가 affiliation 정보를 변경하는 경우,
-             * Hub/Company Service 내부 API 연동 후
+             * 'Hub/Company Service 내부 API' 연동 후
              * 실제 존재하며 삭제되지 않은 소속인지 검증합니다.
              *
              * 승인 시점에는 최종적으로 다시 검증합니다.
@@ -165,8 +194,7 @@ public class UserCommandService {
 
         /*
          * TODO(integration):
-         * 승인 처리 전에
-         * Hub Service 또는 Company Service 내부 API를 호출하여
+         * 승인 처리 전에 'Hub/Company Service 내부 API' 연동 후
          * affiliationId가 실제 존재하며 삭제되지 않은 소속인지 검증합니다.
          *
          * affiliationId, affiliationType 검증 성공 이후에만 APPROVED 상태로 변경합니다.
@@ -245,21 +273,15 @@ public class UserCommandService {
         /*
          * 사용자 비활성화 상태는 UserDeactivatedEvent로 발행합니다.
          *
-         * Auth Service는 해당 이벤트를 소비하여
-         * 대상 사용자의 Refresh Token 및 인증 세션을 무효화하도록
-         * 후속 연동합니다.
+         * TODO(security):
+         *  - Auth Service에서 UserDeactivatedEvent를 소비하여
+         *  - Refresh Token 및 현재 로그인 Session을 무효화합니다.
+         *
+         * Gateway는 Redis Session 검증을 통해
+         * 기존 Access Token의 재사용을 차단합니다.
          *
          * User Service는 Auth Service가 관리하는 Redis에
          * 직접 접근하지 않습니다.
-         */
-
-        /*
-         * TODO(security):
-         * Auth Service의 UserDeactivatedEvent Consumer 구현 후
-         * Refresh Token 및 현재 로그인 Session을 무효화합니다.
-         *
-         * Gateway는 Redis Session 검증을 통해
-         * 기존 Access Token의 재사용을 차단하도록 연동합니다.
          */
 
         userEventPublisher.publish(

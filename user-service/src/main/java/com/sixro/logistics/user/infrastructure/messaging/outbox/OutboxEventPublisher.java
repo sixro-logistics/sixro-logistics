@@ -24,6 +24,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OutboxEventPublisher {
 
+    private static final String USER_CREATED_TOPIC =
+            "user-created";
+
     private static final String USER_APPROVED_TOPIC =
             "user-approved";
 
@@ -32,6 +35,12 @@ public class OutboxEventPublisher {
 
     private static final String USER_DEACTIVATED_TOPIC =
             "user-deactivated";
+
+    private static final String USER_ROLE_CHANGED_TOPIC =
+            "user-role-changed";
+
+    private static final String USER_AFFILIATION_CHANGED_TOPIC =
+            "user-affiliation-changed";
 
     private static final int MAX_RETRY_COUNT = 3;
 
@@ -119,6 +128,10 @@ public class OutboxEventPublisher {
     private String resolveTopic(String eventType) {
 
         return switch (eventType) {
+
+            case "USER_CREATED" ->
+                    USER_CREATED_TOPIC;
+
             case "USER_APPROVED" ->
                     USER_APPROVED_TOPIC;
 
@@ -127,6 +140,12 @@ public class OutboxEventPublisher {
 
             case "USER_DEACTIVATED" ->
                     USER_DEACTIVATED_TOPIC;
+
+            case "USER_ROLE_CHANGED" ->
+                    USER_ROLE_CHANGED_TOPIC;
+
+            case "USER_AFFILIATION_CHANGED" ->
+                    USER_AFFILIATION_CHANGED_TOPIC;
 
             default ->
                     throw new IllegalArgumentException(

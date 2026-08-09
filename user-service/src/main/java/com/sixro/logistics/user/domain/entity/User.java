@@ -209,15 +209,15 @@ public class User extends BaseEntity {
             );
         }
 
-        AffiliationType nextAffiliationType =
-                affiliationType != null
-                        ? affiliationType
-                        : this.affiliationType;
-
         UUID nextAffiliationId =
                 affiliationId != null
                         ? affiliationId
                         : this.affiliationId;
+
+        AffiliationType nextAffiliationType =
+                affiliationType != null
+                        ? affiliationType
+                        : this.affiliationType;
 
         validateAffiliation(
                 this.role,
@@ -225,8 +225,8 @@ public class User extends BaseEntity {
                 nextAffiliationType
         );
 
-        this.affiliationType = nextAffiliationType;
         this.affiliationId = nextAffiliationId;
+        this.affiliationType = nextAffiliationType;
     }
 
     /**
@@ -237,8 +237,8 @@ public class User extends BaseEntity {
     public void updateByMaster(
             String slackId,
             UserRole role,
-            AffiliationType affiliationType,
-            UUID affiliationId
+            UUID affiliationId,
+            AffiliationType affiliationType
     ) {
         if (slackId != null) {
             changeSlackId(slackId);
@@ -246,27 +246,28 @@ public class User extends BaseEntity {
 
         boolean hasAuthorityChange =
                 role != null
-                        || affiliationType != null
-                        || affiliationId != null;
+                        || affiliationId != null
+                        || affiliationType != null;
 
         if (!hasAuthorityChange) {
             return;
         }
 
         UserRole nextRole = role != null ? role : this.role;
-        AffiliationType nextAffiliationType =
-                affiliationType != null
-                        ? affiliationType
-                        : this.affiliationType;
 
         UUID nextAffiliationId =
                 affiliationId != null
                         ? affiliationId
                         : this.affiliationId;
 
+        AffiliationType nextAffiliationType =
+                affiliationType != null
+                        ? affiliationType
+                        : this.affiliationType;
+
         if (nextRole == UserRole.MASTER_ADMIN) {
-            nextAffiliationType = null;
             nextAffiliationId = null;
+            nextAffiliationType = null;
         }
 
         validateAffiliation(
@@ -276,8 +277,8 @@ public class User extends BaseEntity {
         );
 
         this.role = nextRole;
-        this.affiliationType = nextAffiliationType;
         this.affiliationId = nextAffiliationId;
+        this.affiliationType = nextAffiliationType;
     }
 
     /**

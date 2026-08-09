@@ -1,8 +1,6 @@
 package com.sixro.logistics.user.application.event;
 
-import com.sixro.logistics.user.domain.event.UserApprovedEvent;
-import com.sixro.logistics.user.domain.event.UserDeactivatedEvent;
-import com.sixro.logistics.user.domain.event.UserRejectedEvent;
+import com.sixro.logistics.user.domain.event.*;
 
 /**
  * User Service에서 발생한 사용자 상태 변경 이벤트의
@@ -13,9 +11,16 @@ import com.sixro.logistics.user.domain.event.UserRejectedEvent;
  */
 public interface UserEventPublisher {
 
+    void publish(UserCreatedEvent event);
+
     void publish(UserApprovedEvent event);
 
     void publish(UserRejectedEvent event);
 
     void publish(UserDeactivatedEvent event);
+
+    void publish(UserRoleChangedEvent event);
+
+    void publish(UserAffiliationChangedEvent event);
+
 }
