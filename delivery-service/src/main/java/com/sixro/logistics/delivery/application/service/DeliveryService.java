@@ -19,6 +19,7 @@ import com.sixro.logistics.delivery.domain.port.DeliveryRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
 import com.sixro.logistics.delivery.domain.DeliverySearchCondition;
 import com.sixro.logistics.delivery.domain.enums.DeliverySearchScope;
+import com.sixro.logistics.delivery.domain.port.DeliveryManagerRepositoryPort;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -37,10 +38,13 @@ public class DeliveryService {
 
     private final DeliveryRepositoryPort deliveryRepositoryPort;
     private final DeliveryRouteRepositoryPort deliveryRouteRepositoryPort;
+    private final DeliveryManagerRepositoryPort deliveryManagerRepositoryPort;
 
-    public DeliveryService(DeliveryRepositoryPort deliveryRepositoryPort, DeliveryRouteRepositoryPort deliveryRouteRepositoryPort) {
+    public DeliveryService(DeliveryRepositoryPort deliveryRepositoryPort, DeliveryRouteRepositoryPort deliveryRouteRepositoryPort,
+                           DeliveryManagerRepositoryPort deliveryManagerRepositoryPort) {
         this.deliveryRepositoryPort = deliveryRepositoryPort;
         this.deliveryRouteRepositoryPort = deliveryRouteRepositoryPort;
+        this.deliveryManagerRepositoryPort = deliveryManagerRepositoryPort;
     }
 
     @Transactional(readOnly = true)
@@ -55,7 +59,7 @@ public class DeliveryService {
 
     public DeliveryStatusResult updateDeliveryStatus(UpdateDeliveryStatusCommand command) {
         // 배송 조회
-        Delivery delivery = deliveryRepositoryPort.findById(command.getDeliveryId())
+        Delivery delivery = deliveryRepositoryPort.findByIdForUpdate(command.getDeliveryId())
                 .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         // 변경 권한 검증
@@ -73,14 +77,14 @@ public class DeliveryService {
         // 직접 변경 가능 상태 검증
         validateDirectUpdateStatus(command.getDeliveryStatus());
 
-        // 업체 배송 담당자 배정 검증
-        if (command.getDeliveryStatus() == DeliveryStatus.COMPANY_DELIVERY_IN_PROGRESS) {
-            validateCompanyDeliveryManager(delivery);
-        }
+        // 업체 배송 담당자 상태 변경 준비
+        DeliveryManager deliveryManager = prepareCompanyDeliveryManagerStatusChange(
+                delivery, previousStatus, command.getDeliveryStatus());
 
         // 배송 상태 변경
         LocalDateTime changedAt = LocalDateTime.now();
         delivery.updateStatus(command.getDeliveryStatus());
+        updateCompanyDeliveryManagerStatus(deliveryManager, command.getDeliveryStatus());
 
         // 배송 취소 전파
         if (command.getDeliveryStatus() == DeliveryStatus.CANCELLED) {
@@ -146,10 +150,52 @@ public class DeliveryService {
         throw new BaseException(DeliveryErrorCode.DELIVERY_STATUS_UPDATE_FORBIDDEN);
     }
 
-    private void validateCompanyDeliveryManager(Delivery delivery) {
-        DeliveryManager deliveryManager = delivery.getDeliveryManager();
-        if (deliveryManager == null || deliveryManager.getManagerType() != ManagerType.COMPANY_DELIVERY) {
+    private DeliveryManager prepareCompanyDeliveryManagerStatusChange(Delivery delivery, DeliveryStatus previousStatus, DeliveryStatus targetStatus) {
+        // 업체 배송 시작/종료 여부 계산
+        boolean startsCompanyDelivery = targetStatus == DeliveryStatus.COMPANY_DELIVERY_IN_PROGRESS;
+        boolean finishesCompanyDelivery = previousStatus == DeliveryStatus.COMPANY_DELIVERY_IN_PROGRESS
+                && (targetStatus == DeliveryStatus.DELIVERED || targetStatus == DeliveryStatus.FAILED);
+
+        // 담당자 상태 연동 대상 확인
+        if (!startsCompanyDelivery && !finishesCompanyDelivery) {
+            return null;
+        }
+
+        // 배정 담당자 존재 검증
+        DeliveryManager assignedManager = delivery.getDeliveryManager();
+        if (assignedManager == null) {
             throw new BaseException(DeliveryErrorCode.COMPANY_DELIVERY_MANAGER_NOT_ASSIGNED);
+        }
+
+        // 배정 담당자 잠금 조회
+        DeliveryManager deliveryManager = deliveryManagerRepositoryPort
+                .findByIdForUpdate(assignedManager.getDeliveryManagerId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.COMPANY_DELIVERY_MANAGER_NOT_ASSIGNED));
+
+        // 업체 배송 담당자 유형 검증
+        if (deliveryManager.getManagerType() != ManagerType.COMPANY_DELIVERY) {
+            throw new BaseException(DeliveryErrorCode.INVALID_ASSIGNED_DELIVERY_MANAGER_TYPE);
+        }
+
+        // 목적지 허브 소속 검증
+        if (!Objects.equals(deliveryManager.getHubId(), delivery.getDestHubId())) {
+            throw new BaseException(DeliveryErrorCode.COMPANY_DELIVERY_MANAGER_HUB_MISMATCH);
+        }
+        return deliveryManager;
+    }
+
+    private void updateCompanyDeliveryManagerStatus(DeliveryManager deliveryManager, DeliveryStatus targetStatus) {
+        if (deliveryManager == null) {
+            return;
+        }
+
+        // 업체 배송 시작 처리
+        if (targetStatus == DeliveryStatus.COMPANY_DELIVERY_IN_PROGRESS) {
+            deliveryManager.startDelivery();
+        }
+        else if (targetStatus == DeliveryStatus.DELIVERED || targetStatus == DeliveryStatus.FAILED) {
+            // 업체 배송 종료 처리
+            deliveryManager.finishDelivery();
         }
     }
 

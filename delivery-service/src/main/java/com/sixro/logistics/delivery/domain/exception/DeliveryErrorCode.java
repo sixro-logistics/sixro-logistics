@@ -169,6 +169,12 @@ public enum DeliveryErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "D027",
             "배송 담당자가 현재 배송을 시작할 수 없는 상태입니다."
+    ),
+
+    COMPANY_DELIVERY_MANAGER_HUB_MISMATCH(
+            HttpStatus.CONFLICT,
+            "D028",
+            "현재 목적지 허브 소속 업체 배송 담당자가 아닙니다."
     );
 
     private final HttpStatus status;
