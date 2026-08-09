@@ -2,7 +2,7 @@ package com.sixro.logistics.delivery.presentation.controller;
 
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
-import com.sixro.logistics.delivery.application.DeliveryRouteService;
+import com.sixro.logistics.delivery.application.service.DeliveryRouteService;
 import com.sixro.logistics.delivery.application.command.GetDeliveryRouteCommand;
 import com.sixro.logistics.delivery.application.result.DeliveryRouteResult;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryRouteInfoResDto;

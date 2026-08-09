@@ -81,6 +81,12 @@ public enum DeliveryErrorCode implements ErrorCode {
             "배송을 찾을 수 없습니다."
     ),
 
+    DELIVERY_LIST_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D013",
+            "배송 목록 조회 권한이 없습니다."
+    ),
+
     DELIVERY_ROUTE_FORBIDDEN(
             HttpStatus.FORBIDDEN,
             "D014",

@@ -10,5 +10,6 @@ import java.util.UUID;
 
 @Repository
 public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
+
     boolean existsByDeliveryManager_DeliveryManagerIdAndDeliveryStatusNotIn(UUID deliveryManagerId, List<DeliveryStatus> completedStatuses);
 }

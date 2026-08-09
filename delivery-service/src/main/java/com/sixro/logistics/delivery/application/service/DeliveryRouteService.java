@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.application;
+package com.sixro.logistics.delivery.application.service;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.delivery.application.command.GetDeliveryRouteCommand;
