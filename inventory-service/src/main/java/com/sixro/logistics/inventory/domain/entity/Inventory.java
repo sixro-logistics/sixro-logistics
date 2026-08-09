@@ -1,6 +1,7 @@
 package com.sixro.logistics.inventory.domain.entity;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -18,12 +19,12 @@ import java.util.UUID;
                         columnNames = {"hub_id", "product_id"}
                 )
         }/*,
-        schema = "inventory"
+        schema = "inventory_schema"
         */
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Inventory /* extends BaseEntity */{
+public class Inventory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,6 +33,9 @@ public class Inventory /* extends BaseEntity */{
 
     @Column(name = "hub_id", nullable = false, updatable = false)
     private UUID hubId;
+
+    @Column(name = "company_id", nullable = false, updatable = false)
+    private UUID companyId;
 
     @Column(name = "product_id", nullable = false, updatable = false)
     private UUID productId;
@@ -42,17 +46,32 @@ public class Inventory /* extends BaseEntity */{
     @Version
     private Long version;
 
-    private Inventory(UUID hubId, UUID productId, Integer stock){
+    private Inventory(UUID hubId, UUID companyId, UUID productId, Integer stock){
         this.hubId = hubId;
+        this.companyId = companyId;
         this.productId = productId;
         this.stock = stock;
     }
 
-    public static Inventory create(UUID hubId, UUID productId, Integer stock){
-        return new Inventory(hubId, productId, stock);
+    public static Inventory create(UUID hubId, UUID companyId, UUID productId, Integer stock){
+        return new Inventory(hubId, companyId, productId, stock);
     }
 
-    public void decreaseHubStock(Integer quantity){
+    public void updateStock(Integer stock){
+        if(stock == null || stock < 0){
+            throw new BaseException(InventoryErrorCode.INVALID_STOCK);
+        }
+        this.stock = stock;
+    }
+
+    public void addStock(Integer quantity) {
+        if(quantity == null || quantity <= 0){
+            throw new BaseException(InventoryErrorCode.INVALID_STOCK);
+        }
+        this.stock += quantity;
+    }
+
+    public void deductStock(Integer quantity){
         if(quantity == null || quantity < 1){
             throw new BaseException(InventoryErrorCode.INVALID_QUANTITY);
         }
@@ -62,5 +81,7 @@ public class Inventory /* extends BaseEntity */{
         }
         stock -= quantity;
     }
+
+    // restoreStock
 
 }
