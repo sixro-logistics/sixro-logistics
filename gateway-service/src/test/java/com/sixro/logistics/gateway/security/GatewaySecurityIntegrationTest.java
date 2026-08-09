@@ -1,5 +1,6 @@
 package com.sixro.logistics.gateway.security;
 
+import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.test.config.RedisTestContainerConfig;
 import com.sixro.logistics.gateway.support.TestJwtFactory;
 import org.junit.jupiter.api.Test;
@@ -9,8 +10,13 @@ import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.test.StepVerifier;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -30,6 +36,9 @@ class GatewaySecurityIntegrationTest {
 
     @Autowired
     private ReactiveStringRedisTemplate redisTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
     void expiredAccessTokenReturnsGW002() throws Exception {
@@ -195,5 +204,61 @@ class GatewaySecurityIntegrationTest {
                 )
                 .expectNext(true)
                 .verifyComplete();
+    }
+
+    @Test
+    void gatewayErrorResponseUsesSameRequestIdInHeaderAndBody()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        String tokenId = UUID.randomUUID().toString();
+
+        String token = TestJwtFactory.createExpiredToken(
+                tokenId,
+                userId,
+                sessionId
+        );
+
+        EntityExchangeResult<byte[]> result =
+                webTestClient.get()
+                        .uri("/api/v1/users/me")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token
+                        )
+                        .exchange()
+                        .expectStatus()
+                        .isUnauthorized()
+                        .expectHeader()
+                        .exists(HeaderConstants.REQUEST_ID)
+                        .expectBody()
+                        .returnResult();
+
+        String requestId =
+                result.getResponseHeaders()
+                        .getFirst(HeaderConstants.REQUEST_ID);
+
+        assertThat(requestId)
+                .isNotBlank();
+
+        try {
+            JsonNode responseBody =
+                    objectMapper.readTree(
+                            result.getResponseBody()
+                    );
+
+            assertThat(
+                    responseBody
+                            .get("requestId")
+                            .asText()
+            ).isEqualTo(requestId);
+
+        } catch (Exception exception) {
+            throw new AssertionError(
+                    "Gateway 오류 응답 JSON 파싱에 실패했습니다.",
+                    exception
+            );
+        }
     }
 }
