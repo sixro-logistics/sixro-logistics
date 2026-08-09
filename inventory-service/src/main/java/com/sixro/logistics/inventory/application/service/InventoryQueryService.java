@@ -1,0 +1,83 @@
+package com.sixro.logistics.inventory.application.service;
+
+import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.inventory.application.command.InventoryCheckCommand;
+import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
+import com.sixro.logistics.inventory.application.common.model.UserRole;
+import com.sixro.logistics.inventory.application.result.*;
+import com.sixro.logistics.inventory.domain.entity.Inventory;
+import com.sixro.logistics.inventory.domain.repository.InventoryRepository;
+import com.sixro.logistics.inventory.exception.InventoryErrorCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class InventoryQueryService {
+
+    private final InventoryRepository inventoryRepository;
+
+    public InventoryCheckResult checkInventory(InventoryCheckCommand command){
+        List<Inventory> inventories = inventoryRepository
+                .findAllByHubIdAndProductIdInAndIsDeletedFalse(
+                        command.hubId(),
+                        command.productIds()
+                );
+
+        List<InventoryResultItem> items = inventories.stream()
+                .map(inventory -> new InventoryResultItem(
+                        inventory.getProductId(),
+                        inventory.getStock()
+                ))
+                .toList();
+
+        return new InventoryCheckResult(command.hubId(), items);
+    }
+
+    public InventoryGetOneResult getOneInventory(UUID inventoryId) {
+
+        Inventory inventory = inventoryRepository.findByIdAndIsDeletedFalse(inventoryId)
+                .orElseThrow(() ->
+                        new BaseException(InventoryErrorCode.INVENTORY_NOT_FOUND)
+                );
+
+        return new InventoryGetOneResult(
+                inventory.getId(),
+                inventory.getHubId(),
+                inventory.getCompanyId(),
+                inventory.getProductId(),
+                inventory.getStock()
+        );
+
+    }
+
+    public InventorySearchResult searchInventory(
+            UserRole userRole, UUID affiliationId,
+            InventorySearchCommand command, Pageable pageable
+    ) {
+
+        // TO DO: userRole 임의로 설정한 부분 삭제
+        userRole = UserRole.MASTER_ADMIN;
+
+        Page<Inventory> inventoryPage
+                = inventoryRepository.findAll(userRole, affiliationId, command, pageable);
+
+        Page<InventorySearchItem> resultPage =
+                inventoryPage.map(inventory ->
+                        new InventorySearchItem(
+                                inventory.getId(),
+                                inventory.getHubId(),
+                                inventory.getCompanyId(),
+                                inventory.getProductId(),
+                                inventory.getStock()
+                        )
+                );
+
+        return new InventorySearchResult(resultPage);
+    }
+}

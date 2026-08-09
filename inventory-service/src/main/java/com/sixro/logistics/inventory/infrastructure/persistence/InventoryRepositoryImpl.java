@@ -1,10 +1,15 @@
 package com.sixro.logistics.inventory.infrastructure.persistence;
 
+import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
+import com.sixro.logistics.inventory.application.common.model.UserRole;
 import com.sixro.logistics.inventory.domain.entity.Inventory;
 import com.sixro.logistics.inventory.domain.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,8 +26,22 @@ public class InventoryRepositoryImpl implements InventoryRepository {
         return inventoryJpaRepository.save(inventory);
     }
 
-    /*@Override
-    public Optional<Inventory> findByIdAndIsDeletedFalse(UUID id) {
-        return inventoryJpaRepository.findByIdAndIsDeletedFalse(id);
-    }*/
+    @Override
+    public Optional<Inventory> findByIdAndIsDeletedFalse(UUID inventoryId) {
+        return inventoryJpaRepository.findByIdAndIsDeletedFalse(inventoryId);
+    }
+
+    @Override
+    public List<Inventory> findAllByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsId) {
+        return inventoryJpaRepository.findAllByHubIdAndProductIdInAndIsDeletedFalse(hubId, productsId);
+    }
+
+    @Override
+    public Page<Inventory> findAll(
+            UserRole userRole, UUID affiliationId,
+            InventorySearchCommand command, Pageable pageable
+    ) {
+        return inventoryQueryRepository.findAll(userRole, affiliationId, command, pageable);
+    }
+
 }
