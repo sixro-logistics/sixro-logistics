@@ -10,8 +10,6 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -38,12 +36,29 @@ public final class TestJwtFactory {
     }
 
     /**
-     * 유효한 Access Token을 생성합니다.
+     * 기본 Role(MASTER_ADMIN)의 유효한 Access Token을 생성합니다.
      */
     public static String createValidToken(
             String tokenId,
             UUID userId,
             UUID sessionId
+    ) throws Exception {
+        return createValidToken(
+                tokenId,
+                userId,
+                sessionId,
+                DEFAULT_ROLE
+        );
+    }
+
+    /**
+     * 지정한 Role을 가진 유효한 Access Token을 생성합니다.
+     */
+    public static String createValidToken(
+            String tokenId,
+            UUID userId,
+            UUID sessionId,
+            String role
     ) throws Exception {
         Instant now = Instant.now();
 
@@ -51,13 +66,14 @@ public final class TestJwtFactory {
                 tokenId,
                 userId,
                 sessionId,
+                role,
                 now,
                 now.plusSeconds(30 * 60)
         );
     }
 
     /**
-     * 만료된 Access Token을 생성합니다.
+     * 기본 Role(MASTER_ADMIN)의 만료된 Access Token을 생성합니다.
      */
     public static String createExpiredToken(
             String tokenId,
@@ -70,6 +86,7 @@ public final class TestJwtFactory {
                 tokenId,
                 userId,
                 sessionId,
+                DEFAULT_ROLE,
                 now.minusSeconds(60 * 60),
                 now.minusSeconds(60)
         );
@@ -83,6 +100,7 @@ public final class TestJwtFactory {
             String tokenId,
             UUID userId,
             UUID sessionId,
+            String role,
             Instant issuedAt,
             Instant expiresAt
     ) throws Exception {
@@ -92,7 +110,10 @@ public final class TestJwtFactory {
                 .subject(userId.toString())
                 .issuer(ISSUER)
                 .jwtID(tokenId)
-                .claim(ROLE_CLAIM, DEFAULT_ROLE)
+                .claim(
+                        ROLE_CLAIM,
+                        role
+                )
                 .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
                 .claim(
                         SESSION_ID_CLAIM,
@@ -116,13 +137,6 @@ public final class TestJwtFactory {
         return signedJwt.serialize();
     }
 
-    /**
-     * 현재 로컬 테스트용 RSA Private Key를 읽습니다.
-     *
-     * TODO(gateway):
-     * CI 테스트 환경 구성 시 테스트 전용 RSA Key를
-     * classpath resource로 이동하여 local-keys 의존성을 제거합니다.
-     */
     private static RSAPrivateKey loadPrivateKey()
             throws Exception {
 
@@ -163,4 +177,6 @@ public final class TestJwtFactory {
                 .getInstance("RSA")
                 .generatePrivate(keySpec);
     }
+
+
 }

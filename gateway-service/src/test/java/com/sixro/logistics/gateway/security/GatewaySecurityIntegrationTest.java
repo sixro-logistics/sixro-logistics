@@ -261,4 +261,84 @@ class GatewaySecurityIntegrationTest {
             );
         }
     }
+
+    @Test
+    void nonMasterAdminCannotAccessMasterAdminUserApi()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+        String tokenId = UUID.randomUUID().toString();
+
+        String token = TestJwtFactory.createValidToken(
+                tokenId,
+                userId,
+                sessionId,
+                "HUB_ADMIN"
+        );
+
+        saveSession(userId, sessionId);
+
+        try {
+            webTestClient.get()
+                    .uri("/api/v1/users/" + targetUserId)
+                    .header(
+                            HttpHeaders.AUTHORIZATION,
+                            "Bearer " + token
+                    )
+                    .exchange()
+                    .expectStatus()
+                    .isForbidden()
+                    .expectBody()
+                    .jsonPath("$.code")
+                    .isEqualTo("GW004")
+                    .jsonPath("$.message")
+                    .isEqualTo("접근 권한이 없습니다.");
+
+        } finally {
+            redisTemplate.delete(
+                    SESSION_PREFIX + userId
+            ).block();
+        }
+    }
+
+    @Test
+    void masterAdminPassesGatewayRoleAuthorization()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+        String tokenId = UUID.randomUUID().toString();
+
+        String token = TestJwtFactory.createValidToken(
+                tokenId,
+                userId,
+                sessionId,
+                "MASTER_ADMIN"
+        );
+
+        saveSession(userId, sessionId);
+
+        try {
+            webTestClient.get()
+                    .uri("/api/v1/users/" + targetUserId)
+                    .header(
+                            HttpHeaders.AUTHORIZATION,
+                            "Bearer " + token
+                    )
+                    .exchange()
+                    .expectStatus()
+                    .value(status ->
+                            assertThat(status)
+                                    .isNotEqualTo(403)
+                    );
+
+        } finally {
+            redisTemplate.delete(
+                    SESSION_PREFIX + userId
+            ).block();
+        }
+    }
 }
