@@ -1,9 +1,11 @@
 package com.sixro.logistics.gateway.infrastructure.config;
 
+import com.sixro.logistics.gateway.application.security.SessionValidationService;
 import com.sixro.logistics.gateway.application.security.TokenBlacklistService;
 import com.sixro.logistics.gateway.infrastructure.exception.GatewayErrorResponseWriter;
 import com.sixro.logistics.gateway.infrastructure.filter.AccessTokenBlacklistWebFilter;
 import com.sixro.logistics.gateway.infrastructure.filter.JwtHeaderRelayWebFilter;
+import com.sixro.logistics.gateway.infrastructure.filter.SessionValidationWebFilter;
 import com.sixro.logistics.gateway.infrastructure.security.GatewayAccessDeniedHandler;
 import com.sixro.logistics.gateway.infrastructure.security.GatewayAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
@@ -18,8 +20,9 @@ import org.springframework.http.HttpMethod;
 /**
  * API Gateway의 WebFlux 보안 정책과 보안 필터 순서를 구성합니다.
  *
- * <p>Gateway에서 JWT 인증, Redis 블랙리스트 검사,
- * 인증·인가 예외 응답 처리, 내부 사용자 헤더 생성을 담당합니다.</p>
+ * <p>Spring Security OAuth2 Resource Server를 통해 JWT 자체를 검증하고,
+ * 이후 Redis에 저장된 Access Token blacklist와
+ * 현재 로그인 Session 상태를 추가로 검증합니다.</p>
  */
 @Configuration
 @EnableWebFluxSecurity
@@ -36,6 +39,21 @@ public class SecurityConfig {
     ) {
         return new AccessTokenBlacklistWebFilter(
                 tokenBlacklistService,
+                errorResponseWriter
+        );
+    }
+
+    /**
+     * JWT의 sessionId와 Redis에 저장된 현재 사용자 Session을
+     * 비교하는 필터를 생성합니다.
+     */
+    @Bean
+    public SessionValidationWebFilter sessionValidationWebFilter(
+            SessionValidationService sessionValidationService,
+            GatewayErrorResponseWriter errorResponseWriter
+    ) {
+        return new SessionValidationWebFilter(
+                sessionValidationService,
                 errorResponseWriter
         );
     }
@@ -64,6 +82,7 @@ public class SecurityConfig {
             GatewayAuthenticationEntryPoint authenticationEntryPoint,
             GatewayAccessDeniedHandler accessDeniedHandler,
             AccessTokenBlacklistWebFilter accessTokenBlacklistWebFilter,
+            SessionValidationWebFilter sessionValidationWebFilter,
             JwtHeaderRelayWebFilter jwtHeaderRelayWebFilter
     ) {
         /*
@@ -77,7 +96,6 @@ public class SecurityConfig {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
-                // TODO User/Hub/Delivery 등 권한 정책이 확정된 뒤 재점검
                 .authorizeExchange(exchange -> exchange
                         // 브라우저의 CORS 사전 요청은 인증 없이 허용
                         .pathMatchers(HttpMethod.OPTIONS, "/**")
@@ -102,6 +120,7 @@ public class SecurityConfig {
 
                         // 그 외 모든 요청은 유효한 JWT 인증 필요
                         // TODO User Service 개발 후 Role 정책 확정되면 수정범위
+                        //  - MASTER_ADMIN 등의 Role 기반 1차 인가를 추가
                         .anyExchange()
                         .authenticated()
                 )
@@ -112,7 +131,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
 
-                // Bearer Token의 서명, 형식, 만료 여부 검증 및 인증 실패 응답 처리
+                // Bearer Token의 RSA 서명, issuer, expiration, tokenType == ACCESS 를 검증
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults())
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -122,6 +141,7 @@ public class SecurityConfig {
                 /*
                  * JWT 인증 결과가 ServerWebExchange Principal에 연결된 이후
                  * JTI를 이용해 Redis 블랙리스트를 검사합니다.
+                 * 로그아웃된 Access Token의 재사용을 차단합니다.
                  */
                 .addFilterAfter(
                         accessTokenBlacklistWebFilter,
@@ -129,8 +149,24 @@ public class SecurityConfig {
                 )
 
                 /*
+                 * blacklist 검증을 통과한 Access Token에 대해
+                 * JWT sessionId와 Redis의 현재 Session을 비교합니다.
+                 *
+                 * 새로운 로그인으로 sessionId가 교체된 경우
+                 * 이전 Access Token을 차단합니다.
+                 */
+                .addFilterAfter(
+                        sessionValidationWebFilter,
+                        SecurityWebFiltersOrder
+                                .SECURITY_CONTEXT_SERVER_WEB_EXCHANGE
+                )
+
+                /*
                  * 인증·인가가 완료된 요청의 JWT Claim을
                  * 내부 서비스에서 사용할 Header로 변환합니다.
+                 *
+                 * 클라이언트가 전달한 내부 인증 Header는 제거한 뒤
+                 * Gateway에서 검증한 JWT Claim으로 다시 설정합니다.
                  */
                 /* TODO 아직 역할별 hasRole() 규칙이 없으므로 실질적으로는 인증된 요청에 헤더를 추가 */
                 .addFilterAfter(
