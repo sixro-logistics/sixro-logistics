@@ -3,7 +3,11 @@ package com.sixro.logistics.user.application.service;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.user.application.command.*;
 import com.sixro.logistics.user.application.dto.UserResult;
+import com.sixro.logistics.user.application.event.UserEventPublisher;
 import com.sixro.logistics.user.domain.entity.User;
+import com.sixro.logistics.user.domain.event.UserApprovedEvent;
+import com.sixro.logistics.user.domain.event.UserDeactivatedEvent;
+import com.sixro.logistics.user.domain.event.UserRejectedEvent;
 import com.sixro.logistics.user.domain.exception.UserErrorCode;
 import com.sixro.logistics.user.domain.model.UserRole;
 import com.sixro.logistics.user.domain.model.UserStatus;
@@ -22,6 +26,7 @@ public class UserCommandService {
 
     private final UserRepository userRepository;
     private final UserReader userReader;
+    private final UserEventPublisher userEventPublisher;
 
     /**
      * Auth Service에서 전달받은 회원가입 정보를 기반으로 사용자를 생성합니다.
@@ -169,17 +174,17 @@ public class UserCommandService {
 
         user.approve(command.reviewerId());
 
-        /*
-         * TODO Kafka 이벤트
-         * UserApprovedEvent 발행
-         * - userId
-         * - userStatus (APPROVED)
-         * - role
-         * - affiliationType
-         * - affiliationId
-         * - reviewedBy
-         * - reviewedAt
-         */
+        userEventPublisher.publish(
+                new UserApprovedEvent(
+                        user.getUserId(),
+                        user.getUserStatus(),
+                        user.getRole(),
+                        user.getAffiliationId(),
+                        user.getAffiliationType(),
+                        user.getReviewedBy(),
+                        user.getReviewedAt()
+                )
+        );
 
         return UserResult.from(user);
     }
@@ -196,16 +201,15 @@ public class UserCommandService {
         User user = userReader.getAccessibleUser(command.targetUserId());
         user.reject(command.reviewerId(), command.rejectedReason());
 
-        /*
-         * TODO Kafka 이벤트
-         * UserRejectedEvent 발행
-         *
-         * - userId
-         * - userStatus (REJECTED)
-         * - rejectedReason
-         * - reviewedBy
-         * - reviewedAt
-         */
+        userEventPublisher.publish(
+                new UserRejectedEvent(
+                        user.getUserId(),
+                        user.getUserStatus(),
+                        user.getRejectedReason(),
+                        user.getReviewedBy(),
+                        user.getReviewedAt()
+                )
+        );
 
         return UserResult.from(user);
     }
@@ -239,41 +243,35 @@ public class UserCommandService {
         user.deactivate(command.requesterId());
 
         /*
-         * TODO(integration):
-         * 사용자 비활성화 시 Auth Service에 상태 변경을 전달하여
-         * 대상 사용자의 Refresh Token을 폐기합니다.
+         * 사용자 비활성화 상태는 UserDeactivatedEvent로 발행합니다.
          *
-         * User Service는 Auth Service가 관리하는 Redis Key에
+         * Auth Service는 해당 이벤트를 소비하여
+         * 대상 사용자의 Refresh Token 및 인증 세션을 무효화하도록
+         * 후속 연동합니다.
+         *
+         * User Service는 Auth Service가 관리하는 Redis에
          * 직접 접근하지 않습니다.
-         *
-         * Kafka UserDeactivatedEvent 또는
-         * Auth Service 내부 API 방식으로 연동합니다.
          */
 
         /*
          * TODO(security):
-         * 사용자 비활성화 시 이미 발급된 Access Token을
-         * 즉시 무효화할 정책을 확정합니다.
+         * Auth Service의 UserDeactivatedEvent Consumer 구현 후
+         * Refresh Token 및 현재 로그인 Session을 무효화합니다.
          *
-         * 예)
-         * - UserDeactivatedEvent 기반 Auth/Gateway 상태 반영
-         * - 사용자별 tokenVersion
-         * - 사용자 상태 Redis 캐싱
-         *
-         * 개별 Access Token JTI를 알 수 없는 상태에서
-         * User Service가 직접 Access Token 블랙리스트를 관리하지 않습니다.
+         * Gateway는 Redis Session 검증을 통해
+         * 기존 Access Token의 재사용을 차단하도록 연동합니다.
          */
 
-        /*
-         * TODO(event):
-         * UserDeactivatedEvent 발행
-         * - userId
-         * - deletedBy
-         * - deletedAt
-         *
-         * DB 변경과 이벤트 발행의 원자성이 필요할 경우
-         * Transactional Outbox Pattern 적용을 검토합니다.
-         */
+        userEventPublisher.publish(
+                new UserDeactivatedEvent(
+                        user.getUserId(),
+                        user.getRole(),
+                        user.getAffiliationId(),
+                        user.getAffiliationType(),
+                        user.getDeletedBy(),
+                        user.getDeletedAt()
+                )
+        );
 
         return UserResult.from(user);
     }
