@@ -4,16 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sixro.logistics.common.test.config.KafkaTestContainerConfig;
 import com.sixro.logistics.common.test.config.PostgresTestContainerConfig;
 import com.sixro.logistics.common.test.config.RedisTestContainerConfig;
-import com.sixro.logistics.hub.domain.model.Address;
-import com.sixro.logistics.hub.domain.model.Hub;
-import com.sixro.logistics.hub.domain.model.HubZone;
-import com.sixro.logistics.hub.infrastructure.persistence.HubJpaRepository;
+import com.sixro.logistics.hub.hub.domain.model.Address;
+import com.sixro.logistics.hub.hub.domain.model.Hub;
+import com.sixro.logistics.hub.hub.domain.model.HubZone;
+import com.sixro.logistics.hub.hub.domain.model.Location;
+import com.sixro.logistics.hub.hub.infrastructure.persistence.command.HubJpaRepository;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -59,19 +57,14 @@ class HubFullIntegrationTest {
     @Autowired
     private HubKafkaConsumer hubKafkaConsumer;
 
-    private final GeometryFactory geometryFactory = new GeometryFactory();
-
     @Test
     @DisplayName("Hub 데이터를 PostGIS 저장, Redis 캐싱, Kafka 이벤트 발행을 모두 성공적으로 수행한다")
     void shouldIntegrateHubDataAcrossPostgisRedisAndKafka() throws Exception {
         // given
-        Point locationPoint = geometryFactory.createPoint(new Coordinate(127.1249, 37.4776));
-        locationPoint.setSRID(4326);
-
         Hub hub = Hub.builder()
                 .hubName("서울특별시 센터")
-                .address(Address.of("05838", "서울특별시 송파구 송파대로 55", ""))
-                .location(locationPoint)
+                .address(Address.of("05838", "서울특별시 송파구 송파대로 55", "서울특별시 송파구 장지동 862", "동남권물류단지 A동"))
+                .location(Location.of(127.1249, 37.4776))
                 .hubZone(HubZone.CAPITAL)
                 .maxCapacity(1_000_000)
                 .build();
@@ -80,8 +73,9 @@ class HubFullIntegrationTest {
             {
               "hubName": "서울특별시 센터",
               "zipcode": "05838",
-              "address": "서울특별시 송파구 송파대로 55",
-              "detailAddress": "",
+              "roadAddress": "서울특별시 송파구 송파대로 55",
+              "jibunAddress": "서울특별시 송파구 장지동 862",
+              "detailAddress": "동남권물류단지 A동",
               "longitude": 127.1249,
               "latitude": 37.4776,
               "hubZone": "CAPITAL",
