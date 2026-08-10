@@ -125,47 +125,42 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
-                        /*
-                         * 사용자 목록 조회
-                         * MASTER_ADMIN 전용
-                         *
-                         * 반드시 /{userId}보다 먼저 선언합니다.
-                         */
+                        // 사용자 목록 조회
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/users"
                         )
                         .hasRole("MASTER_ADMIN")
 
-                        /*
-                         * 가입 승인 / 거절
-                         * MASTER_ADMIN, HUB_ADMIN 전용
-                         */
+                        // 가입 승인 / 거절
                         .pathMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/users/*/approve",
                                 "/api/v1/users/*/reject"
                         )
-                        .hasRole("MASTER_ADMIN, HUB_ADMIN")
+                        .hasAnyRole("MASTER_ADMIN, HUB_ADMIN")
 
-                        /*
-                         * 사용자 단건 조회
-                         * MASTER_ADMIN 전용
-                         *
-                         * /me는 아래 규칙에 걸리지 않도록
-                         * 먼저 별도로 authenticated 처리합니다.
-                         */
+                        // 내 정보
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/users/me"
                         )
                         .authenticated()
 
+                        // 사용자 단건 조회
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/users/*"
                         )
                         .hasRole("MASTER_ADMIN")
+
+                        // 사용자 비활성화
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/users/*"
+                        )
+                        .hasRole("MASTER_ADMIN")
+
 
                         // TODO 다른 서비스 Role 인가 → 필요 시 후속 확장
 
