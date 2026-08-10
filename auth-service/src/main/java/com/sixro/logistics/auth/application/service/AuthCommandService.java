@@ -9,14 +9,17 @@ import com.sixro.logistics.auth.application.dto.TokenResult;
 import com.sixro.logistics.auth.domain.exception.AuthErrorCode;
 import com.sixro.logistics.auth.domain.exception.AuthException;
 import com.sixro.logistics.auth.domain.model.AffiliationType;
-import com.sixro.logistics.auth.domain.model.RefreshToken;
 import com.sixro.logistics.auth.domain.model.TokenPair;
 import com.sixro.logistics.auth.domain.model.UserStatus;
+import com.sixro.logistics.auth.domain.repository.AuthStateRepository;
 import com.sixro.logistics.auth.domain.repository.RefreshTokenRepository;
+import com.sixro.logistics.auth.domain.repository.SessionRepository;
 import com.sixro.logistics.auth.infrastructure.client.UserServiceClient;
+import com.sixro.logistics.auth.infrastructure.client.UserServiceErrorMapper;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalCreateUserResponse;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalUserAuthInfoResponse;
+import com.sixro.logistics.auth.infrastructure.client.response.InternalUserStatusResponse;
 import com.sixro.logistics.auth.infrastructure.jwt.JwtClaims;
 import com.sixro.logistics.auth.infrastructure.jwt.JwtProvider;
 import com.sixro.logistics.auth.infrastructure.redis.TokenHashProvider;
@@ -33,18 +36,22 @@ import java.util.UUID;
 /**
  * 회원가입, 로그인, 토큰 재발급 및 로그아웃 유스케이스를 처리합니다.
  *
- * <p>인증 흐름을 조정하는 애플리케이션 서비스이며 다음 책임을 가집니다.</p>
+ *
+ * <p>사용자 원본 정보는 User Service가 관리하며,
+ * Auth Service는 인증에 필요한 정보만 내부 API로 조회합니다.</p>
+ *
+ * <p>주요 책임은 다음과 같습니다.</p>
  *
  * <ul>
  *     <li>User Service를 통한 사용자 생성 및 인증 정보 조회</li>
  *     <li>비밀번호 암호화 및 일치 여부 검증</li>
  *     <li>Access Token과 Refresh Token 발급</li>
  *     <li>Refresh Token 해시 저장 및 검증</li>
- *     <li>로그아웃한 Access Token의 블랙리스트 등록</li>
+ *     <li>사용자별 단일 로그인 세션 관리</li>
+ *     <li>토큰 재발급 시 최신 사용자 상태 및 권한 검증</li>
+ *     <li>로그아웃 시 Refresh Token / Session 폐기</li>
+ *     <li>유효한 Access Token의 블랙리스트 등록</li>
  * </ul>
- *
- * <p>사용자 원본 정보는 User Service가 관리하며,
- * Auth Service는 인증에 필요한 정보만 내부 API로 조회합니다.</p>
  *
  */
 @Service
@@ -52,9 +59,14 @@ import java.util.UUID;
 public class AuthCommandService {
 
     private final UserServiceClient userServiceClient;
+    private final UserServiceErrorMapper userServiceErrorMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+
     private final RefreshTokenRepository refreshTokenRepository;
+    private final SessionRepository sessionRepository;
+    private final AuthStateRepository authStateRepository;
+
     private final TokenHashProvider tokenHashProvider;
 
     /**
@@ -66,9 +78,7 @@ public class AuthCommandService {
     public SignUpResult signUp(SignUpCommand command) {
         validateSignUp(command);
 
-        String encodedPassword = passwordEncoder.encode(
-                command.password()
-        );
+        String encodedPassword = passwordEncoder.encode(command.password());
 
         InternalCreateUserResponse response =
                 createUser(command, encodedPassword);
@@ -81,9 +91,15 @@ public class AuthCommandService {
     }
 
     /**
-     * 사용자 상태와 비밀번호를 검증하고 새로운 토큰 쌍을 발급합니다.
+     * 사용자 인증 정보를 검증하고 새로운 로그인 세션을 생성합니다.
      *
-     * <p>발급한 Refresh Token은 원문이 아닌 해시값으로 Redis에 저장합니다.</p>
+     * <p>로그인할 때마다 새로운 sessionId를 생성합니다.
+     * Redis에는 사용자당 하나의 sessionId만 저장하므로,
+     * 동일 사용자가 다시 로그인하면 기존 세션은 새로운 세션으로 교체됩니다.</p>
+     *
+     * <p>Access Token과 Refresh Token에는 동일한 sessionId를 포함합니다.
+     * Gateway에서 JWT의 sessionId와 Redis의 현재 sessionId를 비교하면
+     * 이전 로그인에서 발급된 Access Token도 즉시 차단할 수 있습니다.</p>
      */
     public TokenResult login(LoginCommand command) {
         InternalUserAuthInfoResponse user =
@@ -96,118 +112,274 @@ public class AuthCommandService {
                 user.encodedPassword()
         )) {
             // TODO(auth): 사용자 또는 IP 기준 로그인 실패 횟수를 Redis에 기록하고
-            //  - 임계치 초과 시 일정 시간 로그인을 제한하는 정책을 추가한다.
+            //  - 임계치 초과 시 일정 시간 로그인을 제한하는 정책을 검토합니다.
             throw new AuthException(
                     AuthErrorCode.INVALID_USERNAME_OR_PASSWORD
             );
         }
 
+        /*
+         * 새로운 로그인 세션을 생성합니다.
+         *
+         * 기존 session:{userId}가 존재하더라도 새로운 값으로 교체되므로
+         * 이전 로그인 세션은 더 이상 현재 세션으로 인정되지 않습니다.
+         */
+        UUID sessionId = UUID.randomUUID();
+
         TokenPair tokenPair = jwtProvider.issueTokenPair(
                 user.userId(),
-                user.role()
+                user.role(),
+                sessionId
         );
 
-        saveRefreshToken(
+        String refreshTokenHash =
+                tokenHashProvider.hash(
+                        tokenPair.refreshToken()
+                );
+
+        authStateRepository.saveLoginState(
                 user.userId(),
-                tokenPair.refreshToken()
+                refreshTokenHash,
+                sessionId,
+                jwtProvider.getRefreshTokenExpiration()
         );
 
         return toTokenResult(tokenPair);
     }
 
     /**
-     * Refresh Token을 검증하고 새로운 Access Token과 Refresh Token을 발급합니다.
+     * Refresh Token을 검증하고 새로운 Token Pair를 발급합니다.
      *
-     * <p>JWT 자체의 유효성뿐만 아니라 Redis에 저장된 해시값과도 비교합니다.
-     * 새 Refresh Token을 저장하면 기존 Refresh Token은 사용할 수 없습니다.</p>
+     * <p>Refresh Token에 저장되어 있던 과거 role을 신뢰하지 않고,
+     * User Service에서 현재 사용자 상태와 권한을 다시 조회합니다.</p>
+     *
+     * <p>Refresh Token 검증과 Rotation은 Redis Lua Script를 통해
+     * 원자적으로 처리하여 동일 Refresh Token의 동시 재사용을 차단합니다.</p>
      */
     public TokenResult reissue(
             ReissueTokenCommand command
     ) {
-        JwtClaims claims = jwtProvider.parseRefreshToken(
+
+        /*
+         * 1. Refresh Token 자체를 검증합니다.
+         *
+         * - RSA 서명
+         * - issuer
+         * - expiration
+         * - tokenType == REFRESH
+         */
+        JwtClaims refreshClaims = jwtProvider.parseRefreshToken(
                 command.refreshToken()
         );
 
-        // TODO(auth): 이미 교체된 Refresh Token이 다시 사용되면 토큰 탈취 가능성으로 판단하고,
-        //  - 사용자에게 발급된 Refresh Token을 모두 폐기하는 재사용 탐지 정책을 검토한다.
-        validateSavedRefreshToken(
-                claims.userId(),
-                command.refreshToken()
+        /*
+         * 2. Refresh Token이 현재 로그인 세션에 속하는지 확인합니다.
+         *
+         * 동일 사용자가 새로 로그인하여 sessionId가 변경된 경우
+         * 이전 Refresh Token은 사용할 수 없습니다.
+         */
+        validateCurrentSession(
+                refreshClaims.userId(),
+                refreshClaims.sessionId()
         );
 
-        // TODO(auth): User Service에서 현재 사용자 상태와 권한을 다시 조회한 후 토큰을 재발급한다.
-        //  - 비활성화·삭제·승인 취소된 사용자의 토큰 재발급을 차단해야 한다.
-        //  - Refresh Token 발급 이후 권한이 변경된 경우 현재 권한으로 새 토큰을 발급해야 한다.
-        //  - User Service에 userId 기반 내부 인증 정보 조회 API가 추가된 후 적용한다.
-        //  - Redis Lua Script 또는 원자적 compare-and-set 방식으로 검증과 교체를 한 번에 처리한다.
+        /*
+         * 3. User Service에서 최신 사용자 상태,
+         * 권한 및 소속 정보를 조회합니다.
+         */
+        InternalUserStatusResponse user =
+                getUserStatus(refreshClaims.userId());
+
+        /*
+         * 4. 현재 로그인 가능한 사용자 상태인지 확인합니다.
+         */
+        validateReissueUser(user);
+
+        /*
+         * 5. 최신 사용자 권한으로 Token Pair를 다시 발급합니다.
+         *
+         * 재발급은 새로운 로그인이 아니므로
+         * 기존 sessionId는 그대로 유지합니다.
+         *
+         * Refresh Token에 포함되어 있던 claims.role()은
+         * 새로운 Token 발급 권한으로 사용하지 않습니다.
+         */
         TokenPair newTokenPair =
                 jwtProvider.issueTokenPair(
-                        claims.userId(),
-                        claims.role()
+                        user.userId(),
+                        user.role(),
+                        refreshClaims.sessionId()
                 );
 
-        saveRefreshToken(
-                claims.userId(),
-                newTokenPair.refreshToken()
-        );
+        /*
+         * 6. 요청받은 기존 Refresh Token과
+         * 새로 발급한 Refresh Token을 각각 해시합니다.
+         */
+        String currentRefreshTokenHash =
+                tokenHashProvider.hash(
+                        command.refreshToken()
+                );
+
+        String newRefreshTokenHash =
+                tokenHashProvider.hash(
+                        newTokenPair.refreshToken()
+                );
+
+        /*
+         * 7. Redis Lua Script를 통해 Refresh Token을 원자적으로 Rotation합니다.
+         *
+         * Redis에 저장된 현재 Refresh Token hash가
+         * 요청받은 Refresh Token hash와 일치하는 경우에만
+         * 새로운 Refresh Token hash로 교체합니다.
+         *
+         * 동시에 Session TTL도 새 Refresh Token 수명에 맞춰 갱신합니다.
+         */
+        boolean rotated =
+                authStateRepository.rotateRefreshToken(
+                        user.userId(),
+                        currentRefreshTokenHash,
+                        newRefreshTokenHash,
+                        jwtProvider.getRefreshTokenExpiration()
+                );
+
+        /*
+         * 이미 사용된 Refresh Token이거나,
+         * 새 로그인/로그아웃 등으로 Redis 상태가 변경된 경우
+         * Rotation에 실패합니다.
+         */
+        if (!rotated) {
+            throw new AuthException(
+                    AuthErrorCode.INVALID_REFRESH_TOKEN
+            );
+        }
 
         return toTokenResult(newTokenPair);
     }
 
     /**
-     * Refresh Token을 삭제하고 Access Token을 남은 유효 시간 동안 블랙리스트에 등록합니다.
+     * Refresh Token을 기준으로 현재 로그인 세션을 폐기합니다.
      *
-     * <p>다른 사용자의 토큰을 조합한 로그아웃 요청을 차단하기 위해
-     * Access Token과 Refresh Token의 사용자 및 권한 정보를 비교합니다.</p>
+     * <p>로그아웃의 핵심은 Refresh Token과 현재 Session을 폐기하는 것입니다.</p>
+     *
+     * <p>Access Token이 이미 만료되었더라도 로그아웃은 정상 처리하며,
+     * 아직 유효한 Access Token만 남은 수명 동안 블랙리스트에 등록합니다.</p>
      */
     public void logout(LogoutCommand command) {
+
+        /*
+         * 1. Refresh Token부터 검증합니다.
+         *
+         * Access Token이 만료된 경우에도 Refresh Token을 폐기할 수 있도록
+         * 로그아웃 기준 토큰은 Refresh Token으로 처리합니다.
+         */
         JwtClaims refreshClaims =
                 jwtProvider.parseRefreshToken(
                         command.refreshToken()
                 );
 
-        JwtClaims accessClaims =
-                jwtProvider.parseAccessToken(
-                        command.accessToken()
-                );
-
-        validateSameTokenOwner(
-                refreshClaims,
-                accessClaims
-        );
-
+        /*
+         * 2. Redis에 저장된 현재 Refresh Token인지 확인합니다.
+         */
         validateSavedRefreshToken(
                 refreshClaims.userId(),
                 command.refreshToken()
         );
 
-        // TODO(auth): Refresh Token 삭제와 Access Token 블랙리스트 등록의
-        //  - 부분 실패를 방지하도록 Redis Transaction 또는 Lua Script 적용을 검토한다.
-        refreshTokenRepository.deleteByUserId(
-                refreshClaims.userId()
+        /*
+         * 3. 현재 로그인 세션에 속하는 Refresh Token인지 확인합니다.
+         */
+        validateCurrentSession(
+                refreshClaims.userId(),
+                refreshClaims.sessionId()
         );
 
-        Duration remaining = Duration.between(
-                Instant.now(),
-                accessClaims.expiration()
-        );
+        /*
+         * 4. Access Token 상태를 확인합니다.
+         *
+         * 아직 유효한 경우에는 같은 사용자와 같은 세션에서
+         * 발급된 토큰인지 검증합니다.
+         *
+         * 만료된 Access Token은 블랙리스트 등록 대상이 아니므로
+         * null을 반환하고 로그아웃을 계속 진행합니다.
+         */
+        JwtClaims accessClaims =
+                parseAccessTokenForLogout(
+                        command.accessToken(),
+                        refreshClaims
+                );
 
-        // Access Token 블랙리스트 TTL 방어
-        if (!remaining.isNegative() && !remaining.isZero()) {
-            refreshTokenRepository.blacklistAccessToken(
-                    accessClaims.jwtId(),
-                    remaining
+        String accessTokenJwtId = null;
+        Duration accessTokenTtl = null;
+
+        if (accessClaims != null) {
+            Duration remaining = Duration.between(
+                    Instant.now(),
+                    accessClaims.expiration()
             );
+
+            if (!remaining.isNegative()
+                    && !remaining.isZero()) {
+                accessTokenJwtId =
+                        accessClaims.jwtId();
+
+                accessTokenTtl =
+                        remaining;
+            }
+        }
+
+        authStateRepository.clearLoginState(
+                refreshClaims.userId(),
+                accessTokenJwtId,
+                accessTokenTtl
+        );
+    }
+
+    /**
+     * 로그아웃 요청에 포함된 Access Token을 확인합니다.
+     *
+     * <p>유효한 Access Token이면 Refresh Token과
+     * 동일 사용자 및 동일 로그인 세션에서 발급되었는지 검증합니다.</p>
+     *
+     * <p>Access Token이 이미 만료되었다면
+     * 별도의 blacklist 처리가 필요하지 않으므로 null을 반환합니다.</p>
+     */
+    private JwtClaims parseAccessTokenForLogout(
+            String accessToken,
+            JwtClaims refreshClaims
+    ) {
+        try {
+            JwtClaims accessClaims =
+                    jwtProvider.parseAccessToken(accessToken);
+
+            validateSameTokenOwner(
+                    refreshClaims,
+                    accessClaims
+            );
+
+            return accessClaims;
+
+        } catch (AuthException exception) {
+            /*
+             * Access Token 만료는 로그아웃 실패 조건이 아닙니다.
+             *
+             * Refresh Token 검증과 Session 검증이 정상적으로 완료되었다면
+             * Access Token blacklist 등록만 생략하고 로그아웃을 계속합니다.
+             */
+            if (exception.getErrorCode()
+                    == AuthErrorCode.EXPIRED_ACCESS_TOKEN) {
+                return null;
+            }
+
+            throw exception;
         }
     }
 
     /**
-     * User Service에 사용자 생성을 요청하고 Feign 오류를 Auth 오류로 변환합니다.
+     * User Service에 사용자 생성을 요청합니다.
      *
-     * <p>HTTP 400은 잘못된 회원가입 요청, 409는 중복 사용자,
-     * 그 외 오류는 User Service 통신 실패로 처리합니다.</p>
+     * <p>User Service 호출 과정에서 발생한 Feign 오류는
+     * Auth Service의 오류 코드로 변환합니다.</p>
      */
-    // TODO(auth): User Service 호출과 Feign 예외 변환을 UserAuthClientAdapter로 분리한다.
     private InternalCreateUserResponse createUser(
             SignUpCommand command,
             String encodedPassword
@@ -224,42 +396,17 @@ public class AuthCommandService {
             return requireData(response);
 
         } catch (FeignException exception) {
-            throw convertSignUpException(exception);
+            throw userServiceErrorMapper.convertSignUpException(
+                    exception
+            );
         }
-    }
-
-    /**
-     * User Service의 HTTP 상태 코드를 Auth Service 오류 코드로 변환합니다.
-     */
-    private AuthException convertSignUpException(
-            FeignException exception
-    ) {
-        // TODO(auth): User Service의 ErrorResponse 본문을 파싱하여 세부 오류 코드로 변환한다.
-        //  - 사용자명 중복과 Slack ID 중복을 각각 구분할 수 있도록 한다.
-        //  - 여러 Feign 호출에서 같은 변환 규칙을 사용하게 되면 ErrorDecoder 분리를 검토한다.
-        return switch (exception.status()) {
-            case 400 -> new AuthException(
-                    AuthErrorCode.INVALID_SIGN_UP_REQUEST,
-                    exception
-            );
-
-            case 409 -> new AuthException(
-                    AuthErrorCode.DUPLICATE_USER,
-                    exception
-            );
-
-            default -> new AuthException(
-                    AuthErrorCode.USER_SERVICE_COMMUNICATION_FAILED,
-                    exception
-            );
-        };
     }
 
     /**
      * 로그인을 위해 User Service에서 사용자 인증 정보를 조회합니다.
      *
-     * <p>사용자 존재 여부가 외부에 노출되지 않도록 404 응답도
-     * 아이디 또는 비밀번호 불일치 오류로 변환합니다.</p>
+     * <p>사용자 존재 여부가 외부에 노출되지 않도록
+     * User Service의 404 응답은 아이디 또는 비밀번호 불일치로 변환합니다.</p>
      */
     private InternalUserAuthInfoResponse getAuthInfo(
             String username
@@ -286,9 +433,83 @@ public class AuthCommandService {
     }
 
     /**
-     * 가입 가능한 권한인지 확인하고 권한과 소속 유형의 조합을 검증합니다.
+     * Token 재발급에 필요한 최신 사용자 상태와 권한 정보를
+     * User Service에서 조회합니다.
+     */
+    private InternalUserStatusResponse getUserStatus(
+            UUID userId
+    ) {
+        try {
+            CommonResponse<InternalUserStatusResponse> response =
+                    userServiceClient.getUserStatus(userId);
+
+            return requireData(response);
+
+        } catch (FeignException exception) {
+            switch (exception.status()) {
+                /*
+                 * User Service에서 사용자를 찾을 수 없는 경우(U001),
+                 * 더 이상 해당 사용자에 대한 Refresh Token을
+                 * 유효한 인증 수단으로 인정하지 않습니다.
+                 */
+                case 404 -> throw new AuthException(
+                        AuthErrorCode.INVALID_REFRESH_TOKEN,
+                        exception
+                );
+
+                /*
+                 * User Service에서 비활성화된 사용자(U002)로 판단한 경우
+                 * Auth Service에서도 비활성 사용자 오류로 변환합니다.
+                 */
+                case 410 -> throw new AuthException(
+                        AuthErrorCode.DEACTIVATED_USER,
+                        exception
+                );
+
+                /*
+                 * 그 외 User Service 오류 및 통신 문제는
+                 * 내부 서비스 통신 실패로 처리합니다.
+                 */
+                default -> throw new AuthException(
+                        AuthErrorCode.USER_SERVICE_COMMUNICATION_FAILED,
+                        exception
+                );
+            }
+        }
+    }
+
+    /**
+     * Token 재발급 대상 사용자가
+     * 현재 로그인 가능한 상태인지 검증합니다.
+     */
+    private void validateReissueUser(
+            InternalUserStatusResponse user
+    ) {
+        if (user.userStatus() == UserStatus.REJECTED) {
+            throw new AuthException(
+                    AuthErrorCode.USER_REJECTED
+            );
+        }
+
+        if (!user.userStatus().isLoginAllowed()) {
+            throw new AuthException(
+                    AuthErrorCode.USER_NOT_APPROVED
+            );
+        }
+    }
+
+    /**
+     * 가입 가능한 권한인지 확인하고
+     * Role과 affiliation 정보의 조합을 검증합니다.
      *
-     * <p>MASTER_ADMIN은 일반 회원가입으로 생성할 수 없습니다.</p>
+     * <p>현재 회원가입 정책은 다음과 같습니다.</p>
+     *
+     * <ul>
+     *     <li>HUB_ADMIN → HUB 소속</li>
+     *     <li>DELIVERY_MANAGER → HUB 소속</li>
+     *     <li>COMPANY_MANAGER → COMPANY 소속</li>
+     *     <li>MASTER_ADMIN → 일반 회원가입 불가</li>
+     * </ul>
      */
     private void validateSignUp(SignUpCommand command) {
         if (!command.role().isSignUpAllowed()) {
@@ -298,15 +519,13 @@ public class AuthCommandService {
         }
 
         boolean valid = switch (command.role()) {
-            case HUB_ADMIN -> command.affiliationType()
-                    == AffiliationType.HUB
-                    && command.affiliationId() != null;
+            case HUB_ADMIN, DELIVERY_MANAGER ->
+                    command.affiliationType()
+                            == AffiliationType.HUB
+                            && command.affiliationId() != null;
 
             case COMPANY_MANAGER -> command.affiliationType()
                     == AffiliationType.COMPANY
-                    && command.affiliationId() != null;
-
-            case DELIVERY_MANAGER -> command.affiliationType() != null
                     && command.affiliationId() != null;
 
             case MASTER_ADMIN -> false;
@@ -320,13 +539,18 @@ public class AuthCommandService {
     }
 
     /**
-     * 사용자의 삭제 여부와 가입 승인 상태를 확인합니다.
+     * 로그인 대상 사용자의 삭제 여부와 가입 승인 상태를 검증합니다.
      *
-     * <p>승인 완료 상태의 활성 사용자만 로그인할 수 있습니다.</p>
+     * <p>APPROVED 상태의 활성 사용자만 로그인할 수 있습니다.</p>
      */
     private void validateLoginUser(
             InternalUserAuthInfoResponse user
     ) {
+        /*
+         * User Service의 auth-info API는 현재 Soft Delete되지 않은 사용자를
+         * 조회하도록 구현되어 있지만, 내부 API 계약 변경 등에 대비하여
+         * Auth에서도 방어적으로 deleted 값을 확인합니다.
+         */
         if (user.deleted()) {
             throw new AuthException(
                     AuthErrorCode.DEACTIVATED_USER
@@ -347,7 +571,8 @@ public class AuthCommandService {
     }
 
     /**
-     * 요청받은 Refresh Token의 해시값과 Redis 저장값을 비교합니다.
+     * 요청받은 Refresh Token의 hash와
+     * Redis에 저장된 Refresh Token hash가 일치하는지 검증합니다.
      *
      * <p>Refresh Token 원문은 Redis에 저장하지 않습니다.</p>
      */
@@ -372,7 +597,8 @@ public class AuthCommandService {
     }
 
     /**
-     * Access Token과 Refresh Token이 동일한 사용자와 권한으로 발급되었는지 확인합니다.
+     * Access Token과 Refresh Token이
+     * 동일한 사용자 및 동일한 로그인 세션에서 발급되었는지 검증합니다.
      */
     private void validateSameTokenOwner(
             JwtClaims refreshClaims,
@@ -381,10 +607,10 @@ public class AuthCommandService {
         boolean sameUser = refreshClaims.userId()
                 .equals(accessClaims.userId());
 
-        boolean sameRole = refreshClaims.role()
-                == accessClaims.role();
+        boolean sameSession = refreshClaims.sessionId()
+                .equals(accessClaims.sessionId());
 
-        if (!sameUser || !sameRole) {
+        if (!sameUser || !sameSession) {
             throw new AuthException(
                     AuthErrorCode.TOKEN_OWNER_MISMATCH
             );
@@ -392,23 +618,31 @@ public class AuthCommandService {
     }
 
     /**
-     * Refresh Token을 해시한 후 토큰 만료 시간과 함께 저장합니다.
+     * JWT의 sessionId와 Redis에 저장된
+     * 현재 사용자 sessionId가 일치하는지 검증합니다.
+     *
+     * <p>새로운 로그인으로 sessionId가 교체된 경우
+     * 이전 Refresh Token의 sessionId는 이 검증을 통과하지 못합니다.</p>
      */
-    private void saveRefreshToken(
+    private void validateCurrentSession(
             UUID userId,
-            String refreshToken
+            UUID sessionId
     ) {
-        refreshTokenRepository.save(
-                new RefreshToken(
-                        userId,
-                        tokenHashProvider.hash(refreshToken),
-                        jwtProvider.getRefreshTokenExpiration()
-                )
-        );
+        UUID savedSessionId = sessionRepository
+                .findSessionIdByUserId(userId)
+                .orElseThrow(() -> new AuthException(
+                        AuthErrorCode.INVALID_REFRESH_TOKEN
+                ));
+
+        if (!savedSessionId.equals(sessionId)) {
+            throw new AuthException(
+                    AuthErrorCode.INVALID_REFRESH_TOKEN
+            );
+        }
     }
 
     /**
-     * Bearer 인증 방식의 토큰 결과를 생성합니다.
+     * 발급한 TokenPair를 API 응답용 TokenResult로 변환합니다.
      */
     private TokenResult toTokenResult(
             TokenPair tokenPair

@@ -24,6 +24,9 @@ spring:
           # RS256 Access Token 검증에 사용할 PEM 공개키 위치
           public-key-location: classpath:keys/public-key.pem
 
+  reactor:
+    context-propagation: auto
+
   cloud:
     gateway:
       server:
@@ -145,6 +148,14 @@ management:
     health:
       # 개발 환경에서 Health 상세 정보 표시
       show-details: always
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 logging:
   pattern:
