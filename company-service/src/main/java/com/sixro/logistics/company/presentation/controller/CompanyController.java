@@ -3,10 +3,11 @@ package com.sixro.logistics.company.presentation.controller;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.response.CommonResponse;
-import com.sixro.logistics.company.presentation.dto.request.CompanyCreateRequestDto;
-import com.sixro.logistics.company.presentation.dto.response.CompanyResponseDto;
-import com.sixro.logistics.company.presentation.dto.request.CompanyUpdateRequestDto;
 import com.sixro.logistics.company.application.service.CompanyService;
+import com.sixro.logistics.company.presentation.dto.request.CompanyCreateRequestDto;
+import com.sixro.logistics.company.presentation.dto.request.CompanyUpdateRequestDto;
+import com.sixro.logistics.company.presentation.dto.response.CompanyCheckResponseDto;
+import com.sixro.logistics.company.presentation.dto.response.CompanyResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,7 +36,7 @@ public class CompanyController {
      * GET /companies?page=0&size=10
      */
     @GetMapping
-    public ResponseEntity<Page<CompanyResponseDto>> getCompanies(
+    public ResponseEntity<CommonResponse<Page<CompanyResponseDto>>> getCompanies(
             @RequestParam(required = false) UUID hubId,
             @RequestParam(required = false) String companyName,
             @RequestParam(required = false) String companyType,
@@ -50,20 +51,17 @@ public class CompanyController {
                         pageable
                 );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(CommonResponse.success("업체 목록 조회에 성공했습니다.", response));
     }
 
     /**
      * 업체 상세 조회
      */
     @GetMapping("/{companyId}")
-    public ResponseEntity<CompanyResponseDto> getCompany(
+    public ResponseEntity<CommonResponse<CompanyResponseDto>> getCompany(
             @PathVariable UUID companyId
     ) {
-
-        return ResponseEntity.ok(
-                companyService.getCompany(companyId)
-        );
+        return ResponseEntity.ok(CommonResponse.success("업체 목록 조회에 성공했습니다.", companyService.getCompany(companyId)));
     }
 
     /**
@@ -73,10 +71,17 @@ public class CompanyController {
     public ResponseEntity<CompanyResponseDto> createCompany(
             @Valid @RequestBody CompanyCreateRequestDto request,
             @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader("X-User-Role") String userRole
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestHeader("X-Affiliation-Id") UUID affiliationId
     ) {
-        // 권한 검증: MASTER 또는 HUB_MANAGER가 아닌 경우 예외 발생
+        // 권한 검증: MASTER 또는 HUB_ADMIN 아닌 경우 예외 발생
         if (!"MASTER_ADMIN".equalsIgnoreCase(userRole) && !"HUB_ADMIN".equalsIgnoreCase(userRole)) {
+            // HUB_ADMIN은 본인 허브에 대한 업체만 등록 가능
+            if("HUB_ADMIN".equalsIgnoreCase(userRole)) {
+                if (!affiliationId.equals(request.getHubId())) {
+                    throw new BaseException(CommonErrorCode.FORBIDDEN);
+                }
+            }
             throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
@@ -96,10 +101,22 @@ public class CompanyController {
             @PathVariable UUID companyId,
             @Valid @RequestBody CompanyUpdateRequestDto request,
             @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader("X-User-Role") String userRole
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestHeader("X-Affiliation-Id") UUID affiliationId
     ) {
         // 권한 검증: MASTER 또는 HUB_MANAGER가 아닌 경우 예외 발생
         if (!"MASTER_ADMIN".equalsIgnoreCase(userRole) && !"HUB_ADMIN".equalsIgnoreCase(userRole) && !"COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
+            if("HUB_ADMIN".equalsIgnoreCase(userRole)) {
+                // HUB_ADMIN은 본인 허브에 대한 업체만 수정 가능
+                if (!affiliationId.equals(request.getHubId())) {
+                    throw new BaseException(CommonErrorCode.FORBIDDEN);
+                }
+            } else if("COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
+                // COMPANY_MANAGER는 본인 업체에 대한 업체만 수정 가능
+                if (!affiliationId.equals(companyId)) {
+                    throw new BaseException(CommonErrorCode.FORBIDDEN);
+                }
+            }
             throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
@@ -120,10 +137,18 @@ public class CompanyController {
     public ResponseEntity<CommonResponse<Void>> deleteCompany(
             @PathVariable UUID companyId,
             @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader("X-User-Role") String userRole
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestHeader("X-Affiliation-Id") UUID affiliationId
     ) {
         // 권한 검증: MASTER 또는 HUB_MANAGER가 아닌 경우 예외 발생
         if (!"MASTER_ADMIN".equalsIgnoreCase(userRole) && !"HUB_ADMIN".equalsIgnoreCase(userRole)) {
+            if("HUB_ADMIN".equalsIgnoreCase(userRole)) {
+                CompanyResponseDto resCompanyDto = companyService.getCompany(companyId);
+                // HUB_ADMIN은 본인 허브에 대한 업체만 삭제 가능
+                if (!affiliationId.equals(resCompanyDto.getHubId())) {
+                    throw new BaseException(CommonErrorCode.FORBIDDEN);
+                }
+            }
             throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
@@ -133,5 +158,13 @@ public class CompanyController {
         );
 
         return ResponseEntity.ok(CommonResponse.success("업체가 성공적으로 삭제되었습니다."));
+    }
+
+    @GetMapping("/check/{companyId}")
+    public CommonResponse<CompanyCheckResponseDto> getCheckCompany(
+            @PathVariable("companyId") UUID companyId
+    ) {
+        CompanyCheckResponseDto response = companyService.getCheckCompany(companyId);
+        return CommonResponse.success("유효한 업체입니다.", response);
     }
 }
