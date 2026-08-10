@@ -175,11 +175,13 @@ public class UserController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "사용자 정보 수정 성공"),
-            @ApiResponse(responseCode = "400", description = "C002 - 요청 검증 실패 / U004 - 소속 정보 오류"),
+            @ApiResponse(responseCode = "400", description = "C002 - 요청 검증 실패 / U004 - 유효하지 않은 소속 정보"),
             @ApiResponse(responseCode = "401", description = "A008/A009/A010 - Access Token 인증 실패"),
-            @ApiResponse(responseCode = "403", description = "U003 - 수정 권한 없음 / U005 - 승인 사용자 소속 수정 불가"),
+            @ApiResponse(responseCode = "403", description = "U003 - 수정 권한 없음 / U005 - 소속 수정 불가"),
             @ApiResponse(responseCode = "404", description = "U001 - 사용자를 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "U011 - 이미 사용 중인 Slack ID"),
             @ApiResponse(responseCode = "410", description = "U002 - 비활성화된 사용자"),
+            @ApiResponse(responseCode = "503", description = "U013 - 소속 서비스 호출 실패"),
             @ApiResponse(responseCode = "500", description = "C999 - 서버 내부 오류")
     })
     @PatchMapping("/{userId}")
@@ -204,16 +206,17 @@ public class UserController {
 
     @Operation(
             summary = "사용자 가입 승인",
-            description = "MASTER_ADMIN이 PENDING 상태 사용자의 가입을 승인하고 역할과 소속 정보를 확정합니다."
+            description = "MASTER_ADMIN 또는 HUB_ADMIN이 PENDING 상태 사용자의 가입을 승인하고 역할과 소속 정보를 확정합니다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "가입 승인 성공"),
-            @ApiResponse(responseCode = "400", description = "U004 - 유효하지 않은 역할·소속 정보"),
+            @ApiResponse(responseCode = "400", description = "U004 - 유효하지 않은 역할·소속 정보 / U012 - 소속을 찾을 수 없음"),
             @ApiResponse(responseCode = "401", description = "A008/A009/A010 - Access Token 인증 실패"),
             @ApiResponse(responseCode = "403", description = "U003 - 가입 승인 권한 없음"),
             @ApiResponse(responseCode = "404", description = "U001 - 사용자를 찾을 수 없음"),
             @ApiResponse(responseCode = "409", description = "U006 - 가입 승인 불가능한 상태"),
             @ApiResponse(responseCode = "410", description = "U002 - 비활성화된 사용자"),
+            @ApiResponse(responseCode = "503", description = "U013 - 소속 서비스 호출 실패"),
             @ApiResponse(responseCode = "500", description = "C999 - 서버 내부 오류")
     })
     @PostMapping("/{userId}/approve")
@@ -237,7 +240,7 @@ public class UserController {
 
     @Operation(
             summary = "사용자 가입 거절",
-            description = "MASTER_ADMIN이 PENDING 상태 사용자의 가입을 거절하고 거절 사유를 기록합니다."
+            description = "MASTER_ADMIN 또는 HUB_ADMIN이 PENDING 상태 사용자의 가입을 거절하고 거절 사유를 기록합니다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "가입 거절 성공"),
@@ -273,8 +276,9 @@ public class UserController {
     @Operation(
             summary = "사용자 비활성화",
             description = """
-                    사용자를 Soft Delete 방식으로 비활성화합니다.
+                    MASTER_ADMIN이 사용자를 Soft Delete 방식으로 비활성화합니다.
                     isDeleted를 true로 변경하고 deletedAt, deletedBy를 기록합니다.
+                    자기 자신의 계정은 비활성화할 수 없습니다.
                     이미 비활성화된 사용자는 다시 비활성화할 수 없습니다.
                     """
     )

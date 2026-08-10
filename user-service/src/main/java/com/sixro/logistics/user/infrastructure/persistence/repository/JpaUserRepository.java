@@ -11,11 +11,18 @@ import java.util.UUID;
  */
 public interface JpaUserRepository extends JpaRepository<User, UUID> {
 
-    Optional<User> findByUserIdAndIsDeletedFalse(UUID userId);
+    // 로그인 등 활성 사용자 조회에 사용합니다.
+    Optional<User>
+    findByUsernameAndIsDeletedFalseAndDeletedAtIsNull(String username);
 
-    Optional<User> findByUsernameAndIsDeletedFalse(String username);
+    // 삭제 여부와 관계없는 전역 중복 검사입니다.
+    boolean existsByUsername(String username);
 
-    boolean existsByUsernameAndIsDeletedFalse(String username);
+    boolean existsBySlackId(String slackId);
 
-    boolean existsBySlackIdAndIsDeletedFalse(String slackId);
+    // 사용자 수정 시 자기 자신은 중복 검사에서 제외합니다.
+    boolean existsBySlackIdAndUserIdNot(
+            String slackId,
+            UUID userId
+    );
 }

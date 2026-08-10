@@ -206,7 +206,7 @@ public class User extends BaseEntity {
     ) {
         if (this.userStatus != UserStatus.PENDING) {
             throw new BaseException(
-                    UserErrorCode.APPROVED_USER_AFFILIATION_IMMUTABLE
+                    UserErrorCode.AFFILIATION_CHANGE_NOT_ALLOWED
             );
         }
 
