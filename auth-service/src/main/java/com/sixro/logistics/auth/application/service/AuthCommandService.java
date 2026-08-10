@@ -402,7 +402,7 @@ public class AuthCommandService {
             return requireData(response);
 
         } catch (FeignException exception) {
-            throw userServiceErrorMapper.convertSignUpException(
+            throw userServiceErrorMapper.convertUserCreateException(
                     exception
             );
         }

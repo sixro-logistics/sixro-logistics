@@ -30,7 +30,8 @@ public class AffiliationValidationService {
             UUID affiliationId,
             AffiliationType affiliationType
     ) {
-        if (affiliationId == null || affiliationType == null) {
+        if (affiliationId == null
+                || affiliationType == null) {
             throw new BaseException(
                     UserErrorCode.INVALID_AFFILIATION
             );
@@ -42,33 +43,60 @@ public class AffiliationValidationService {
         }
     }
 
-    public void validateHub(UUID hubId) {
+    private void validateHub(UUID hubId) {
         try {
             CommonResponse<InternalHubResponse> response =
                     hubServiceClient.getHub(hubId);
 
-            if (response == null
-                    || !response.success()
-                    || response.data() == null
-                    || !hubId.equals(response.data().hubId())) {
-                throw new BaseException(
-                        UserErrorCode.AFFILIATION_NOT_FOUND
-                );
-            }
+            validateHubResponse(hubId, response);
 
         } catch (FeignException exception) {
-            if (exception.status() == 404
-                    || exception.status() == 410) {
-                throw new BaseException(
-                        UserErrorCode.AFFILIATION_NOT_FOUND
-                );
-            }
-
-            log.error(
-                    "Hub Service 호출 실패. hubId={}, status={}",
+            handleFeignException(
+                    "Hub",
                     hubId,
-                    exception.status(),
                     exception
+            );
+        }
+    }
+
+    private void validateCompany(UUID companyId) {
+        try {
+            CommonResponse<InternalCompanyResponse> response =
+                    companyServiceClient.getCompany(companyId);
+
+            validateCompanyResponse(
+                    companyId,
+                    response
+            );
+
+        } catch (FeignException exception) {
+            handleFeignException(
+                    "Company",
+                    companyId,
+                    exception
+            );
+        }
+    }
+
+    private void validateHubResponse(
+            UUID requestedHubId,
+            CommonResponse<InternalHubResponse> response
+    ) {
+        if (response == null
+                || !response.success()
+                || response.data() == null) {
+            throw new BaseException(
+                    UserErrorCode.AFFILIATION_SERVICE_UNAVAILABLE
+            );
+        }
+
+        if (!requestedHubId.equals(
+                response.data().hubId()
+        )) {
+            log.error(
+                    "Hub Service 응답 ID가 일치하지 않습니다. requestedHubId={}, responseHubId={}",
+                    requestedHubId,
+                    response.data().hubId()
             );
 
             throw new BaseException(
@@ -77,40 +105,55 @@ public class AffiliationValidationService {
         }
     }
 
-    public void validateCompany(UUID companyId) {
-        try {
-            CommonResponse<InternalCompanyResponse> response =
-                    companyServiceClient.getCompany(companyId);
+    private void validateCompanyResponse(
+            UUID requestedCompanyId,
+            CommonResponse<InternalCompanyResponse> response
+    ) {
+        if (response == null
+                || !response.success()
+                || response.data() == null) {
+            throw new BaseException(
+                    UserErrorCode.AFFILIATION_SERVICE_UNAVAILABLE
+            );
+        }
 
-            if (response == null
-                    || !response.success()
-                    || response.data() == null
-                    || !companyId.equals(
-                    response.data().companyId()
-            )) {
-                throw new BaseException(
-                        UserErrorCode.AFFILIATION_NOT_FOUND
-                );
-            }
-
-        } catch (FeignException exception) {
-            if (exception.status() == 404
-                    || exception.status() == 410) {
-                throw new BaseException(
-                        UserErrorCode.AFFILIATION_NOT_FOUND
-                );
-            }
-
+        if (!requestedCompanyId.equals(
+                response.data().companyId()
+        )) {
             log.error(
-                    "Company Service 호출 실패. companyId={}, status={}",
-                    companyId,
-                    exception.status(),
-                    exception
+                    "Company Service 응답 ID가 일치하지 않습니다. requestedCompanyId={}, responseCompanyId={}",
+                    requestedCompanyId,
+                    response.data().companyId()
             );
 
             throw new BaseException(
                     UserErrorCode.AFFILIATION_SERVICE_UNAVAILABLE
             );
         }
+    }
+
+    private void handleFeignException(
+            String serviceName,
+            UUID affiliationId,
+            FeignException exception
+    ) {
+        if (exception.status() == 404
+                || exception.status() == 410) {
+            throw new BaseException(
+                    UserErrorCode.AFFILIATION_NOT_FOUND
+            );
+        }
+
+        log.error(
+                "{} Service 호출 실패. affiliationId={}, status={}",
+                serviceName,
+                affiliationId,
+                exception.status(),
+                exception
+        );
+
+        throw new BaseException(
+                UserErrorCode.AFFILIATION_SERVICE_UNAVAILABLE
+        );
     }
 }

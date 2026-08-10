@@ -16,29 +16,48 @@ public class UserServiceErrorMapper {
 
     private final ObjectMapper objectMapper;
 
-    public AuthException convertSignUpException(
+    public AuthException convertUserCreateException(
             FeignException exception
     ) {
         ErrorResponse errorResponse =
                 parseErrorResponse(exception);
 
-        if (errorResponse != null) {
-            return switch (errorResponse.code()) {
-                case "U010" -> new AuthException(
-                        AuthErrorCode.DUPLICATE_USERNAME,
-                        exception
-                );
-
-                case "U011" -> new AuthException(
-                        AuthErrorCode.DUPLICATE_SLACK_ID,
-                        exception
-                );
-
-                default -> convertByStatus(exception);
-            };
+        if (errorResponse == null
+                || errorResponse.code() == null) {
+            return convertByStatus(exception);
         }
 
-        return convertByStatus(exception);
+        return switch (errorResponse.code()) {
+            case "U004", "U012" ->
+                    new AuthException(
+                            AuthErrorCode.INVALID_AFFILIATION,
+                            exception
+                    );
+
+            case "U010" ->
+                    new AuthException(
+                            AuthErrorCode.DUPLICATE_USERNAME,
+                            exception
+                    );
+
+            case "U011" ->
+                    new AuthException(
+                            AuthErrorCode.DUPLICATE_SLACK_ID,
+                            exception
+                    );
+
+            /*
+             * Hub 또는 Company Service 장애로
+             * User Service가 소속을 검증하지 못한 경우입니다.
+             */
+            case "U013" ->
+                    new AuthException(
+                            AuthErrorCode.USER_SERVICE_COMMUNICATION_FAILED,
+                            exception
+                    );
+
+            default -> convertByStatus(exception);
+        };
     }
 
     private AuthException convertByStatus(

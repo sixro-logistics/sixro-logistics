@@ -1,15 +1,20 @@
 package com.sixro.logistics.auth.infrastructure.client;
 
+import com.sixro.logistics.auth.domain.model.UserRole;
+import com.sixro.logistics.auth.infrastructure.client.request.InternalAdminCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalCreateUserResponse;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalUserAuthInfoResponse;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalUserStatusResponse;
+import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+
 import java.util.UUID;
 
 /**
@@ -25,6 +30,18 @@ public interface UserServiceClient {
     @PostMapping("/api/v1/internal/users")
     CommonResponse<InternalCreateUserResponse> createUser(
             @RequestBody InternalCreateUserRequest request
+    );
+
+    @PostMapping("/api/v1/internal/users/admin-created")
+    CommonResponse<InternalCreateUserResponse> createApprovedUser(
+            @RequestHeader(HeaderConstants.USER_ID)
+            UUID requesterId,
+
+            @RequestHeader(HeaderConstants.USER_ROLE)
+            UserRole requesterRole,
+
+            @RequestBody
+            InternalAdminCreateUserRequest request
     );
 
     // 사용자명으로 로그인 검증에 필요한 내부 인증 정보를 조회합니다.

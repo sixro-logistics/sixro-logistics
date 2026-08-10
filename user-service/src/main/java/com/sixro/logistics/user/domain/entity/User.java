@@ -47,7 +47,7 @@ public class User extends BaseEntity {
     @Column(name = "user_id", updatable = false, nullable = false)
     private UUID userId;
 
-    @Column(name = "username", nullable = false, length = 50)
+    @Column(name = "username", nullable = false, length = 10)
     private String username;
 
     /**
@@ -128,6 +128,18 @@ public class User extends BaseEntity {
             UUID affiliationId,
             AffiliationType affiliationType
     ) {
+        if (requestedRole == UserRole.MASTER_ADMIN) {
+            throw new BaseException(
+                    UserErrorCode.MASTER_ADMIN_SIGN_UP_NOT_ALLOWED
+            );
+        }
+
+        validateRequiredFields(
+                username,
+                encodedPassword,
+                slackId
+        );
+
         validateAffiliation(
                 requestedRole,
                 affiliationId,
@@ -179,7 +191,7 @@ public class User extends BaseEntity {
         this.userStatus = UserStatus.REJECTED;
         this.reviewedAt = LocalDateTime.now();
         this.reviewedBy = reviewerId;
-        this.rejectedReason = reason.trim();
+        this.rejectedReason = normalizedReason;
     }
 
     /**
@@ -321,6 +333,36 @@ public class User extends BaseEntity {
         }
     }
 
+    private static void validateRequiredFields(
+            String username,
+            String encodedPassword,
+            String slackId
+    ) {
+        if (username == null
+                || username.isBlank()
+                || username.length() < 4
+                || username.length() > 10) {
+            throw new BaseException(
+                    CommonErrorCode.INVALID_REQUEST
+            );
+        }
+
+        if (encodedPassword == null
+                || encodedPassword.isBlank()
+                || encodedPassword.length() > 255) {
+            throw new BaseException(
+                    CommonErrorCode.INVALID_REQUEST
+            );
+        }
+
+        if (slackId == null
+                || slackId.isBlank()
+                || slackId.length() > 100) {
+            throw new BaseException(
+                    CommonErrorCode.INVALID_REQUEST
+            );
+        }
+    }
 
     /**
      * 사용자 권한과 소속 정보의 조합을 검증합니다.
@@ -379,5 +421,48 @@ public class User extends BaseEntity {
             );
         }
 
+    }
+
+    /**
+     * MASTER_ADMIN이 승인 절차 없이 사용자를 직접 생성합니다.
+     */
+    public static User createApprovedByAdmin(
+            String username,
+            String encodedPassword,
+            String slackId,
+            UserRole role,
+            UUID affiliationId,
+            AffiliationType affiliationType,
+            UUID reviewerId
+    ) {
+        validateReviewer(reviewerId);
+
+        validateAffiliation(
+                role,
+                affiliationId,
+                affiliationType
+        );
+
+        validateRequiredFields(
+                username,
+                encodedPassword,
+                slackId
+        );
+
+        User user = User.builder()
+                .username(username)
+                .password(encodedPassword)
+                .slackId(slackId)
+                .role(role)
+                .affiliationId(affiliationId)
+                .affiliationType(affiliationType)
+                .userStatus(UserStatus.APPROVED)
+                .build();
+
+        user.reviewedAt = LocalDateTime.now();
+        user.reviewedBy = reviewerId;
+        user.rejectedReason = null;
+
+        return user;
     }
 }

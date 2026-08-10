@@ -47,6 +47,15 @@ spring:
 
           # lb:// Load Balancer를 통해 Eureka에서 ABC-service를 찾습니다.
           routes:
+            # MASTER 관리자 사용자 생성, 기존 회원가입과 별도 구현
+            # 비밀번호 암호화를 위해 Auth Service로 전달
+            - id: auth-admin-user-create
+              order: -10
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/v1/users
+                - Method=POST
+
             # Auth
             - id: auth-service
               uri: lb://auth-service

@@ -1,5 +1,6 @@
 package com.sixro.logistics.user.presentation.controller;
 
+import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.user.application.dto.InternalDeliveryUserResult;
 import com.sixro.logistics.user.application.dto.InternalUserAuthResult;
@@ -7,6 +8,8 @@ import com.sixro.logistics.user.application.dto.InternalUserStatusResult;
 import com.sixro.logistics.user.application.dto.UserResult;
 import com.sixro.logistics.user.application.service.UserCommandService;
 import com.sixro.logistics.user.application.service.UserQueryService;
+import com.sixro.logistics.user.domain.model.UserRole;
+import com.sixro.logistics.user.presentation.request.internal.InternalAdminCreateUserRequest;
 import com.sixro.logistics.user.presentation.request.internal.InternalCreateUserRequest;
 import com.sixro.logistics.user.presentation.response.internal.InternalCreateUserResponse;
 import com.sixro.logistics.user.presentation.response.internal.InternalDeliveryUserResponse;
@@ -31,6 +34,36 @@ public class UserInternalController {
 
     private final UserCommandService userCommandService;
     private final UserQueryService userQueryService;
+
+    /**
+     * MASTER_ADMIN이 Auth Service를 통해
+     * 승인 완료 상태의 사용자를 생성합니다.
+     */
+    @PostMapping("/admin-created")
+    public CommonResponse<InternalCreateUserResponse>
+    createApprovedUser(
+            @RequestHeader(HeaderConstants.USER_ID)
+            UUID requesterId,
+
+            @RequestHeader(HeaderConstants.USER_ROLE)
+            UserRole requesterRole,
+
+            @Valid @RequestBody
+            InternalAdminCreateUserRequest request
+    ) {
+        UserResult result =
+                userCommandService.createApprovedUser(
+                        request.toCommand(
+                                requesterId,
+                                requesterRole
+                        )
+                );
+
+        return CommonResponse.success(
+                "승인 완료 사용자를 생성했습니다.",
+                InternalCreateUserResponse.from(result)
+        );
+    }
 
     /**
      * Auth Service에서 전달한 회원가입 정보를 기반으로 사용자를 생성합니다.
