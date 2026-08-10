@@ -8,4 +8,11 @@ import java.util.UUID;
 public record UserSecurityChangedMessage(
         UUID userId
 ) {
+    public UserSecurityChangedMessage {
+        if (userId == null) {
+            throw new IllegalArgumentException(
+                    "사용자 보안 이벤트의 userId는 필수입니다."
+            );
+        }
+    }
 }

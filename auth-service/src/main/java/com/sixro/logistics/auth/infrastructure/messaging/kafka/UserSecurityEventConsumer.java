@@ -24,7 +24,7 @@ public class UserSecurityEventConsumer {
                     "user-role-changed",
                     "user-affiliation-changed"
             },
-            groupId = "auth-user-security"
+            groupId = "${spring.kafka.consumer.group-id}"
     )
     public void consume(String payload) {
         try {
