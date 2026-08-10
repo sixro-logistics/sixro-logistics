@@ -31,17 +31,11 @@ public class UserRepositoryAdapter implements UserRepository {
     /**
      * 삭제 여부와 관계없이 조회합니다.
      *
-     * <p>존재하지 않는 사용자와 이미 비활성화된 사용자를
-     * 구분해야 하는 유스케이스에서 사용합니다.</p>
+     * <p>비활성화 여부까지 구분해야 하는 유스케이스에서 사용합니다.</p>
      */
     @Override
     public Optional<User> findById(UUID userId) {
         return jpaUserRepository.findById(userId);
-    }
-
-    @Override
-    public Optional<User> findActiveById(UUID userId) {
-        return jpaUserRepository.findByUserIdAndIsDeletedFalse(userId);
     }
 
     @Override

@@ -23,6 +23,9 @@ public class UserCommandService {
     private final UserRepository userRepository;
     private final UserReader userReader;
 
+    /**
+     * Auth Service에서 전달받은 회원가입 정보를 기반으로 사용자를 생성합니다.
+     */
     public UserResult createUser(CreateUserCommand command) {
         if (userRepository.existsActiveByUsername(command.username())) {
             throw new BaseException(UserErrorCode.DUPLICATE_USERNAME);
@@ -31,6 +34,15 @@ public class UserCommandService {
         if (userRepository.existsActiveBySlackId(command.slackId())) {
             throw new BaseException(UserErrorCode.DUPLICATE_SLACK_ID);
         }
+
+        /*
+         * TODO(integration):
+         * 회원가입 시점의 affiliationId 사전 검증 여부는 정책 확정 후 적용합니다.
+         * - 가입 시점 검증은 선택, 승인 시점 검증은 필수
+         *
+         * 단, 최종 승인 시점에는 Hub/Company Service 내부 API를 통해
+         * affiliationId가 실제 존재하며 삭제되지 않은 소속인지 반드시 재검증합니다.
+         */
 
         User user = User.create(
                 command.username(),
@@ -47,17 +59,35 @@ public class UserCommandService {
          * TODO Kafka 이벤트
          * UserCreatedEvent 발행
          *
-         * 회원가입 직후 상태는 PENDING이며,
+         * - userId
+         * - userStatus (PENDING)
+         * - role
+         * - affiliationType
+         * - affiliationId
          * 관리자 승인 이후 UserApprovedEvent를 별도로 발행합니다.
          */
 
         return UserResult.from(savedUser);
     }
 
+    /**
+     * 사용자 정보를 수정합니다.
+     *
+     * <p>MASTER_ADMIN은 권한과 소속을 포함한 사용자 정보를 수정할 수 있으며,
+     * 일반 사용자는 자신의 제한된 정보만 수정할 수 있습니다.</p>
+     */
     public UserResult updateUser(UpdateUserCommand command) {
         User user = userReader.getAccessibleUser(command.targetUserId());
 
         if (command.requesterRole() == UserRole.MASTER_ADMIN) {
+
+            /*
+             * TODO(integration):
+             * role 또는 affiliation 정보가 변경되는 경우,
+             * 변경될 소속이 실제 존재하며 삭제되지 않았는지
+             * Hub/Company Service 내부 API를 통해 먼저 검증합니다.
+             */
+
             user.updateByMaster(
                     command.slackId(),
                     command.role(),
@@ -76,6 +106,9 @@ public class UserCommandService {
 
         validateSelfRequest(command.targetUserId(), command.requesterId());
 
+        /*
+         * 일반 사용자는 자신의 Role을 직접 변경할 수 없습니다.
+         */
         if (command.role() != null) {
             throw new BaseException(UserErrorCode.USER_ACCESS_DENIED);
         }
@@ -95,6 +128,15 @@ public class UserCommandService {
                 );
             }
 
+            /*
+             * TODO(integration):
+             * PENDING 사용자가 affiliation 정보를 변경하는 경우,
+             * Hub/Company Service 내부 API 연동 후
+             * 실제 존재하며 삭제되지 않은 소속인지 검증합니다.
+             *
+             * 승인 시점에는 최종적으로 다시 검증합니다.
+             */
+
             user.changePendingAffiliation(
                     command.affiliationId(),
                     command.affiliationType()
@@ -104,6 +146,9 @@ public class UserCommandService {
         return UserResult.from(user);
     }
 
+    /**
+     * MASTER_ADMIN이 PENDING 사용자의 가입 요청을 승인합니다.
+     */
     public UserResult approveUser(
             ApproveUserCommand command,
             UserRole requesterRole
@@ -111,18 +156,24 @@ public class UserCommandService {
         validateMasterAdmin(requesterRole);
 
         User user = userReader.getAccessibleUser(command.targetUserId());
-        user.approve(command.reviewerId());
+
 
         /*
-         * TODO OpenFeign
-         * 승인 전 affiliationType에 따라 Hub Service 또는 Company Service에서
-         * affiliationId의 실제 존재 여부를 검증합니다.
+         * TODO(integration):
+         * 승인 처리 전에
+         * Hub Service 또는 Company Service 내부 API를 호출하여
+         * affiliationId가 실제 존재하며 삭제되지 않은 소속인지 검증합니다.
+         *
+         * affiliationId, affiliationType 검증 성공 이후에만 APPROVED 상태로 변경합니다.
          */
+
+        user.approve(command.reviewerId());
 
         /*
          * TODO Kafka 이벤트
          * UserApprovedEvent 발행
          * - userId
+         * - userStatus (APPROVED)
          * - role
          * - affiliationType
          * - affiliationId
@@ -133,6 +184,9 @@ public class UserCommandService {
         return UserResult.from(user);
     }
 
+    /**
+     * MASTER_ADMIN이 PENDING 사용자의 가입 요청을 거절합니다.
+     */
     public UserResult rejectUser(
             RejectUserCommand command,
             UserRole requesterRole
@@ -145,7 +199,9 @@ public class UserCommandService {
         /*
          * TODO Kafka 이벤트
          * UserRejectedEvent 발행
+         *
          * - userId
+         * - userStatus (REJECTED)
          * - rejectedReason
          * - reviewedBy
          * - reviewedAt
@@ -154,14 +210,23 @@ public class UserCommandService {
         return UserResult.from(user);
     }
 
+    /**
+     * 사용자를 Soft Delete 방식으로 비활성화합니다.
+     */
     public UserResult deactivateUser(DeactivateUserCommand command) {
+
+        /*
+         * 이미 비활성화된 사용자인지 여부는
+         * User.deactivate() 내부의 도메인 규칙에서 검증합니다.
+         *
+         * 따라서 삭제된 사용자도 조회할 수 있는 getById()를 사용합니다.
+         */
         User user = userReader.getById(command.targetUserId());
 
-        if (user.isDeleted()) {
-            throw new BaseException(UserErrorCode.USER_ALREADY_DEACTIVATED);
-        }
-
         if (command.requesterRole() == UserRole.MASTER_ADMIN) {
+            /*
+             * MASTER_ADMIN 자신의 계정 비활성화는 허용하지 않습니다.
+             */
             if (command.targetUserId().equals(command.requesterId())) {
                 throw new BaseException(
                         UserErrorCode.SELF_DEACTIVATION_NOT_ALLOWED
@@ -174,28 +239,48 @@ public class UserCommandService {
         user.deactivate(command.requesterId());
 
         /*
-         * TODO Redis 연동
-         * Auth Service에 대상 사용자의 Refresh Token 삭제 요청
-         * Redis Key: refresh:{userId}
-         */
-
-        /*
-         * TODO Access Token 즉시 무효화
-         * 사용자 상태 변경 이벤트 전파, 사용자별 토큰 버전,
-         * 비활성 사용자 Redis 저장 또는 Access Token 블랙리스트 검토
-         */
-
-        /*
-         * TODO Kafka 이벤트
-         * UserDeactivatedEvent 발행
+         * TODO(integration):
+         * 사용자 비활성화 시 Auth Service에 상태 변경을 전달하여
+         * 대상 사용자의 Refresh Token을 폐기합니다.
          *
-         * DB 변경과 이벤트 발행의 원자성이 필요한 경우
-         * Transactional Outbox Pattern 적용 검토
+         * User Service는 Auth Service가 관리하는 Redis Key에
+         * 직접 접근하지 않습니다.
+         *
+         * Kafka UserDeactivatedEvent 또는
+         * Auth Service 내부 API 방식으로 연동합니다.
+         */
+
+        /*
+         * TODO(security):
+         * 사용자 비활성화 시 이미 발급된 Access Token을
+         * 즉시 무효화할 정책을 확정합니다.
+         *
+         * 예)
+         * - UserDeactivatedEvent 기반 Auth/Gateway 상태 반영
+         * - 사용자별 tokenVersion
+         * - 사용자 상태 Redis 캐싱
+         *
+         * 개별 Access Token JTI를 알 수 없는 상태에서
+         * User Service가 직접 Access Token 블랙리스트를 관리하지 않습니다.
+         */
+
+        /*
+         * TODO(event):
+         * UserDeactivatedEvent 발행
+         * - userId
+         * - deletedBy
+         * - deletedAt
+         *
+         * DB 변경과 이벤트 발행의 원자성이 필요할 경우
+         * Transactional Outbox Pattern 적용을 검토합니다.
          */
 
         return UserResult.from(user);
     }
 
+    /**
+     * 요청자가 대상 사용자 본인인지 확인합니다.
+     */
     private void validateSelfRequest(
             java.util.UUID targetUserId,
             java.util.UUID requesterId
@@ -205,6 +290,9 @@ public class UserCommandService {
         }
     }
 
+    /**
+     * MASTER_ADMIN 권한인지 확인합니다.
+     */
     private void validateMasterAdmin(UserRole requesterRole) {
         if (requesterRole != UserRole.MASTER_ADMIN) {
             throw new BaseException(UserErrorCode.USER_ACCESS_DENIED);

@@ -58,6 +58,10 @@ public class GatewayErrorResponseWriter {
      * ErrorCode를 공통 ErrorResponse(JSON)로 직렬화합니다.
      *
      * <p>직렬화에 실패하면 내부 서버 오류 응답으로 대체합니다.</p>
+     *
+     * TODO(common-module):
+     * ErrorResponse에 선택적 requestId 필드를 추가한 뒤,
+     * Gateway 보안 오류 응답 본문에도 X-Request-Id와 동일한 값을 포함합니다.
      */
     private SerializedError serialize(ErrorCode errorCode) {
         try {

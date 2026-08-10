@@ -1,6 +1,9 @@
 package com.sixro.logistics.user.application.service;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.user.application.dto.InternalDeliveryUserResult;
+import com.sixro.logistics.user.application.dto.InternalUserAuthResult;
+import com.sixro.logistics.user.application.dto.InternalUserStatusResult;
 import com.sixro.logistics.user.application.dto.UserResult;
 import com.sixro.logistics.user.domain.exception.UserErrorCode;
 import com.sixro.logistics.user.domain.model.UserRole;
@@ -51,6 +54,44 @@ public class UserQueryService {
 
         return userRepository.search(condition, pageable)
                 .map(UserResult::from);
+    }
+
+    /**
+     * Auth Service 로그인 검증에 필요한
+     * 사용자 인증 정보를 조회합니다.
+     *
+     * <p>가입 승인 상태는 필터링하지 않고 반환하며,
+     * 로그인 허용 여부는 Auth Service에서 판단합니다.</p>
+     */
+    public InternalUserAuthResult getAuthInfo(String username) {
+        return InternalUserAuthResult.from(
+                userReader.getActiveByUsername(username)
+        );
+    }
+
+    /**
+     * Auth Service의 Access Token 재발급 시
+     * 최신 사용자 상태, 권한 및 소속 정보를 조회합니다.
+     */
+    public InternalUserStatusResult getInternalUserStatus(UUID userId) {
+        return InternalUserStatusResult.from(
+                userReader.getAccessibleUser(userId)
+        );
+    }
+
+    /**
+     * Delivery Service에서 배송 담당자 생성 및 검증에 필요한
+     * 사용자 상태, 권한, Slack 및 소속 정보를 조회합니다.
+     *
+     * <p>배송 담당자 등록 가능 여부는 반환된 정보를 기준으로
+     * Delivery Service에서 판단합니다.</p>
+     */
+    public InternalDeliveryUserResult getDeliveryUser(
+            UUID userId
+    ) {
+        return InternalDeliveryUserResult.from(
+                userReader.getAccessibleUser(userId)
+        );
     }
 
     private void validateMasterAdmin(UserRole requesterRole) {

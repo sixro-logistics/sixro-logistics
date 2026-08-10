@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'org.springframework.boot' version '3.5.16'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'java-test-fixtures'
 }
 
 group = 'com.sixro.logistics'
@@ -21,6 +22,9 @@ repositories {
 dependencies {
     // CommonResponse, ErrorCode 등에서 HttpStatus 사용
     api 'org.springframework:spring-web'
+
+    // JSON 직렬화 어노테이션
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
 
     // 공통 Auto Configuration 작성에 필요한 Spring Boot API
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -51,6 +55,16 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
+
+    // Spring Boot Testcontainers 연동
+    testFixturesImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testFixturesImplementation 'org.springframework.boot:spring-boot-testcontainers'
+
+    // Testcontainers
+    testFixturesImplementation 'org.testcontainers:junit-jupiter'
+    testFixturesImplementation 'org.testcontainers:postgresql'
+    testFixturesImplementation 'org.testcontainers:kafka'
+    testFixturesImplementation 'org.testcontainers:testcontainers'
 }
 
 tasks.named('bootJar') {

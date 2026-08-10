@@ -1,6 +1,6 @@
 package com.sixro.logistics.gateway.infrastructure.security;
 
-import com.sixro.logistics.gateway.domain.exception.AuthErrorCode;
+import com.sixro.logistics.gateway.domain.exception.GatewaySecurityErrorCode;
 import com.sixro.logistics.gateway.infrastructure.exception.GatewayErrorResponseWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.AuthenticationException;
@@ -40,9 +40,9 @@ public class GatewayAuthenticationEntryPoint
             ServerWebExchange exchange,
             AuthenticationException exception
     ) {
-        AuthErrorCode errorCode = isExpiredToken(exception)
-                ? AuthErrorCode.EXPIRED_ACCESS_TOKEN
-                : AuthErrorCode.INVALID_ACCESS_TOKEN;
+        GatewaySecurityErrorCode errorCode = isExpiredToken(exception)
+                ? GatewaySecurityErrorCode.EXPIRED_ACCESS_TOKEN
+                : GatewaySecurityErrorCode.INVALID_ACCESS_TOKEN;
 
         return errorResponseWriter.write(exchange, errorCode);
     }
