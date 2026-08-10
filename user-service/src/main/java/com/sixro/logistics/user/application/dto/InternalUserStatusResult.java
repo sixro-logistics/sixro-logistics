@@ -13,6 +13,7 @@ import java.util.UUID;
  */
 public record InternalUserStatusResult(
         UUID userId,
+        String username,
         UserRole role,
         UserStatus userStatus,
         UUID affiliationId,
@@ -22,6 +23,7 @@ public record InternalUserStatusResult(
     public static InternalUserStatusResult from(User user) {
         return new InternalUserStatusResult(
                 user.getUserId(),
+                user.getUsername(),
                 user.getRole(),
                 user.getUserStatus(),
                 user.getAffiliationId(),

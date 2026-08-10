@@ -13,6 +13,7 @@ import java.util.UUID;
  */
 public record InternalUserStatusResponse(
         UUID userId,
+        String username,
         UserRole role,
         UserStatus userStatus,
         UUID affiliationId,
@@ -24,6 +25,7 @@ public record InternalUserStatusResponse(
     ) {
         return new InternalUserStatusResponse(
                 result.userId(),
+                result.username(),
                 result.role(),
                 result.userStatus(),
                 result.affiliationId(),

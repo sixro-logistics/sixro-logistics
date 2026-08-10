@@ -1,6 +1,7 @@
 package com.sixro.logistics.user.application.dto;
 
 import com.sixro.logistics.user.domain.entity.User;
+import com.sixro.logistics.user.domain.model.AffiliationType;
 import com.sixro.logistics.user.domain.model.UserRole;
 import com.sixro.logistics.user.domain.model.UserStatus;
 
@@ -15,6 +16,8 @@ public record InternalUserAuthResult(
         String encodedPassword,
         UserRole role,
         UserStatus userStatus,
+        UUID affiliationId,
+        AffiliationType affiliationType,
         boolean deleted
 ) {
 
@@ -25,6 +28,8 @@ public record InternalUserAuthResult(
                 user.getPassword(),
                 user.getRole(),
                 user.getUserStatus(),
+                user.getAffiliationId(),
+                user.getAffiliationType(),
                 user.isDeleted()
         );
     }
