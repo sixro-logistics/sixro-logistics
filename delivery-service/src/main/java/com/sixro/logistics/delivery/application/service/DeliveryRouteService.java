@@ -307,7 +307,7 @@ public class DeliveryRouteService {
 
     private void validateCompanyManagerAuthority(UUID affiliationId, Delivery delivery) { // 경로가 속한 배송의 공급/수령업체가 본인의 소속업체임
         boolean isRelatedCompany = affiliationId != null
-                && (Objects.equals(affiliationId, delivery.getSupplierCompanyId()) || Objects.equals(affiliationId, delivery.getRecipientCompanyId()));
+                && (delivery.getSupplierCompanyIds().contains(affiliationId) || Objects.equals(affiliationId, delivery.getRecipientCompanyId()));
 
         if (!isRelatedCompany) {
             throw new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_FORBIDDEN);

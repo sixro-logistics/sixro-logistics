@@ -125,7 +125,7 @@ public class DeliveryQueryRepositoryImpl implements DeliveryQueryRepository {
 
     private BooleanExpression relatedCompany(UUID affiliationId) {
         return affiliationId == null ? Expressions.FALSE
-                : delivery.supplierCompanyId.eq(affiliationId).or(delivery.recipientCompanyId.eq(affiliationId));
+                : delivery.supplierCompanyIds.contains(affiliationId).or(delivery.recipientCompanyId.eq(affiliationId));
     }
 
     private OrderSpecifier<?> resolveOrder(Pageable pageable) {

@@ -121,7 +121,7 @@ public class DeliveryRouteQueryRepositoryImpl implements DeliveryRouteQueryRepos
 
     private BooleanExpression relatedCompany(UUID companyId) {
         return companyId == null ? Expressions.FALSE
-                : delivery.supplierCompanyId.eq(companyId).or(delivery.recipientCompanyId.eq(companyId));
+                : delivery.supplierCompanyIds.contains(companyId).or(delivery.recipientCompanyId.eq(companyId));
     }
 
     private OrderSpecifier<?> resolveOrder(Pageable pageable) {

@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -27,8 +29,17 @@ public class Delivery extends BaseEntity {
     @Column(nullable = false, unique = true, updatable = false)
     private UUID orderId;
 
-    @Column(nullable = false, updatable = false)
-    private UUID supplierCompanyId;
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "p_delivery_supplier_company",
+            joinColumns = @JoinColumn(name = "delivery_id"),
+            uniqueConstraints = @UniqueConstraint(
+                    name = "uk_delivery_supplier_company",
+                    columnNames = {"delivery_id", "supplier_company_id"}
+            )
+    )
+    @Column(name = "supplier_company_id", nullable = false)
+    private Set<UUID> supplierCompanyIds = new HashSet<>();
 
     @Column(nullable = false, updatable = false)
     private UUID recipientCompanyId;
