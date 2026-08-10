@@ -22,7 +22,7 @@ spring:
       resourceserver:
         jwt:
           # RS256 Access Token 검증에 사용할 PEM 공개키 위치
-          public-key-location: classpath:keys/public-key.pem
+          public-key-location: file:${JWT_PUBLIC_KEY_PATH}
 
   reactor:
     context-propagation: auto

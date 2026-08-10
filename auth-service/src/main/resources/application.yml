@@ -20,6 +20,15 @@ spring:
       username: ${REDIS_USERNAME}
       password: ${REDIS_PASSWORD}
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: auth-user-security
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
   cloud:
     discovery:
       enabled: true
