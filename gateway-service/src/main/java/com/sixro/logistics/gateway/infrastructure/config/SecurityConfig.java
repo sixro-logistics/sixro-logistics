@@ -139,14 +139,14 @@ public class SecurityConfig {
 
                         /*
                          * 가입 승인 / 거절
-                         * MASTER_ADMIN 전용
+                         * MASTER_ADMIN, HUB_ADMIN 전용
                          */
                         .pathMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/users/*/approve",
                                 "/api/v1/users/*/reject"
                         )
-                        .hasRole("MASTER_ADMIN")
+                        .hasRole("MASTER_ADMIN, HUB_ADMIN")
 
                         /*
                          * 사용자 단건 조회
