@@ -11,6 +11,8 @@ import java.util.UUID;
 
 public interface DeliveryRouteRepositoryPort {
 
+    List<DeliveryRoute> saveAll(List<DeliveryRoute> deliveryRoutes);
+
     Optional<DeliveryRoute> findById(UUID deliveryRouteId);
 
     Optional<DeliveryRoute> findByIdForUpdate(UUID deliveryRouteId);
