@@ -21,13 +21,13 @@ import java.util.UUID;
 /**
  * RSA 키 기반 JWT 발급과 검증을 담당합니다.
  *
- * <p>Access Token과 Refresh Token에 사용자 ID, 권한, 토큰 유형 및 JWT ID를 포함하며,
- * 토큰 검증 시 서명, 발급자, 만료 시간과 토큰 유형을 확인합니다.</p>
+ * <p>Access Token과 Refresh Token에 동일한 sessionId를 포함하여
+ * 사용자 단일 세션 검증에 필요한 정보를 제공합니다.</p>
  *
- * <p>비밀키는 토큰 발급에만 사용하고 공개키는 토큰 검증에 사용합니다.</p>
- * <p>
+ * <p>실제 현재 세션 상태는 Redis 기반 SessionRepository에서 관리합니다.</p>
+ *
  * TODO(auth): 운영 환경의 JWT 키 교체를 지원하도록 kid 헤더와
- *  - 복수 공개키 또는 JWKS 기반 키 조회 방식을 검토한다.
+ *  - 복수 공개키 또는 JWKS 기반 키 조회 방식을 검토합니다.
  */
 @Component
 @RequiredArgsConstructor
@@ -35,6 +35,7 @@ public class JwtProvider {
 
     private static final String ROLE_CLAIM = "role";
     private static final String TOKEN_TYPE_CLAIM = "tokenType";
+    private static final String SESSION_ID_CLAIM = "sessionId";
 
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
     private static final String REFRESH_TOKEN_TYPE = "REFRESH";
@@ -43,21 +44,24 @@ public class JwtProvider {
     private final RsaPrivateKeyLoader privateKeyLoader;
     private final RsaPublicKeyLoader publicKeyLoader;
 
-    // 동일한 사용자 정보로 Access Token과 Refresh Token을 발급합니다.
+    // 동일한 로그인 세션 정보로 Access Token과 Refresh Token을 발급합니다.
     public TokenPair issueTokenPair(
             UUID userId,
-            UserRole role
+            UserRole role,
+            UUID sessionId
     ) {
         return new TokenPair(
                 createToken(
                         userId,
                         role,
+                        sessionId,
                         ACCESS_TOKEN_TYPE,
                         properties.accessTokenExpiration()
                 ),
                 createToken(
                         userId,
                         role,
+                        sessionId,
                         REFRESH_TOKEN_TYPE,
                         properties.refreshTokenExpiration()
                 )
@@ -112,10 +116,11 @@ public class JwtProvider {
         return properties.refreshTokenExpiration();
     }
 
-    // 토큰 유형과 만료 시간을 적용하여 RSA SHA-256 방식의 JWT를 생성합니다.
+    // 토큰 유형과 로그인 세션 정보를 포함한 RSA SHA-256 방식의 JWT를 생성합니다.
     private String createToken(
             UUID userId,
             UserRole role,
+            UUID sessionId,
             String tokenType,
             Duration expiration
     ) {
@@ -132,16 +137,13 @@ public class JwtProvider {
                 .expiration(Date.from(expiresAt))
                 .id(UUID.randomUUID().toString())
                 .claim(ROLE_CLAIM, role.name())
+                .claim(SESSION_ID_CLAIM, sessionId.toString())
                 .claim(TOKEN_TYPE_CLAIM, tokenType)
                 .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
     }
 
-    /**
-     * 공개키로 JWT 서명과 발급자를 검증하고 Claims를 추출합니다.
-     *
-     * <p>만료 오류와 그 밖의 유효하지 않은 토큰 오류를 구분합니다.</p>
-     */
+    // 공개키로 JWT 서명과 발급자를 검증하고 Claims를 추출합니다.
     private Claims parse(
             String token,
             AuthErrorCode expiredError,
@@ -199,6 +201,12 @@ public class JwtProvider {
                     UserRole.valueOf(
                             claims.get(
                                     ROLE_CLAIM,
+                                    String.class
+                            )
+                    ),
+                    UUID.fromString(
+                            claims.get(
+                                    SESSION_ID_CLAIM,
                                     String.class
                             )
                     ),

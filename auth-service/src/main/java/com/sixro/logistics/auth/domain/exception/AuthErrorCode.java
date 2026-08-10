@@ -92,12 +92,15 @@ public enum AuthErrorCode implements ErrorCode {
             "A013",
             "User Service 통신 중 오류가 발생했습니다."
     ),
+    /*
+     * User Service의 세부 오류 응답을 확인할 수 없는 경우
+     * 사용하는 회원 중복 오류 fallback입니다.
+     */
     DUPLICATE_USER(
             HttpStatus.CONFLICT,
             "A014",
             "이미 사용 중인 사용자명 또는 Slack ID입니다."
     ),
-
     INVALID_SIGN_UP_REQUEST(
             HttpStatus.BAD_REQUEST,
             "A015",
@@ -106,8 +109,20 @@ public enum AuthErrorCode implements ErrorCode {
     TOKEN_OWNER_MISMATCH(
             HttpStatus.UNAUTHORIZED,
             "A016",
-            "Access Token과 Refresh Token의 사용자 또는 권한 정보가 일치하지 않습니다."
-    );
+            "Access Token과 Refresh Token의 사용자 또는 세션 정보가 일치하지 않습니다."
+    ),
+    DUPLICATE_USERNAME(
+            HttpStatus.CONFLICT,
+            "A017",
+            "이미 사용 중인 사용자명입니다."
+    ),
+
+    DUPLICATE_SLACK_ID(
+            HttpStatus.CONFLICT,
+            "A018",
+            "이미 사용 중인 Slack ID입니다."
+    )
+    ;
 
     private final HttpStatus status;
     private final String code;
