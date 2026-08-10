@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
-@FeignClient(name = "hub-service", path = "/api/v1/internal/hub-routes")
+@FeignClient(name = "hub-service", contextId = "hubRouteClient", path = "/api/v1/internal/hub-routes")
 public interface HubRouteClient {
 
     @PostMapping("/path")
