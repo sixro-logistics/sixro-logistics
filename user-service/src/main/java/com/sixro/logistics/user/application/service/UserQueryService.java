@@ -80,11 +80,11 @@ public class UserQueryService {
     }
 
     /**
-     * Delivery Service에서 배송 담당자 생성 및 검증에 필요한
-     * 사용자 상태, 권한, Slack 및 소속 정보를 조회합니다.
+     * Delivery Service에서 배송 담당자 검증 및 수령인 정보 조회에 필요한
+     * 사용자 상태, 권한, username, Slack 및 소속 정보를 조회합니다.
      *
-     * <p>배송 담당자 등록 가능 여부는 반환된 정보를 기준으로
-     * Delivery Service에서 판단합니다.</p>
+     * 배송 담당자 여부 등 Delivery 도메인의 세부 판단은
+     * Delivery Service에서 수행합니다.
      */
     public InternalDeliveryUserResult getDeliveryUser(
             UUID userId

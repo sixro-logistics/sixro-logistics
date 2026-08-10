@@ -8,11 +8,12 @@ import com.sixro.logistics.user.domain.model.UserStatus;
 import java.util.UUID;
 
 /**
- * Delivery Service에서 배송 담당자 생성 및 검증에 사용하는
- * 내부 사용자 정보입니다.
+ * Delivery Service의 배송 담당자 검증 및
+ * 수령인 정보 조회에 사용하는 내부 사용자 정보입니다.
  */
 public record InternalDeliveryUserResult(
         UUID userId,
+        String username,
         UserRole role,
         UserStatus userStatus,
         String slackId,
@@ -23,6 +24,7 @@ public record InternalDeliveryUserResult(
     public static InternalDeliveryUserResult from(User user) {
         return new InternalDeliveryUserResult(
                 user.getUserId(),
+                user.getUsername(),
                 user.getRole(),
                 user.getUserStatus(),
                 user.getSlackId(),
