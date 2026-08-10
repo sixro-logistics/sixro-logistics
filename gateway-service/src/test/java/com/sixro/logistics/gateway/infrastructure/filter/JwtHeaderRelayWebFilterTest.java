@@ -1,6 +1,7 @@
 package com.sixro.logistics.gateway.infrastructure.filter;
 
 import com.sixro.logistics.common.constant.HeaderConstants;
+import com.sixro.logistics.common.constant.JwtClaimConstants;
 import com.sixro.logistics.gateway.infrastructure.exception.GatewayErrorResponseWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,13 +27,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
- * JwtHeaderRelayWebFilter의 내부 인증 Header 처리 동작을 검증합니다.
+ * {@link JwtHeaderRelayWebFilter}의 내부 인증 Header 처리 동작을 검증합니다.
  *
  * <p>클라이언트가 전달한 내부 인증 Header를 제거하고,
- * Gateway에서 검증된 JWT Claim을 기준으로
- * 내부 서비스용 Header를 다시 생성하는지 확인합니다.</p>
+ * Gateway에서 검증된 JWT Claim을 이용하여 내부 서비스용 Header를
+ * 다시 생성하는지 확인합니다.</p>
  */
 class JwtHeaderRelayWebFilterTest {
+
+    private static final String MASTER_ADMIN =
+            "MASTER_ADMIN";
+
+    private static final String AUTHENTICATED_USERNAME =
+            "master-user";
 
     private GatewayErrorResponseWriter errorResponseWriter;
     private JwtHeaderRelayWebFilter filter;
@@ -48,18 +55,21 @@ class JwtHeaderRelayWebFilterTest {
     }
 
     /**
-     * 인증된 JWT의 userId와 role이
+     * 인증된 JWT의 사용자 ID, 사용자명 및 역할이
      * 내부 서비스용 Header로 전달되는지 확인합니다.
+     *
+     * <p>MASTER_ADMIN은 허브 또는 업체에 소속되지 않으므로
+     * 소속 관련 Header는 전달되지 않아야 합니다.</p>
      */
     @Test
     void authenticatedJwtRelaysUserIdAndRoleHeaders() {
-
-        UUID userId = UUID.randomUUID();
+        UUID userId =
+                UUID.randomUUID();
 
         JwtAuthenticationToken authentication =
                 createAuthentication(
                         userId,
-                        "MASTER_ADMIN"
+                        MASTER_ADMIN
                 );
 
         MockServerHttpRequest request =
@@ -110,22 +120,49 @@ class JwtHeaderRelayWebFilterTest {
 
         assertThat(
                 headers.getFirst(
+                        HeaderConstants.USERNAME
+                )
+        ).isEqualTo(
+                AUTHENTICATED_USERNAME
+        );
+
+        assertThat(
+                headers.getFirst(
                         HeaderConstants.USER_ROLE
                 )
         ).isEqualTo(
-                "MASTER_ADMIN"
+                MASTER_ADMIN
         );
+
+        /*
+         * MASTER_ADMIN은 소속 정보가 없으므로 소속 Header가
+         * 생성되지 않아야 합니다.
+         */
+        assertThat(
+                headers.containsKey(
+                        HeaderConstants.AFFILIATION_ID
+                )
+        ).isFalse();
+
+        assertThat(
+                headers.containsKey(
+                        HeaderConstants.AFFILIATION_TYPE
+                )
+        ).isFalse();
 
         verifyNoInteractions(errorResponseWriter);
     }
 
     /**
-     * 클라이언트가 임의로 전달한 내부 인증 Header를 제거하고,
-     * JWT에서 검증된 userId와 role로 다시 설정하는지 확인합니다.
+     * 클라이언트가 내부 인증 Header를 임의로 전달하더라도
+     * 해당 값이 제거되고 JWT에서 검증된 값으로 다시 설정되는지
+     * 확인합니다.
+     *
+     * <p>JWT에 존재하지 않는 소속 정보는 클라이언트가 전달했더라도
+     * 내부 서비스로 전달되지 않아야 합니다.</p>
      */
     @Test
     void spoofedInternalHeadersAreRemovedAndReplaced() {
-
         UUID authenticatedUserId =
                 UUID.randomUUID();
 
@@ -138,7 +175,7 @@ class JwtHeaderRelayWebFilterTest {
         JwtAuthenticationToken authentication =
                 createAuthentication(
                         authenticatedUserId,
-                        "MASTER_ADMIN"
+                        MASTER_ADMIN
                 );
 
         MockServerHttpRequest request =
@@ -200,8 +237,8 @@ class JwtHeaderRelayWebFilterTest {
                         .getHeaders();
 
         /*
-         * 클라이언트가 전달한 userId / role이 아니라
-         * JWT에서 검증된 값으로 교체되어야 합니다.
+         * 클라이언트가 전달한 위조 사용자 ID가 아니라
+         * JWT subject의 사용자 ID로 교체되어야 합니다.
          */
         assertThat(
                 headers.getFirst(
@@ -211,24 +248,35 @@ class JwtHeaderRelayWebFilterTest {
                 authenticatedUserId.toString()
         );
 
+        /*
+         * 클라이언트가 전달한 fake-user가 아니라
+         * JWT에서 검증된 username으로 교체되어야 합니다.
+         */
+        assertThat(
+                headers.getFirst(
+                        HeaderConstants.USERNAME
+                )
+        ).isEqualTo(
+                AUTHENTICATED_USERNAME
+        );
+
+        /*
+         * 클라이언트가 전달한 FAKE_ROLE이 아니라
+         * JWT에서 검증된 역할로 교체되어야 합니다.
+         */
         assertThat(
                 headers.getFirst(
                         HeaderConstants.USER_ROLE
                 )
         ).isEqualTo(
-                "MASTER_ADMIN"
+                MASTER_ADMIN
         );
 
         /*
-         * Gateway가 JWT에서 생성하지 않는 내부 인증 Header는
-         * downstream으로 전달되지 않아야 합니다.
+         * MASTER_ADMIN JWT에는 소속 Claim이 없으므로
+         * 클라이언트가 위조한 소속 Header는 제거된 상태로
+         * 유지되어야 합니다.
          */
-        assertThat(
-                headers.containsKey(
-                        HeaderConstants.USERNAME
-                )
-        ).isFalse();
-
         assertThat(
                 headers.containsKey(
                         HeaderConstants.AFFILIATION_TYPE
@@ -245,12 +293,15 @@ class JwtHeaderRelayWebFilterTest {
     }
 
     /**
-     * 인증되지 않은 요청에서도 클라이언트가 전달한
-     * 내부 인증 Header를 제거하는지 확인합니다.
+     * 인증되지 않은 요청에서도 클라이언트가 전달한 내부 인증
+     * Header가 모두 제거되는지 확인합니다.
+     *
+     * <p>로그인과 회원가입 같은 공개 API 요청에는 인증 Principal이
+     * 존재하지 않으므로, Header를 다시 생성하지 않고 제거된 요청을
+     * 다음 Filter로 전달해야 합니다.</p>
      */
     @Test
     void unauthenticatedRequestRemovesInternalHeaders() {
-
         MockServerHttpRequest request =
                 MockServerHttpRequest
                         .post("/api/v1/auth/login")
@@ -260,7 +311,7 @@ class JwtHeaderRelayWebFilterTest {
                         )
                         .header(
                                 HeaderConstants.USER_ROLE,
-                                "MASTER_ADMIN"
+                                MASTER_ADMIN
                         )
                         .header(
                                 HeaderConstants.USERNAME,
@@ -314,13 +365,13 @@ class JwtHeaderRelayWebFilterTest {
 
         assertThat(
                 headers.containsKey(
-                        HeaderConstants.USER_ROLE
+                        HeaderConstants.USERNAME
                 )
         ).isFalse();
 
         assertThat(
                 headers.containsKey(
-                        HeaderConstants.USERNAME
+                        HeaderConstants.USER_ROLE
                 )
         ).isFalse();
 
@@ -340,14 +391,18 @@ class JwtHeaderRelayWebFilterTest {
     }
 
     /**
-     * 테스트용 JWT Authentication을 생성합니다.
+     * 테스트에서 사용할 MASTER_ADMIN JWT Authentication을 생성합니다.
+     *
+     * <p>현재 {@link JwtHeaderRelayWebFilter}는 userId, username,
+     * role Claim을 필수로 검증하므로 테스트 JWT에도 동일한 Claim을
+     * 포함해야 합니다.</p>
      */
     private JwtAuthenticationToken createAuthentication(
             UUID userId,
             String role
     ) {
-
-        Instant now = Instant.now();
+        Instant now =
+                Instant.now();
 
         Jwt jwt = Jwt.withTokenValue(
                         "test-access-token"
@@ -360,7 +415,11 @@ class JwtHeaderRelayWebFilterTest {
                         userId.toString()
                 )
                 .claim(
-                        "role",
+                        JwtClaimConstants.USERNAME,
+                        AUTHENTICATED_USERNAME
+                )
+                .claim(
+                        JwtClaimConstants.ROLE,
                         role
                 )
                 .issuedAt(now)
@@ -380,7 +439,6 @@ class JwtHeaderRelayWebFilterTest {
             MockServerHttpRequest request,
             JwtAuthenticationToken authentication
     ) {
-
         MockServerWebExchange exchange =
                 MockServerWebExchange.from(request);
 
