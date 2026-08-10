@@ -1,4 +1,4 @@
-package com.sixro.logistics.hub.hub.application.auth;
+package com.sixro.logistics.hub.common.auth;
 
 import java.util.UUID;
 
