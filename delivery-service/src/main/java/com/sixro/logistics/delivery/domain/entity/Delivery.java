@@ -72,6 +72,28 @@ public class Delivery extends BaseEntity {
     @Column(length = 100, nullable = false)
     private String recipientSlackId;
 
+    public static Delivery create(UUID orderId, Set<UUID> supplierCompanyIds, UUID recipientCompanyId,
+                                  UUID originHubId, UUID destHubId, String deliveryAddress,
+                                  LocalDateTime deliveryDeadline, String requests,
+                                  String recipientName, String recipientSlackId) {
+
+        Delivery delivery = new Delivery();
+
+        delivery.orderId = orderId;
+        delivery.supplierCompanyIds = new HashSet<>(supplierCompanyIds);
+        delivery.recipientCompanyId = recipientCompanyId;
+        delivery.originHubId = originHubId;
+        delivery.destHubId = destHubId;
+        delivery.deliveryAddress = deliveryAddress;
+        delivery.deliveryDeadline = deliveryDeadline;
+        delivery.requests = requests;
+        delivery.recipientName = recipientName;
+        delivery.recipientSlackId = recipientSlackId;
+        delivery.deliveryStatus = DeliveryStatus.HUB_WAITING;
+
+        return delivery;
+    }
+
     public void startHubTransit() {
         this.deliveryStatus = DeliveryStatus.HUB_IN_TRANSIT;
     }
