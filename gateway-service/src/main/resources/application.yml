@@ -146,8 +146,10 @@ management:
 
   endpoint:
     health:
-      # 개발 환경에서 Health 상세 정보 표시
+      # 개발환경
       show-details: always
+      # 운영환경
+  #      show-details: when_authorized
 
   tracing:
     sampling:
@@ -158,5 +160,9 @@ management:
       endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 logging:
+  level:
+    root: INFO
+    com.sixro.logistics.gateway: INFO
+
   pattern:
-    console: '%clr(%-5level){green} %clr(%logger{36}.%M\(\)){cyan}: %msg%n'
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'
