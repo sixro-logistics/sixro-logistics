@@ -3,12 +3,14 @@ package com.sixro.logistics.auth.infrastructure.client;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalCreateUserResponse;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalUserAuthInfoResponse;
+import com.sixro.logistics.auth.infrastructure.client.response.InternalUserStatusResponse;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import java.util.UUID;
 
 /**
  * Auth Service가 User Service의 내부 API를 호출하기 위한 OpenFeign 클라이언트입니다.
@@ -29,5 +31,10 @@ public interface UserServiceClient {
     @GetMapping("/api/v1/internal/users/auth-info/{username}")
     CommonResponse<InternalUserAuthInfoResponse> getAuthInfo(
             @PathVariable String username
+    );
+
+    @GetMapping("/api/v1/internal/users/{userId}/status")
+    CommonResponse<InternalUserStatusResponse> getUserStatus(
+            @PathVariable UUID userId
     );
 }
