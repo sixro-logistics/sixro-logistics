@@ -55,6 +55,20 @@ public class DeliveryManager extends BaseEntity {
         this.deliverySequence = deliverySequence;
     }
 
+    public void startDelivery() {
+        if (this.managerStatus != ManagerStatus.AVAILABLE) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_AVAILABLE);
+        }
+
+        this.managerStatus = ManagerStatus.IN_DELIVERY;
+    }
+
+    public void finishDelivery() {
+        if (this.managerStatus == ManagerStatus.IN_DELIVERY) {
+            this.managerStatus = ManagerStatus.AVAILABLE;
+        }
+    }
+
     public void validateUpdateConditions(UUID hubId, ManagerType managerType, ManagerStatus managerStatus) {
         // 현재 배송 중인 담당자의 수정 요청은 모두 차단
         if (this.managerStatus.equals(ManagerStatus.IN_DELIVERY)) {

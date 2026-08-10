@@ -1,7 +1,9 @@
 package com.sixro.logistics.delivery.domain.entity;
 
+import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import com.sixro.logistics.delivery.domain.enums.RouteStatus;
+import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -52,4 +54,43 @@ public class DeliveryRoute extends BaseEntity {
     private LocalDateTime startedAt;
 
     private LocalDateTime completedAt;
+
+    public void updateStatus(RouteStatus routeStatus, LocalDateTime changedAt) {
+        validateStatusTransition(routeStatus);
+
+        this.routeStatus = routeStatus;
+
+        if (routeStatus == RouteStatus.HUB_IN_TRANSIT) {
+            this.startedAt = changedAt;
+        }
+        if (routeStatus == RouteStatus.HUB_ARRIVED) {
+            this.completedAt = changedAt;
+        }
+    }
+
+    public void validateStatusTransition(RouteStatus routeStatus) {
+        if (!canTransitTo(routeStatus)) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_ROUTE_STATUS_TRANSITION);
+        }
+    }
+
+    public void cancelByDelivery() {
+        if (this.routeStatus != RouteStatus.HUB_TRANSIT_WAITING) {
+            throw new BaseException(DeliveryErrorCode.INVALID_DELIVERY_ROUTE_STATUS_TRANSITION);
+        }
+
+        this.routeStatus = RouteStatus.CANCELLED;
+    }
+
+    public void assignDeliveryManager(DeliveryManager deliveryManager) {
+        this.deliveryManager = deliveryManager;
+    }
+
+    private boolean canTransitTo(RouteStatus routeStatus) {
+        return switch (this.routeStatus) {
+            case HUB_TRANSIT_WAITING -> routeStatus == RouteStatus.HUB_IN_TRANSIT || routeStatus == RouteStatus.FAILED;
+            case HUB_IN_TRANSIT -> routeStatus == RouteStatus.HUB_ARRIVED || routeStatus == RouteStatus.FAILED;
+            case HUB_ARRIVED, CANCELLED, FAILED -> false;
+        };
+    }
 }

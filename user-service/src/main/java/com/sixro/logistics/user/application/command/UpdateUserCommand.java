@@ -14,7 +14,7 @@ public record UpdateUserCommand(
         UserRole requesterRole,
         String slackId,
         UserRole role,
-        AffiliationType affiliationType,
-        UUID affiliationId
+        UUID affiliationId,
+        AffiliationType affiliationType
 ) {
 }
