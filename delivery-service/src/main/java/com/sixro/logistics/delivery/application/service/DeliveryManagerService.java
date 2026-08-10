@@ -3,7 +3,9 @@ package com.sixro.logistics.delivery.application.service;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
+import com.sixro.logistics.delivery.application.model.HubInfo;
 import com.sixro.logistics.delivery.application.model.UserInfo;
+import com.sixro.logistics.delivery.application.port.HubQueryPort;
 import com.sixro.logistics.delivery.application.port.UserQueryPort;
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
@@ -40,12 +42,14 @@ public class DeliveryManagerService {
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteRepository deliveryRouteRepository;
     private final UserQueryPort userQueryPort;
+    private final HubQueryPort hubQueryPort;
 
-    public DeliveryManagerService(DeliveryManagerRepository managerRepository, DeliveryRepository deliveryRepository, DeliveryRouteRepository deliveryRouteRepository, UserQueryPort userQueryPort) {
+    public DeliveryManagerService(DeliveryManagerRepository managerRepository, DeliveryRepository deliveryRepository, DeliveryRouteRepository deliveryRouteRepository, UserQueryPort userQueryPort, HubQueryPort hubQueryPort) {
         this.managerRepository = managerRepository;
         this.deliveryRepository = deliveryRepository;
         this.deliveryRouteRepository = deliveryRouteRepository;
         this.userQueryPort = userQueryPort;
+        this.hubQueryPort = hubQueryPort;
     }
 
     public ManagerCreateResDto createDeliveryManager(String userRole, UUID affiliationId, ManagerCreateReqDto managerCreateReqDto) {
@@ -69,7 +73,9 @@ public class DeliveryManagerService {
         }
 
         // 3. 요청에 소속 허브가 있을 경우 해당 허브 존재 / 활성화여부 체크
-            // TODO: hub openfeign 단건 조회
+        if (managerType == ManagerType.COMPANY_DELIVERY) {
+            validateHub(hubId);
+        }
 
         // 순번 계산
         int deliverySequence = assignDeliverySequence(managerType, hubId);
@@ -111,6 +117,15 @@ public class DeliveryManagerService {
 
         if (!userId.equals(userInfo.userId()) || !"DELIVERY_MANAGER".equals(userInfo.role()) || !"APPROVED".equals(userInfo.userStatus())) {
             throw new BaseException(DeliveryErrorCode.USER_NOT_ELIGIBLE_FOR_DELIVERY_MANAGER);
+        }
+    }
+
+    private void validateHub(UUID hubId) {
+        HubInfo hubInfo = hubQueryPort.findHub(hubId)
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_TYPE_HUB_MISMATCH));
+
+        if (!hubId.equals(hubInfo.hubId())) {
+            throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_TYPE_HUB_MISMATCH);
         }
     }
 
@@ -238,9 +253,9 @@ public class DeliveryManagerService {
                 }
             }
 
-            // TODO: company_delivery의 허브 변경하는 경우 허브 검증 (서비스 간 통신): 허브 단건 조회 api
+            // company_delivery의 허브 변경하는 경우 허브 검증
             if (fmanagerType == ManagerType.COMPANY_DELIVERY) {
-                //
+                validateHub(fhubId);
             }
 
             // 순번 재지정
