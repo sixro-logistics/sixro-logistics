@@ -164,7 +164,7 @@ public class DeliveryManagerService {
         return new ManagerInfoResDto(deliveryManager);
     }
 
-    private void validateGetAuthority(UUID loginUserId, String userRole, UUID affiliationId, DeliveryManager deliveryManager) { // TODO: UserRole
+    private void validateGetAuthority(UUID loginUserId, String userRole, UUID affiliationId, DeliveryManager deliveryManager) {
         ManagerType targetManagerType = deliveryManager.getManagerType();
         UUID hubId = deliveryManager.getHubId();
         UUID managerId = deliveryManager.getDeliveryManagerId();
@@ -271,7 +271,7 @@ public class DeliveryManagerService {
         return new ManagerUpdateResDto(deliveryManager);
     }
 
-    private void validateUpdateAndDeleteAuthority(String userRole, UUID affiliationId, DeliveryManager deliveryManager) { // TODO: UserRole
+    private void validateUpdateAndDeleteAuthority(String userRole, UUID affiliationId, DeliveryManager deliveryManager) {
         ManagerType targetManagerType = deliveryManager.getManagerType();
         UUID hubId = deliveryManager.getHubId();
 
