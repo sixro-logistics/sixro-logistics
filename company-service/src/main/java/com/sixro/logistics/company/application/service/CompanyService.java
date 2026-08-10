@@ -1,10 +1,13 @@
 package com.sixro.logistics.company.application.service;
 
-import com.sixro.logistics.company.presentation.dto.request.CompanyCreateRequestDto;
-import com.sixro.logistics.company.presentation.dto.response.CompanyResponseDto;
-import com.sixro.logistics.company.presentation.dto.request.CompanyUpdateRequestDto;
+import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.company.domain.entity.Company;
 import com.sixro.logistics.company.domain.repository.CompanyRepository;
+import com.sixro.logistics.company.exception.CompanyErrorCode;
+import com.sixro.logistics.company.presentation.dto.request.CompanyCreateRequestDto;
+import com.sixro.logistics.company.presentation.dto.request.CompanyUpdateRequestDto;
+import com.sixro.logistics.company.presentation.dto.response.CompanyCheckResponseDto;
+import com.sixro.logistics.company.presentation.dto.response.CompanyResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -157,6 +160,17 @@ public class CompanyService {
                 );
 
         company.delete(userId);
+    }
+
+    /**
+     * 업체 존재 유무 확인
+     */
+    public CompanyCheckResponseDto getCheckCompany(UUID companyId) {
+        Company company = companyRepository
+                .findByCompanyIdAndIsDeletedFalse(companyId)
+                .orElseThrow(() -> new BaseException(CompanyErrorCode.COMPANY_NOT_FOUND));
+
+        return CompanyCheckResponseDto.from(company);
     }
 
     private Specification<Company> isNotDeleted() {
