@@ -2,11 +2,10 @@ package com.sixro.logistics.inventory.application.service;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.inventory.application.command.*;
-import com.sixro.logistics.inventory.application.result.InventoryCreateResult;
-import com.sixro.logistics.inventory.application.result.InventoryDeleteResult;
-import com.sixro.logistics.inventory.application.result.InventoryStockInCompanyResult;
-import com.sixro.logistics.inventory.application.result.InventoryUpdateResult;
+import com.sixro.logistics.inventory.application.common.model.UserRole;
+import com.sixro.logistics.inventory.application.result.*;
 import com.sixro.logistics.inventory.application.service.inventory.InventoryCommandService;
+import com.sixro.logistics.inventory.application.service.inventory.InventoryQueryService;
 import com.sixro.logistics.inventory.application.service.outbox.OutboxService;
 import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
 import com.sixro.logistics.inventory.domain.event.InventoryDeductedEvent;
@@ -20,6 +19,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -36,6 +39,9 @@ class InventoryServiceTest {
 
     @InjectMocks
     private InventoryCommandService inventoryService;
+
+    @InjectMocks
+    private InventoryQueryService inventoryQueryService;
 
     @Mock
     private InventoryRepository inventoryRepository;
@@ -115,7 +121,7 @@ class InventoryServiceTest {
         InventoryUpdateCommand command =
                 new InventoryUpdateCommand(200);
 
-        given(inventoryRepository.findByIdAndIsDeletedFalse(inventoryId))
+        given(inventoryRepository.findForUpdateByIdAndIsDeletedFalse(inventoryId))
                 .willReturn(Optional.of(inventory));
 
         // when
@@ -128,7 +134,7 @@ class InventoryServiceTest {
         assertThat(result.stock()).isEqualTo(200);
 
         verify(inventoryRepository)
-                .findByIdAndIsDeletedFalse(inventoryId);
+                .findForUpdateByIdAndIsDeletedFalse(inventoryId);
     }
 
     @Test
@@ -141,7 +147,7 @@ class InventoryServiceTest {
         InventoryUpdateCommand command =
                 new InventoryUpdateCommand(200);
 
-        given(inventoryRepository.findByIdAndIsDeletedFalse(inventoryId))
+        given(inventoryRepository.findForUpdateByIdAndIsDeletedFalse(inventoryId))
                 .willReturn(Optional.empty());
 
         // when
@@ -180,7 +186,7 @@ class InventoryServiceTest {
         InventoryStockInCommand command =
                 new InventoryStockInCommand(50);
 
-        given(inventoryRepository.findByIdAndIsDeletedFalse(inventoryId))
+        given(inventoryRepository.findForUpdateByIdAndIsDeletedFalse(inventoryId))
                 .willReturn(Optional.of(inventory));
 
         // when
@@ -196,7 +202,7 @@ class InventoryServiceTest {
         assertThat(result.stock()).isEqualTo(150);
 
         verify(inventoryRepository)
-                .findByIdAndIsDeletedFalse(inventoryId);
+                .findForUpdateByIdAndIsDeletedFalse(inventoryId);
     }
 
     @Test
@@ -209,7 +215,7 @@ class InventoryServiceTest {
         InventoryStockInCommand command =
                 new InventoryStockInCommand(50);
 
-        given(inventoryRepository.findByIdAndIsDeletedFalse(inventoryId))
+        given(inventoryRepository.findForUpdateByIdAndIsDeletedFalse(inventoryId))
                 .willReturn(Optional.empty());
 
         // when
@@ -285,6 +291,96 @@ class InventoryServiceTest {
     }
 
     @Test
+    @DisplayName("재고 목록 조회 성공")
+    void searchInventory_success() {
+
+        // given
+        UserRole userRole = UserRole.MASTER_ADMIN;
+        UUID affiliationId = UUID.randomUUID();
+
+        InventorySearchCommand command =
+                new InventorySearchCommand(
+                        null,
+                        null,
+                        null
+                );
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Inventory inventory1 =
+                Inventory.create(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        100
+                );
+
+        Inventory inventory2 =
+                Inventory.create(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        200
+                );
+
+        Page<Inventory> inventoryPage =
+                new PageImpl<>(
+                        List.of(inventory1, inventory2),
+                        pageable,
+                        2
+                );
+
+        given(
+                inventoryRepository.findAll(
+                        userRole,
+                        affiliationId,
+                        command,
+                        pageable
+                )
+        ).willReturn(inventoryPage);
+
+        // when
+        InventorySearchResult result =
+                inventoryQueryService.searchInventory(
+                        userRole,
+                        affiliationId,
+                        command,
+                        pageable
+                );
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.page()).isNotNull();
+        assertThat(result.page().getContent()).hasSize(2);
+
+        InventorySearchItem firstItem =
+                result.page().getContent().get(0);
+
+        assertThat(firstItem.inventoryId())
+                .isEqualTo(inventory1.getId());
+
+        assertThat(firstItem.hubId())
+                .isEqualTo(inventory1.getHubId());
+
+        assertThat(firstItem.companyId())
+                .isEqualTo(inventory1.getCompanyId());
+
+        assertThat(firstItem.productId())
+                .isEqualTo(inventory1.getProductId());
+
+        assertThat(firstItem.stock())
+                .isEqualTo(inventory1.getStock());
+
+        verify(inventoryRepository)
+                .findAll(
+                        userRole,
+                        affiliationId,
+                        command,
+                        pageable
+                );
+    }
+
+    @Test
     @DisplayName("재고 차감 성공 - Outbox 이벤트 생성")
     void deductInventory_success() {
 
@@ -316,7 +412,7 @@ class InventoryServiceTest {
 
         given(
                 inventoryRepository
-                        .findAllByHubIdAndProductIdInAndIsDeletedFalse(
+                        .findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(
                                 eq(hubId),
                                 anyList()
                         )
@@ -374,7 +470,7 @@ class InventoryServiceTest {
 
         given(
                 inventoryRepository
-                        .findAllByHubIdAndProductIdInAndIsDeletedFalse(
+                        .findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(
                                 eq(hubId),
                                 anyList()
                         )
