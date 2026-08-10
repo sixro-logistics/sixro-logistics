@@ -14,24 +14,19 @@ public interface UserRepository {
 
     User save(User user);
 
-    /**
-     * 삭제 여부와 관계없이 사용자를 조회합니다.
-     *
-     * <p>사용자 없음과 이미 비활성화된 상태를 구분할 때 사용합니다.</p>
-     */
+    // 삭제 여부와 관계없이 사용자를 조회합니다.
     Optional<User> findById(UUID userId);
 
-    /**
-     * 활성 사용자만 조회합니다.
-     */
-    Optional<User> findActiveById(UUID userId);
-
+    // username으로 Soft Delete되지 않은 사용자를 조회합니다.
     Optional<User> findActiveByUsername(String username);
 
+    // 동일한 username을 사용하는 활성 사용자가 존재하는지 확인합니다.
     boolean existsActiveByUsername(String username);
 
+    // 동일한 Slack ID를 사용하는 활성 사용자가 존재하는지 확인합니다.
     boolean existsActiveBySlackId(String slackId);
 
+    // 검색 조건에 해당하는 활성 사용자를 조회합니다.
     Page<User> search(
             UserSearchCondition condition,
             Pageable pageable

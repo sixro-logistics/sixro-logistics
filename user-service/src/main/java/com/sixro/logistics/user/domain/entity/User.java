@@ -32,6 +32,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @Table(
+        schema = "user_schema",
         name = "p_user",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_p_user_username",
@@ -68,6 +69,15 @@ public class User extends BaseEntity {
     @Column(name = "role", nullable = false, length = 50)
     private UserRole role;
 
+    /**
+     * 사용자의 소속 식별자입니다.
+     *
+     * <p>HUB 소속 사용자는 Hub ID,
+     * COMPANY 소속 사용자는 Company ID를 저장합니다.</p>
+     *
+     * <p>실제 소속의 존재 여부 및 Soft Delete 여부는
+     * Application 계층에서 Hub/Company Service 내부 API를 통해 검증합니다.</p>
+     */
     @Column(name = "affiliation_id")
     private UUID affiliationId;
 
@@ -156,7 +166,13 @@ public class User extends BaseEntity {
         validateRejectableStatus();
         validateReviewer(reviewerId);
 
-        if (reason == null || reason.isBlank() || reason.length() > 500) {
+        if (reason == null || reason.isBlank()) {
+            throw new BaseException(CommonErrorCode.INVALID_REQUEST);
+        }
+
+        String normalizedReason = reason.trim();
+
+        if (normalizedReason.length() > 500) {
             throw new BaseException(CommonErrorCode.INVALID_REQUEST);
         }
 
@@ -174,7 +190,9 @@ public class User extends BaseEntity {
             throw new BaseException(CommonErrorCode.INVALID_REQUEST);
         }
 
-        this.slackId = slackId.trim();
+        String normalizedSlackId = slackId.trim();
+
+        this.slackId = normalizedSlackId;
     }
 
     /**
@@ -192,15 +210,15 @@ public class User extends BaseEntity {
             );
         }
 
-        AffiliationType nextAffiliationType =
-                affiliationType != null
-                        ? affiliationType
-                        : this.affiliationType;
-
         UUID nextAffiliationId =
                 affiliationId != null
                         ? affiliationId
                         : this.affiliationId;
+
+        AffiliationType nextAffiliationType =
+                affiliationType != null
+                        ? affiliationType
+                        : this.affiliationType;
 
         validateAffiliation(
                 this.role,
@@ -208,8 +226,8 @@ public class User extends BaseEntity {
                 nextAffiliationType
         );
 
-        this.affiliationType = nextAffiliationType;
         this.affiliationId = nextAffiliationId;
+        this.affiliationType = nextAffiliationType;
     }
 
     /**
@@ -220,8 +238,8 @@ public class User extends BaseEntity {
     public void updateByMaster(
             String slackId,
             UserRole role,
-            AffiliationType affiliationType,
-            UUID affiliationId
+            UUID affiliationId,
+            AffiliationType affiliationType
     ) {
         if (slackId != null) {
             changeSlackId(slackId);
@@ -229,27 +247,28 @@ public class User extends BaseEntity {
 
         boolean hasAuthorityChange =
                 role != null
-                        || affiliationType != null
-                        || affiliationId != null;
+                        || affiliationId != null
+                        || affiliationType != null;
 
         if (!hasAuthorityChange) {
             return;
         }
 
         UserRole nextRole = role != null ? role : this.role;
-        AffiliationType nextAffiliationType =
-                affiliationType != null
-                        ? affiliationType
-                        : this.affiliationType;
 
         UUID nextAffiliationId =
                 affiliationId != null
                         ? affiliationId
                         : this.affiliationId;
 
+        AffiliationType nextAffiliationType =
+                affiliationType != null
+                        ? affiliationType
+                        : this.affiliationType;
+
         if (nextRole == UserRole.MASTER_ADMIN) {
-            nextAffiliationType = null;
             nextAffiliationId = null;
+            nextAffiliationType = null;
         }
 
         validateAffiliation(
@@ -259,8 +278,8 @@ public class User extends BaseEntity {
         );
 
         this.role = nextRole;
-        this.affiliationType = nextAffiliationType;
         this.affiliationId = nextAffiliationId;
+        this.affiliationType = nextAffiliationType;
     }
 
     /**
@@ -302,10 +321,22 @@ public class User extends BaseEntity {
         }
     }
 
+
     /**
-     * 권한과 소속 유형의 조합을 검증합니다.
+     * 사용자 권한과 소속 정보의 조합을 검증합니다.
      *
-     * <p>실제 Hub 또는 Company 존재 여부는 내부 API 연동 후 추가 검증합니다.</p>
+     * <p>
+     * MASTER_ADMIN은 소속 정보를 가지지 않습니다.<br>
+     * HUB_ADMIN과 DELIVERY_MANAGER는 HUB 소속이어야 합니다.<br>
+     * COMPANY_MANAGER는 COMPANY 소속이어야 합니다.
+     * </p>
+     *
+     * <p>DELIVERY_MANAGER의 실제 배송 업무 유형인
+     * HUB_DELIVERY / COMPANY_DELIVERY는 User의 권한이 아니라
+     * Delivery Service의 managerType에서 관리합니다.</p>
+     *
+     * <p>affiliationId가 실제 존재하며 삭제되지 않은 Hub 또는 Company인지에 대한
+     * 검증은 Application 계층의 내부 서비스 연동에서 수행합니다.</p>
      */
     private static void validateAffiliation(
             UserRole role,
@@ -348,10 +379,5 @@ public class User extends BaseEntity {
             );
         }
 
-        /*
-         * TODO OpenFeign
-         * affiliationType이 HUB이면 Hub Service에서 affiliationId 존재 여부 확인
-         * affiliationType이 COMPANY이면 Company Service에서 affiliationId 존재 여부 확인
-         */
     }
 }

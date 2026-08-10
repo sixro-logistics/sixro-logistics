@@ -1,0 +1,207 @@
+package com.sixro.logistics.delivery.domain.exception;
+
+import com.sixro.logistics.common.core.exception.ErrorCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum DeliveryErrorCode implements ErrorCode {
+
+    INVALID_DELIVERY_MANAGER_TYPE(
+            HttpStatus.BAD_REQUEST,
+            "D001",
+            "유효하지 않은 배송 담당자 유형입니다."
+    ),
+
+    DELIVERY_MANAGER_TYPE_HUB_MISMATCH(
+            HttpStatus.BAD_REQUEST,
+            "D002",
+            "담당자 유형과 소속 허브 정보가 일치하지 않습니다."
+    ),
+
+    USER_NOT_ELIGIBLE_FOR_DELIVERY_MANAGER(
+            HttpStatus.BAD_REQUEST,
+            "D003",
+            "배송 담당자로 등록할 수 없는 사용자입니다."
+    ),
+
+    DELIVERY_MANAGER_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D004",
+            "배송 담당자 관리 권한이 없습니다."
+    ),
+
+    DELIVERY_MANAGER_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "D005",
+            "이미 등록된 배송 담당자입니다."
+    ),
+
+    DELIVERY_MANAGER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "D006",
+            "배송 담당자를 찾을 수 없습니다."
+    ),
+
+    DELIVERY_MANAGER_UPDATE_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "D007",
+            "현재 상태에서는 담당자 정보를 변경할 수 없습니다."
+    ),
+
+    INVALID_DELIVERY_MANAGER_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "D008",
+            "허용되지 않은 담당자 상태 변경입니다."
+    ),
+
+    DELIVERY_MANAGER_CAPACITY_EXCEEDED(
+            HttpStatus.CONFLICT,
+            "D009",
+            "등록할 수 있는 배송 담당자 수를 초과했습니다."
+    ),
+
+    DELIVERY_MANAGER_HAS_ACTIVE_ASSIGNMENT(
+            HttpStatus.CONFLICT,
+            "D010",
+            "진행 중인 배정 업무가 존재합니다."
+    ),
+
+    DELIVERY_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D011",
+            "해당 배송에 접근할 권한이 없습니다."
+    ),
+
+    DELIVERY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "D012",
+            "배송을 찾을 수 없습니다."
+    ),
+
+    DELIVERY_LIST_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D013",
+            "배송 목록 조회 권한이 없습니다."
+    ),
+
+    DELIVERY_ROUTE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D014",
+            "배송 경로 조회 권한이 없습니다."
+    ),
+
+    DELIVERY_ROUTE_UPDATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D015",
+            "해당 배송 경로를 변경할 권한이 없습니다."
+    ),
+
+    DELIVERY_ROUTE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "D016",
+            "배송 경로를 찾을 수 없습니다."
+    ),
+
+    INVALID_DELIVERY_ROUTE_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "D017",
+            "변경할 수 없는 배송 경로 상태입니다."
+    ),
+
+    PREVIOUS_DELIVERY_ROUTE_NOT_COMPLETED(
+            HttpStatus.CONFLICT,
+            "D018",
+            "이전 배송 경로가 아직 완료되지 않았습니다."
+    ),
+
+    DELIVERY_ROUTE_MANAGER_NOT_ASSIGNED(
+            HttpStatus.CONFLICT,
+            "D019",
+            "허브 배송 담당자가 배정되지 않았습니다."
+    ),
+
+    DELIVERY_STATUS_UPDATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D020",
+            "해당 배송의 상태를 변경할 권한이 없습니다."
+    ),
+
+    INVALID_DELIVERY_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "D021",
+            "변경할 수 없는 배송 상태입니다."
+    ),
+
+    COMPANY_DELIVERY_MANAGER_NOT_ASSIGNED(
+            HttpStatus.CONFLICT,
+            "D022",
+            "업체 배송 담당자가 배정되지 않았습니다."
+    ),
+
+    INVALID_ASSIGNED_DELIVERY_MANAGER_TYPE(
+            HttpStatus.BAD_REQUEST,
+            "D023",
+            "알맞은 배송 담당자 유형이 아닙니다."
+    ),
+
+    DELIVERY_ROUTE_MANAGER_UPDATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D024",
+            "해당 배송 경로의 담당자를 배정할 권한이 없습니다."
+    ),
+
+    DELIVERY_MANAGER_NOT_ASSIGNABLE(
+            HttpStatus.CONFLICT,
+            "D025",
+            "배정할 수 없는 배송 담당자입니다."
+    ),
+
+    DELIVERY_MANAGER_ASSIGNMENT_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "D026",
+            "현재 상태에서는 배송 담당자를 변경할 수 없습니다."
+    ),
+
+    DELIVERY_MANAGER_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "D027",
+            "배송 담당자가 현재 배송을 시작할 수 없는 상태입니다."
+    ),
+
+    COMPANY_DELIVERY_MANAGER_HUB_MISMATCH(
+            HttpStatus.CONFLICT,
+            "D028",
+            "현재 목적지 허브 소속 업체 배송 담당자가 아닙니다."
+    ),
+
+    DELIVERY_MANAGER_ASSIGNMENT_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D029",
+            "해당 배송의 담당자를 배정할 권한이 없습니다."
+    ),
+
+    DELIVERY_INFO_UPDATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D030",
+            "해당 배송 정보를 수정할 권한이 없습니다."
+    ),
+
+    DELIVERY_DELETE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "D031",
+            "해당 배송을 삭제할 권한이 없습니다."
+    ),
+
+    DELIVERY_DELETE_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "D032",
+            "현재 상태에서는 배송을 삭제할 수 없습니다."
+    );
+
+    private final HttpStatus status;
+    private final String code;
+    private final String message;
+}

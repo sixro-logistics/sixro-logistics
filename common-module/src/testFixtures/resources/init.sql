@@ -1,0 +1,10 @@
+-- 테스트용 db 스키마 일괄 생성
+CREATE SCHEMA IF NOT EXISTS auth_schema;
+CREATE SCHEMA IF NOT EXISTS company_schema;
+CREATE SCHEMA IF NOT EXISTS delivery_schema;
+CREATE SCHEMA IF NOT EXISTS hub_schema;
+CREATE SCHEMA IF NOT EXISTS inventory_schema;
+CREATE SCHEMA IF NOT EXISTS notification_schema;
+CREATE SCHEMA IF NOT EXISTS order_schema;
+CREATE SCHEMA IF NOT EXISTS product_schema;
+CREATE SCHEMA IF NOT EXISTS user_schema;

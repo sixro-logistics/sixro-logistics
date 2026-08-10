@@ -41,17 +41,21 @@ dependencies {
     annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 
-    // Password Encoding (BCrypt)
-    implementation 'org.springframework.security:spring-security-crypto'
-
     // Eureka Client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
     // Internal Service Communication
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
+    // Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+
     // Actuator
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Observability / Tracing
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
     // OpenAPI / Swagger UI
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
