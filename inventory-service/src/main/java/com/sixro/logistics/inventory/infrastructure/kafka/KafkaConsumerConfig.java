@@ -1,6 +1,6 @@
 package com.sixro.logistics.inventory.infrastructure.kafka;
 
-import com.sixro.logistics.inventory.application.event.OrderCreatedEvent;
+import com.sixro.logistics.inventory.domain.event.OrderCreatedEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
