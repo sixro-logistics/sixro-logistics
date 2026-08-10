@@ -32,6 +32,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @Table(
+        schema = "user_schema",
         name = "p_user",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_p_user_username",

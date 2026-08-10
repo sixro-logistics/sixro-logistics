@@ -17,7 +17,7 @@ import java.util.UUID;
  * DB 변경과 이벤트 발행 요청 사이의 불일치를 줄입니다.</p>
  */
 @Entity
-@Table(name = "p_user_outbox_events")
+@Table(schema = "user_schema", name = "p_user_outbox_events")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OutboxEvent {
