@@ -3,7 +3,7 @@ package com.sixro.logistics.delivery.presentation.controller;
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.common.core.response.PageResponse;
-import com.sixro.logistics.delivery.application.DeliveryManagerService;
+import com.sixro.logistics.delivery.application.service.DeliveryManagerService;
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.presentation.dto.req.ManagerCreateReqDto;
 import com.sixro.logistics.delivery.presentation.dto.req.ManagerSearchReqDto;

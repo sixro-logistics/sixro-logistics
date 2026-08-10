@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.application;
+package com.sixro.logistics.delivery.application.service;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
@@ -108,12 +108,12 @@ public class DeliveryManagerService {
         if (managerType == ManagerType.HUB_DELIVERY) {
             activeManagerCount = managerRepository.countByManagerTypeAndHubIdIsNull(ManagerType.HUB_DELIVERY);
             maxSequence = managerRepository.findMaxHubDeliverySequenceIncludingDeleted()
-                    .orElse(-1);
+                    .orElse(0);
         }
         else {
             activeManagerCount = managerRepository.countByManagerTypeAndHubId(ManagerType.COMPANY_DELIVERY, hubId);
             maxSequence = managerRepository.findMaxCompanyDeliverySequenceIncludingDeleted(hubId)
-                    .orElse(-1);
+                    .orElse(0);
         }
 
         if (activeManagerCount >= MAX_DELIVERY_MANAGER_COUNT) {
