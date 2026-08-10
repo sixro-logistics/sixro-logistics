@@ -1,8 +1,7 @@
-package com.sixro.logistics.inventory.infrastructure.persistence;
+package com.sixro.logistics.inventory.infrastructure.persistence.inventory;
 
-import com.sixro.logistics.inventory.domain.entity.Inventory;
+import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;

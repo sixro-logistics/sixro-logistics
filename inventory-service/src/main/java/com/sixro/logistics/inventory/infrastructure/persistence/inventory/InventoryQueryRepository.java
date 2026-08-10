@@ -1,11 +1,11 @@
-package com.sixro.logistics.inventory.infrastructure.persistence;
+package com.sixro.logistics.inventory.infrastructure.persistence.inventory;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
-import com.sixro.logistics.inventory.domain.entity.Inventory;
+import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
-import static com.sixro.logistics.inventory.domain.entity.QInventory.inventory;
+import static com.sixro.logistics.inventory.domain.entity.inventory.QInventory.inventory;
 
 @Repository
 @RequiredArgsConstructor

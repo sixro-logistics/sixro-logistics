@@ -7,7 +7,7 @@ import com.sixro.logistics.inventory.application.common.model.UserRole;
 import com.sixro.logistics.inventory.application.result.InventoryCheckResult;
 import com.sixro.logistics.inventory.application.result.InventoryGetOneResult;
 import com.sixro.logistics.inventory.application.result.InventorySearchResult;
-import com.sixro.logistics.inventory.application.service.InventoryQueryService;
+import com.sixro.logistics.inventory.application.service.inventory.InventoryQueryService;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -17,8 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Set;
 import java.util.UUID;
-
-import static com.sixro.logistics.common.core.exception.CommonErrorCode.FORBIDDEN;
 
 @Service
 @RequiredArgsConstructor

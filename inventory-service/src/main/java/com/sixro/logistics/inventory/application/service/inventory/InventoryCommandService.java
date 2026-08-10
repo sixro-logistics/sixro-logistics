@@ -1,10 +1,13 @@
-package com.sixro.logistics.inventory.application.service;
+package com.sixro.logistics.inventory.application.service.inventory;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.inventory.application.command.*;
 import com.sixro.logistics.inventory.application.result.*;
-import com.sixro.logistics.inventory.domain.entity.Inventory;
-import com.sixro.logistics.inventory.domain.repository.InventoryRepository;
+import com.sixro.logistics.inventory.application.service.outbox.OutboxService;
+import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
+import com.sixro.logistics.inventory.domain.event.InventoryDeductedEvent;
+import com.sixro.logistics.inventory.domain.event.InventoryDeductionFailedEvent;
+import com.sixro.logistics.inventory.domain.repository.inventory.InventoryRepository;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 public class InventoryCommandService {
 
     private final InventoryRepository inventoryRepository;
+    private final OutboxService outboxService;
 
     public InventoryCreateResult createInventory(InventoryCreateServiceCommand command) {
 
@@ -87,25 +91,46 @@ public class InventoryCommandService {
         return new InventoryDeleteResult(inventoryId);
     }
 
-    public void deductInventory(InventoryDeductCommand command){
+    public void deductInventory(InventoryDeductCommand command) {
 
-        Map<UUID, Integer> quantityMap = command.items().stream()
-                .collect(Collectors.toMap(
-                        item -> item.productId(),
-                        item -> item.quantity()
-                ));
+        try {
+            Map<UUID, Integer> quantityMap = command.items()
+                    .stream()
+                    .collect(Collectors.toMap(
+                            item -> item.productId(),
+                            item -> item.quantity()
+                    ));
 
-        List<Inventory> inventoryList = inventoryRepository
-                .findAllByHubIdAndProductIdInAndIsDeletedFalse(
-                        command.hubId(),
-                        command.items().stream()
-                                .map(item -> item.productId())
-                                .toList()
-                );
+            List<Inventory> inventoryList =
+                    inventoryRepository
+                            .findAllByHubIdAndProductIdInAndIsDeletedFalse(
+                                    command.hubId(),
+                                    command.items()
+                                            .stream()
+                                            .map(item -> item.productId())
+                                            .toList()
+                            );
 
-        for(Inventory inventory : inventoryList){
-            Integer quantity = quantityMap.get(inventory.getProductId());
-            inventory.deductStock(quantity);
+            for(Inventory inventory : inventoryList){
+                Integer quantity = quantityMap.get(inventory.getProductId());
+                inventory.deductStock(quantity);
+            }
+
+            // 재고 차감 성공
+            InventoryDeductedEvent event = new InventoryDeductedEvent(command.orderId());
+            outboxService.save(event);
+
+        } catch (BaseException e) {
+            // 재고 차감 실패
+            InventoryDeductionFailedEvent event =
+                    new InventoryDeductionFailedEvent(
+                            command.orderId(),
+                            e.getErrorCode().getCode(),
+                            e.getMessage()
+                    );
+
+            outboxService.save(event);
         }
     }
+
 }

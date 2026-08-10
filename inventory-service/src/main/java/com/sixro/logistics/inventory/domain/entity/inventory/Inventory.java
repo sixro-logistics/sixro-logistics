@@ -1,4 +1,4 @@
-package com.sixro.logistics.inventory.domain.entity;
+package com.sixro.logistics.inventory.domain.entity.inventory;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.persistence.entity.BaseEntity;

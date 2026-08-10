@@ -3,14 +3,13 @@ package com.sixro.logistics.inventory.application.facade;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.inventory.application.command.*;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
-import com.sixro.logistics.inventory.application.event.OrderCreatedItem;
-import com.sixro.logistics.inventory.application.model.HubInfo;
+import com.sixro.logistics.inventory.domain.event.OrderCreatedItem;
 import com.sixro.logistics.inventory.application.model.ProductInfo;
 import com.sixro.logistics.inventory.application.port.HubQueryPort;
 import com.sixro.logistics.inventory.application.port.ProductQueryPort;
 import com.sixro.logistics.inventory.application.result.*;
-import com.sixro.logistics.inventory.application.service.InventoryCommandService;
-import com.sixro.logistics.inventory.application.service.InventoryQueryService;
+import com.sixro.logistics.inventory.application.service.inventory.InventoryCommandService;
+import com.sixro.logistics.inventory.application.service.inventory.InventoryQueryService;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -104,6 +103,7 @@ public class InventoryCommandFacade {
         return inventoryCommandService.stockInInventory(inventoryId, command);
     }
 
+    // TO DO : deleteInventory에 userId 같이 넘기기
     public InventoryDeleteResult deleteInventory(
             UUID userId, UserRole userRole, UUID affiliationId,
             UUID inventoryId
@@ -124,8 +124,10 @@ public class InventoryCommandFacade {
         return inventoryCommandService.deleteInventory(inventoryId);
     }
 
-    public void deductStock(UUID hubId, List<OrderCreatedItem> items) {
-        InventoryDeductCommand command = new InventoryDeductCommand(hubId,
+    public void deductStock(UUID orderId, UUID hubId, List<OrderCreatedItem> items) {
+        InventoryDeductCommand command = new InventoryDeductCommand(
+                orderId,
+                hubId,
                 items
                         .stream()
                         .map(item

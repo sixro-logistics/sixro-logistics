@@ -1,12 +1,12 @@
-package com.sixro.logistics.inventory.application.service;
+package com.sixro.logistics.inventory.application.service.inventory;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.inventory.application.command.InventoryCheckCommand;
 import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
 import com.sixro.logistics.inventory.application.result.*;
-import com.sixro.logistics.inventory.domain.entity.Inventory;
-import com.sixro.logistics.inventory.domain.repository.InventoryRepository;
+import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
+import com.sixro.logistics.inventory.domain.repository.inventory.InventoryRepository;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

@@ -1,9 +1,9 @@
-package com.sixro.logistics.inventory.infrastructure.persistence;
+package com.sixro.logistics.inventory.infrastructure.persistence.inventory;
 
 import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
-import com.sixro.logistics.inventory.domain.entity.Inventory;
-import com.sixro.logistics.inventory.domain.repository.InventoryRepository;
+import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
+import com.sixro.logistics.inventory.domain.repository.inventory.InventoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
