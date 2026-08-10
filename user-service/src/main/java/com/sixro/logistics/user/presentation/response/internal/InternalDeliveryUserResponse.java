@@ -8,11 +8,12 @@ import com.sixro.logistics.user.domain.model.UserStatus;
 import java.util.UUID;
 
 /**
- * Delivery Service가 배송 담당자 생성 및 검증에 사용하는
- * 내부 사용자 정보 응답 DTO입니다.
+ * Delivery Service의 배송 담당자 검증 및
+ * 수령인 정보 조회에 사용하는 내부 사용자 정보 응답 DTO입니다.
  */
 public record InternalDeliveryUserResponse(
         UUID userId,
+        String username,
         UserRole role,
         UserStatus userStatus,
         String slackId,
@@ -25,6 +26,7 @@ public record InternalDeliveryUserResponse(
     ) {
         return new InternalDeliveryUserResponse(
                 result.userId(),
+                result.username(),
                 result.role(),
                 result.userStatus(),
                 result.slackId(),

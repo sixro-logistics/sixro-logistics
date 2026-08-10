@@ -81,10 +81,10 @@ public class UserInternalController {
     }
 
     /**
-     * Delivery Service에서 배송 담당자 생성 및 검증에 필요한
-     * 사용자 정보를 조회합니다.
+     * Delivery Service에서 배송 담당자 검증 및
+     * 수령인 정보 조회에 필요한 사용자 정보를 조회합니다.
      */
-    @GetMapping("/{userId}/delivery-manager")
+    @GetMapping("/{userId}/delivery-info")
     public CommonResponse<InternalDeliveryUserResponse> getDeliveryUser(
             @PathVariable UUID userId
     ) {
@@ -92,7 +92,7 @@ public class UserInternalController {
                 userQueryService.getDeliveryUser(userId);
 
         return CommonResponse.success(
-                "배송 담당자 사용자 정보 조회에 성공했습니다.",
+                "배송 관련 사용자 정보 조회에 성공했습니다.",
                 InternalDeliveryUserResponse.from(result)
         );
     }
