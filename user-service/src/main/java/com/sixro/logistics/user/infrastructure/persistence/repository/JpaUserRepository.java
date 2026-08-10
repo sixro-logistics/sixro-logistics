@@ -13,7 +13,7 @@ public interface JpaUserRepository extends JpaRepository<User, UUID> {
 
     // 로그인 등 활성 사용자 조회에 사용합니다.
     Optional<User>
-    findByUsernameAndIsDeletedFalseAndDeletedAtIsNull(String username);
+    findByUsernameAndIsDeletedFalseAndDeletedAtIsNullAndDeletedByIsNull(String username);
 
     // 삭제 여부와 관계없는 전역 중복 검사입니다.
     boolean existsByUsername(String username);

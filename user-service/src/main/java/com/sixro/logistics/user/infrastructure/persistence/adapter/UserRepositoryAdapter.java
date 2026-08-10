@@ -46,7 +46,7 @@ public class UserRepositoryAdapter implements UserRepository {
      */
     @Override
     public Optional<User> findActiveByUsername(String username) {
-        return jpaUserRepository.findByUsernameAndIsDeletedFalseAndDeletedAtIsNull(username);
+        return jpaUserRepository.findByUsernameAndIsDeletedFalseAndDeletedAtIsNullAndDeletedByIsNull(username);
     }
 
     /**
