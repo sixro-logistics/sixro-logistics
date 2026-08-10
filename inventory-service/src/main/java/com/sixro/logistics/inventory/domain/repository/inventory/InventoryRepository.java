@@ -16,7 +16,13 @@ public interface InventoryRepository {
 
     Optional<Inventory> findByIdAndIsDeletedFalse(UUID id);
 
+    Optional<Inventory> findForUpdateByIdAndIsDeletedFalse(UUID inventoryId);
+
     List<Inventory> findAllByHubIdAndProductIdInAndIsDeletedFalse(
+            UUID hubId, List<UUID> productsId
+    );
+
+    List<Inventory> findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(
             UUID hubId, List<UUID> productsId
     );
 

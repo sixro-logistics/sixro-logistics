@@ -32,8 +32,18 @@ public class InventoryRepositoryImpl implements InventoryRepository {
     }
 
     @Override
+    public Optional<Inventory> findForUpdateByIdAndIsDeletedFalse(UUID inventoryId) {
+        return inventoryJpaRepository.findByIdAndIsDeletedFalse(inventoryId);
+    }
+
+    @Override
     public List<Inventory> findAllByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsId) {
         return inventoryJpaRepository.findAllByHubIdAndProductIdInAndIsDeletedFalse(hubId, productsId);
+    }
+
+    @Override
+    public List<Inventory> findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsId) {
+        return inventoryJpaRepository.findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(hubId, productsId);
     }
 
     @Override

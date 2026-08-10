@@ -43,9 +43,6 @@ public class Inventory extends BaseEntity {
     @Column(nullable = false)
     private Integer stock;
 
-    @Version
-    private Long version;
-
     private Inventory(UUID hubId, UUID companyId, UUID productId, Integer stock){
         this.hubId = hubId;
         this.companyId = companyId;

@@ -50,7 +50,7 @@ public class InventoryCommandService {
             UUID inventoryId, InventoryUpdateCommand command
     ) {
 
-        Inventory inventory = inventoryRepository.findByIdAndIsDeletedFalse(inventoryId)
+        Inventory inventory = inventoryRepository.findForUpdateByIdAndIsDeletedFalse(inventoryId)
                 .orElseThrow(() ->
                         new BaseException(InventoryErrorCode.INVENTORY_NOT_FOUND)
                 );
@@ -66,7 +66,7 @@ public class InventoryCommandService {
             UUID inventoryId, InventoryStockInCommand command
     ) {
 
-        Inventory inventory = inventoryRepository.findByIdAndIsDeletedFalse(inventoryId)
+        Inventory inventory = inventoryRepository.findForUpdateByIdAndIsDeletedFalse(inventoryId)
                 .orElseThrow(() ->
                         new BaseException(InventoryErrorCode.INVENTORY_NOT_FOUND)
                 );
@@ -103,7 +103,7 @@ public class InventoryCommandService {
 
             List<Inventory> inventoryList =
                     inventoryRepository
-                            .findAllByHubIdAndProductIdInAndIsDeletedFalse(
+                            .findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(
                                     command.hubId(),
                                     command.items()
                                             .stream()
