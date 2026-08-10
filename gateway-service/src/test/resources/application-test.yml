@@ -1,23 +1,10 @@
 spring:
-#  config:
-#    # 로컬 테스트에서는 프로젝트 루트의 .env 사용
-#    # CI에서는 파일이 없어도 아래 테스트 기본값 사용
-#    import: "optional:file:../.env[.properties]"
-#  security:
-#    oauth2:
-#      resourceserver:
-#        jwt:
-#          # 테스트 JWT의 RS256 서명 검증에 사용하는 공개키
-#          public-key-location: classpath:keys/public-key.pem
-#
-#  data:
-#    redis:
-#      # GatewaySecurityIntegrationTest 전용 Redis 접속 정보
-#      # CI Redis 컨테이너도 동일한 인증정보로 실행해야 함
-#      host: ${REDIS_HOST:localhost}
-#      port: ${REDIS_PORT:6379}
-#      username: ${REDIS_USERNAME}
-#      password: ${REDIS_PASSWORD}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 테스트 JWT의 RS256 서명 검증에 사용하는 공개키
+          public-key-location: classpath:keys/test-public-key.pem
 
   cloud:
     # 테스트에서는 Eureka와 서비스 탐색을 사용하지 않음
