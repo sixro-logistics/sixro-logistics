@@ -29,10 +29,25 @@ import reactor.core.publisher.Mono;
  * <p>Spring Security OAuth2 Resource Server를 통해 JWT 자체를 검증하고,
  * 이후 Redis에 저장된 Access Token blacklist와
  * 현재 로그인 Session 상태를 추가로 검증합니다.</p>
+ *
+ * JWT 인증과 URL 기반 1차 Role 인가를 설정
+ *
+ * <p>본인 여부, 담당 허브, 소속 업체, 주문·배송 관계 등의
+ * 도메인 정보가 필요한 최종 인가는 각 Downstream Service에서
+ * 다시 검증해야 합니다.</p>
+ *
  */
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
+
+    private static final String MASTER_ADMIN = "MASTER_ADMIN";
+
+    private static final String HUB_ADMIN = "HUB_ADMIN";
+
+    private static final String DELIVERY_MANAGER = "DELIVERY_MANAGER";
+
+    private static final String COMPANY_MANAGER = "COMPANY_MANAGER";
 
     /**
      * Access Token 블랙리스트 필터를 Security Filter Chain에
@@ -103,6 +118,7 @@ public class SecurityConfig {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
+
                 .authorizeExchange(exchange -> exchange
                         // 브라우저의 CORS 사전 요청은 인증 없이 허용
                         .pathMatchers(HttpMethod.OPTIONS, "/**")
@@ -117,6 +133,13 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
+                        // 로그아웃은 Access Token이 필요합니다.
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/auth/logout"
+                        )
+                        .authenticated()
+
                         // Gateway 상태 확인 API
                         .pathMatchers(
                                 HttpMethod.GET,
@@ -125,12 +148,23 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
-                        // 사용자 목록 조회
+                        // Internal API는 Gateway를 통해 노출하지 않습니다.
                         .pathMatchers(
-                                HttpMethod.GET,
+                                "/api/v1/internal/**"
+                        )
+                        .denyAll()
+
+                        /*
+                         * =====================================================
+                         * User
+                         * =====================================================
+                         */
+                        // MASTER 사용자 생성
+                        .pathMatchers(
+                                HttpMethod.POST,
                                 "/api/v1/users"
                         )
-                        .hasRole("MASTER_ADMIN")
+                        .hasRole(MASTER_ADMIN)
 
                         // 가입 승인 / 거절
                         .pathMatchers(
@@ -138,9 +172,16 @@ public class SecurityConfig {
                                 "/api/v1/users/*/approve",
                                 "/api/v1/users/*/reject"
                         )
-                        .hasAnyRole("MASTER_ADMIN, HUB_ADMIN")
+                        .hasAnyRole(MASTER_ADMIN, HUB_ADMIN)
 
-                        // 내 정보
+                        // 본인 또는 MASTER 수정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/users/*"
+                        )
+                        .authenticated()
+
+                        // 내 정보 조회
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/users/me"
@@ -152,22 +193,484 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/v1/users/*"
                         )
-                        .hasRole("MASTER_ADMIN")
+                        .hasRole(MASTER_ADMIN)
+
+                        // 사용자 목록 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/users"
+                        )
+                        .hasRole(MASTER_ADMIN)
 
                         // 사용자 비활성화
                         .pathMatchers(
                                 HttpMethod.DELETE,
                                 "/api/v1/users/*"
                         )
-                        .hasRole("MASTER_ADMIN")
-
-
-                        // TODO 다른 서비스 Role 인가 → 필요 시 후속 확장
+                        .hasRole(MASTER_ADMIN)
 
                         /*
-                         * 사용자 정보 수정 / 비활성화 등은
-                         * 본인 여부 및 세부 권한 판단이 필요하므로
-                         * 각 서비스에서 최종 인가합니다.
+                         * =====================================================
+                         * Hub
+                         * =====================================================
+                         */
+
+                        // 허브 생성
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/hubs"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        // 허브 수정
+                        .pathMatchers(
+                                HttpMethod.PUT,
+                                "/api/v1/hubs/*"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        // 허브 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/hubs/*"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        // 허브 상태 변경
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/hubs/*/status"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 허브 조회·검색
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/hubs",
+                                "/api/v1/hubs/**"
+                        )
+                        .authenticated()
+
+                        /*
+                         * =====================================================
+                         * Hub Route
+                         * =====================================================
+                         */
+
+                        // 스케줄러 호출은 Gateway가 아닌 내부 호출로 처리
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/hub-routes"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        .pathMatchers(
+                                HttpMethod.PUT,
+                                "/api/v1/hub-routes/*"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/hub-routes/*"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/hub-routes",
+                                "/api/v1/hub-routes/**"
+                        )
+                        .authenticated()
+
+                        /*
+                         * =====================================================
+                         * Delivery Manager
+                         * =====================================================
+                         */
+
+                        // 배송 담당자 등록
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/delivery-managers"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 배송 담당자 목록 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/delivery-managers"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 배송 담당자 단건 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/delivery-managers/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                DELIVERY_MANAGER
+                        )
+
+                        // 배송 담당자 수정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/delivery-managers/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 배송 담당자 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/delivery-managers/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        /*
+                         * =====================================================
+                         * Delivery Route
+                         * =====================================================
+                         */
+
+                        // 배송 경로 상태 변경
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/delivery-routes/*/status"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                DELIVERY_MANAGER
+                        )
+
+                        // 허브 배송 담당자 배정·변경
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/delivery-routes/*/manager"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 배송 경로 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/delivery-routes",
+                                "/api/v1/delivery-routes/**"
+                        )
+                        .authenticated()
+
+                        /*
+                         * =====================================================
+                         * Delivery
+                         * =====================================================
+                         */
+
+                        // 배송 상태 변경
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/deliveries/*/status"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                DELIVERY_MANAGER
+                        )
+
+                        // 업체 배송 담당자 배정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/deliveries/*/manager"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 배송 정보 수정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/deliveries/*"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        // 배송 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/deliveries/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 배송 단건·추적·목록 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/deliveries",
+                                "/api/v1/deliveries/**"
+                        )
+                        .authenticated()
+
+                        /*
+                         * =====================================================
+                         * Order
+                         * =====================================================
+                         */
+
+                        // 주문 생성
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/orders"
+                        )
+                        .authenticated()
+
+                        // 주문 상태 변경·취소
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/orders/*/status"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 주문 수정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/orders/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 주문 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/orders/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 주문 단건·목록 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/orders",
+                                "/api/v1/orders/**"
+                        )
+                        .authenticated()
+
+                        /*
+                         * =====================================================
+                         * Inventory
+                         * =====================================================
+                         */
+
+                        // 재고 생성
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/inventories"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                COMPANY_MANAGER
+                        )
+
+                        // 재고 입고
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/inventories/*/stock"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                COMPANY_MANAGER
+                        )
+
+                        // 재고 수정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/inventories/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 재고 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/inventories/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        /*
+                         * =====================================================
+                         * Company
+                         * =====================================================
+                         */
+
+                        // 업체 생성
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/companies"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 업체 수정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/companies/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                COMPANY_MANAGER
+                        )
+
+                        // 업체 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/companies/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 업체 목록·상세 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/companies",
+                                "/api/v1/companies/**"
+                        )
+                        .authenticated()
+
+                        /*
+                         * =====================================================
+                         * Product
+                         * =====================================================
+                         */
+
+                        // 상품 생성
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/products"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                COMPANY_MANAGER
+                        )
+
+                        // 상품 수정
+                        .pathMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/products/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN,
+                                COMPANY_MANAGER
+                        )
+
+                        // 상품 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/products/*"
+                        )
+                        .hasAnyRole(
+                                MASTER_ADMIN,
+                                HUB_ADMIN
+                        )
+
+                        // 상품 목록·상세 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/products",
+                                "/api/v1/products/**"
+                        )
+                        .authenticated()
+
+                        /*
+                         * =====================================================
+                         * Notification / Slack
+                         * =====================================================
+                         */
+
+                        // Slack 메시지 수정
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/slack/messages/*"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        // Slack 메시지 생성
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/slack/messages"
+                        )
+                        .authenticated()
+
+                        // Slack 메시지 삭제
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/slack/messages/*"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        // Slack 메시지 조회
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/slack/messages",
+                                "/api/v1/slack/messages/**"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        /*
+                         * =====================================================
+                         * Notification / AI
+                         * =====================================================
+                         */
+
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/ai/requests",
+                                "/api/v1/ai/requests/**"
+                        )
+                        .hasRole(MASTER_ADMIN)
+
+                        /*
+                         * 명시되지 않은 API는 최소한 인증을 요구합니다.
+                         * 세부 권한은 Downstream Service에서 검증합니다.
                          */
                         .anyExchange()
                         .authenticated()
