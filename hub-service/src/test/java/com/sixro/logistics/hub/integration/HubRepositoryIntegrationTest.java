@@ -2,17 +2,15 @@ package com.sixro.logistics.hub.integration;
 
 import com.sixro.logistics.common.test.config.PostgresTestContainerConfig;
 import com.sixro.logistics.hub.config.TestAuditingConfig;
-import com.sixro.logistics.hub.domain.model.Address;
-import com.sixro.logistics.hub.domain.model.Hub;
-import com.sixro.logistics.hub.domain.model.HubZone;
-import com.sixro.logistics.hub.infrastructure.persistence.HubJpaRepository;
-import com.sixro.logistics.hub.infrastructure.persistence.NearestHubProjection;
-import org.junit.jupiter.api.Disabled;
+import com.sixro.logistics.hub.hub.domain.model.Address;
+import com.sixro.logistics.hub.hub.domain.model.Hub;
+import com.sixro.logistics.hub.hub.domain.model.HubZone;
+import com.sixro.logistics.hub.hub.domain.model.Location;
+import com.sixro.logistics.hub.hub.infrastructure.persistence.command.HubJpaRepository;
+import com.sixro.logistics.hub.hub.infrastructure.persistence.query.HubNativeQueryRepository;
+import com.sixro.logistics.hub.hub.infrastructure.persistence.query.NearestHubProjection;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
@@ -36,21 +34,17 @@ class HubRepositoryIntegrationTest {
     @Autowired
     private HubJpaRepository hubJpaRepository;
 
-    private final GeometryFactory geometryFactory = new GeometryFactory();
+    @Autowired
+    private HubNativeQueryRepository hubNativeQueryRepository;
 
     @Test
     @DisplayName("Hub 정보를 저장하면 데이터베이스에 정상적으로 반영된다")
     void save_hub_test() {
         // given
-        Point point = createPoint(
-                127.1249,
-                37.4776
-        );
-
         Hub hub = Hub.builder()
                 .hubName("서울특별시 센터")
-                .address(Address.of("05838", "서울특별시 송파구 송파대로 55", ""))
-                .location(point)
+                .address(Address.of("05838", "서울특별시 송파구 송파대로 55", "서울특별시 송파구 장지동 862", "동남권물류단지 A동"))
+                .location(Location.of(127.1249, 37.4776))
                 .hubZone(HubZone.CAPITAL)
                 .maxCapacity(1_000_000)
                 .build();
@@ -70,15 +64,10 @@ class HubRepositoryIntegrationTest {
     @DisplayName("PostGIS Point 데이터를 저장하고 조회할 때 좌표 값이 일치해야 한다")
     void save_postgis_point_test() {
         // given
-        Point point = createPoint(
-                127.1249,
-                37.4776
-        );
-
         Hub hub = Hub.builder()
                 .hubName("서울특별시 센터")
-                .address(Address.of("05838", "서울특별시 송파구 송파대로 55", ""))
-                .location(point)
+                .address(Address.of("05838", "서울특별시 송파구 송파대로 55", "서울특별시 송파구 장지동 862", "동남권물류단지 A동"))
+                .location(Location.of(127.1249, 37.4776))
                 .hubZone(HubZone.CAPITAL)
                 .maxCapacity(1_000_000)
                 .build();
@@ -92,10 +81,10 @@ class HubRepositoryIntegrationTest {
         assertThat(result.getLocation())
                 .isNotNull();
 
-        assertThat(result.getLocation().getX())
+        assertThat(result.getLocation().getLongitude())
                 .isEqualTo(127.1249);
 
-        assertThat(result.getLocation().getY())
+        assertThat(result.getLocation().getLatitude())
                 .isEqualTo(37.4776);
     }
 
@@ -108,7 +97,7 @@ class HubRepositoryIntegrationTest {
 
         // when
         Optional<NearestHubProjection> result =
-                hubJpaRepository.findNearestHubWithDistance(
+                hubNativeQueryRepository.findNearestHubWithDistance(
                         127.1250,
                         37.4777
                 );
@@ -130,25 +119,14 @@ class HubRepositoryIntegrationTest {
             double latitude
     ) {
         Hub hub = Hub.builder()
-                .hubName(name)
-                .address(Address.of("00000", "테스트 주소", ""))
-                .location(createPoint(longitude, latitude))
+                .hubName("서울특별시 센터")
+                .address(Address.of("05838", "서울특별시 송파구 송파대로 55", "서울특별시 송파구 장지동 862", "동남권물류단지 A동"))
+                .location(Location.of(127.1249, 37.4776))
                 .hubZone(HubZone.CAPITAL)
                 .maxCapacity(1_000_000)
                 .build();
 
         hubJpaRepository.save(hub);
         hubJpaRepository.flush();
-    }
-
-    private Point createPoint(
-            double longitude,
-            double latitude
-    ) {
-        Point point = geometryFactory.createPoint(new Coordinate(longitude, latitude));
-
-        point.setSRID(4326);
-
-        return point;
     }
 }
