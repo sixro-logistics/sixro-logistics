@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 /**
  * API 정상 응답의 공통 형식입니다.
  *
+ * @param success   요청 성공 여부
  * @param status    HTTP 상태 코드
  * @param message   응답 메시지
  * @param data      응답 데이터
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
  * @param <T>       응답 데이터 타입
  */
 public record CommonResponse<T>(
+        boolean success,
         int status,
         String message,
         T data,
@@ -29,6 +31,7 @@ public record CommonResponse<T>(
             T data
     ) {
         return new CommonResponse<>(
+                true,
                 status.value(),
                 message,
                 data,
@@ -63,12 +66,4 @@ public record CommonResponse<T>(
         return success(HttpStatus.CREATED, message, data);
     }
 
-    /**
-     * 응답 데이터가 없는 HTTP 204 No Content 응답을 생성합니다.
-     *
-     * 실제 Controller에서 204를 사용할 경우에는 응답 Body를 비우는 방식도 검토해야 합니다.
-     */
-    public static CommonResponse<Void> noContent(String message) {
-        return success(HttpStatus.NO_CONTENT, message, null);
-    }
 }

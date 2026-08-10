@@ -29,7 +29,7 @@ public class PageResponse<T> {
                 .toList();
         return new PageResponse<>(
                 content,
-                page.getNumber(),
+                page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalElements(),
                 page.getTotalPages()

@@ -1,3 +1,98 @@
+server:
+  # User Service 실행 포트
+  port: 19093
+
 spring:
   application:
+    # Eureka에 등록되는 서비스 이름
+    # Gateway의 lb://user-service와 반드시 일치해야 합니다.
     name: user-service
+
+  config:
+    # user-service 디렉터리를 실행 경로로 사용할 경우
+    # 프로젝트 루트의 .env 파일을 불러옵니다.
+    import: "optional:file:../.env[.properties]"
+
+  datasource:
+    url: ${USER_DB_URL}
+    username: ${USER_DB_USERNAME}
+    password: ${USER_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 로컬 개발 단계에서 Entity 변경사항을 DB에 반영합니다.
+      # 운영 환경에서는 Flyway 등 마이그레이션 도구 사용을 검토합니다.
+      ddl-auto: update
+
+    open-in-view: false
+
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+#    consumer:
+#      group-id: user-service-group
+#      auto-offset-reset: earliest
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+#      properties:
+#        spring.json.trusted.packages: "*"
+
+  cloud:
+    discovery:
+      enabled: true
+
+eureka:
+  client:
+    # User Service를 Eureka Server에 등록
+    register-with-eureka: true
+
+    # Eureka Registry에서 다른 서비스 목록 조회
+    fetch-registry: true
+
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+
+  endpoint:
+    health:
+      show-details: always
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+    zipkin:
+      tracing:
+        endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.springframework.boot.context.config: DEBUG
+
+  pattern:
+    console: '%clr(%-5level){green} [traceId=%X{traceId:-}, spanId=%X{spanId:-}] %clr(%logger{36}){cyan}: %msg%n'
+
+outbox:
+  publisher:
+    fixed-delay: 1000

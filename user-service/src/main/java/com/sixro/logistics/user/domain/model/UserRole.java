@@ -1,0 +1,8 @@
+package com.sixro.logistics.user.domain.model;
+
+public enum UserRole {
+    MASTER_ADMIN,
+    HUB_ADMIN,
+    DELIVERY_MANAGER,
+    COMPANY_MANAGER
+}
