@@ -87,10 +87,15 @@ public class InventoryCommandFacade {
         InventoryGetOneResult result = inventoryQueryService.getOneInventory(inventoryId);
 
         // UserRole 검증
-        if(userRole == UserRole.MASTER_ADMIN ||
-                userRole == UserRole.HUB_ADMIN ||
-                userRole == UserRole.DELIVERY_MANAGER){
+        if(userRole == UserRole.DELIVERY_MANAGER){
             throw new BaseException(InventoryErrorCode.FORBIDDEN);
+        }
+
+        // 허브 관리자 권한 검증
+        if(userRole == UserRole.HUB_ADMIN){
+            if(!affiliationId.equals(result.hubId())){
+                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+            }
         }
 
         // 업체 관리자 권한 검증
