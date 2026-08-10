@@ -1,2 +1,0 @@
-# sixro-logistics
-sixro-logistics

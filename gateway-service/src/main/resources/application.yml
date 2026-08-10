@@ -4,7 +4,8 @@ server:
 
 spring:
   config:
-    import: "optional:file:.env[.properties]"
+    # 프로젝트 루트의 .env 파일을 불러옵니다.
+    import: "optional:file:../.env[.properties]"
   application:
     # Eureka에 등록되는 서비스 이름
     name: gateway-service
@@ -27,6 +28,10 @@ spring:
     gateway:
       server:
         webflux:
+          # Gateway 요청 처리 메트릭 수집
+          metrics:
+            enabled: true
+
           # Eureka 등록 서비스 자동 노출 대신 명시적 Route만 사용
           discovery:
             locator:
@@ -123,7 +128,7 @@ eureka:
     fetch-registry: true
 
     service-url:
-      defaultZone: http://localhost:19090/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
 
 management:
   endpoints:
@@ -132,6 +137,7 @@ management:
         include:
           - health
           - info
+          - metrics
           # 개발 중 Route 확인이 필요하면 임시 활성화
 #          - gateway
 
