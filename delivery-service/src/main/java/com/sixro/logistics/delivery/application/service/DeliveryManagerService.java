@@ -3,6 +3,8 @@ package com.sixro.logistics.delivery.application.service;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.util.PageUtil;
+import com.sixro.logistics.delivery.application.model.UserInfo;
+import com.sixro.logistics.delivery.application.port.UserQueryPort;
 import com.sixro.logistics.delivery.domain.entity.DeliveryManager;
 import com.sixro.logistics.delivery.domain.enums.DeliveryStatus;
 import com.sixro.logistics.delivery.domain.enums.ManagerStatus;
@@ -37,11 +39,13 @@ public class DeliveryManagerService {
     private final DeliveryManagerRepository managerRepository;
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteRepository deliveryRouteRepository;
+    private final UserQueryPort userQueryPort;
 
-    public DeliveryManagerService(DeliveryManagerRepository managerRepository, DeliveryRepository deliveryRepository, DeliveryRouteRepository deliveryRouteRepository) {
+    public DeliveryManagerService(DeliveryManagerRepository managerRepository, DeliveryRepository deliveryRepository, DeliveryRouteRepository deliveryRouteRepository, UserQueryPort userQueryPort) {
         this.managerRepository = managerRepository;
         this.deliveryRepository = deliveryRepository;
         this.deliveryRouteRepository = deliveryRouteRepository;
+        this.userQueryPort = userQueryPort;
     }
 
     public ManagerCreateResDto createDeliveryManager(String userRole, UUID affiliationId, ManagerCreateReqDto managerCreateReqDto) {
@@ -49,7 +53,7 @@ public class DeliveryManagerService {
         UUID hubId = managerCreateReqDto.getHubId();
         ManagerType managerType = managerCreateReqDto.getManagerType();
 
-        // 현재 유저의 생성 권한 체크 TODO: UserRole Enum으로 권한 체크
+        // 현재 유저의 생성 권한 체크
         validateCreateAuthority(userRole, affiliationId, hubId, managerType);
 
         // dto 검증: 생성하려는 담당자 정보 확인
@@ -57,7 +61,7 @@ public class DeliveryManagerService {
         validateManagerTypeAndHub(managerType, hubId);
 
         // 1. 유저테이블에 존재하고, 활성화된 유저인가?
-            // TODO: 사용자 테이블에서의 ROLE이 배송담당자가 맞는지 user openfeign 단건 조회
+        validateDeliveryManagerUser(userId);
 
         // 2. DeliveryManager 중복 검증
         if (managerRepository.existsById(userId)) {
@@ -98,6 +102,15 @@ public class DeliveryManagerService {
 
         if (managerType == ManagerType.COMPANY_DELIVERY && hubId == null) {
             throw new BaseException(DeliveryErrorCode.DELIVERY_MANAGER_TYPE_HUB_MISMATCH);
+        }
+    }
+
+    private void validateDeliveryManagerUser(UUID userId) {
+        UserInfo userInfo = userQueryPort.findUser(userId)
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.USER_NOT_ELIGIBLE_FOR_DELIVERY_MANAGER));
+
+        if (!userId.equals(userInfo.userId()) || !"DELIVERY_MANAGER".equals(userInfo.role()) || !"APPROVED".equals(userInfo.userStatus())) {
+            throw new BaseException(DeliveryErrorCode.USER_NOT_ELIGIBLE_FOR_DELIVERY_MANAGER);
         }
     }
 
