@@ -20,3 +20,5 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
 
+tmap:
+  app-key: ${TMAP_APP_KEY:test-tmap-app-key}
