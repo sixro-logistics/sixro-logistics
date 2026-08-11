@@ -5,6 +5,7 @@ import com.sixro.logistics.company.domain.entity.Company;
 import com.sixro.logistics.company.domain.repository.CompanyRepository;
 import com.sixro.logistics.company.exception.CompanyErrorCode;
 import com.sixro.logistics.company.presentation.dto.response.internal.CompanyInternalCheckResponseDto;
+import com.sixro.logistics.company.presentation.dto.response.internal.CompanyInternalHubInfoResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,5 +28,16 @@ public class CompanyInternalService {
                 .orElseThrow(() -> new BaseException(CompanyErrorCode.COMPANY_NOT_FOUND));
 
         return CompanyInternalCheckResponseDto.from(company);
+    }
+
+    /**
+     * 목적지 허브를 반환
+     */
+    public CompanyInternalHubInfoResponseDto getCompanyHubInfo(UUID companyId) {
+        Company company = companyRepository
+                .findByCompanyIdAndIsDeletedFalse(companyId)
+                .orElseThrow(() -> new BaseException(CompanyErrorCode.COMPANY_NOT_FOUND));
+
+        return CompanyInternalHubInfoResponseDto.from(company);
     }
 }

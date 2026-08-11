@@ -78,4 +78,5 @@ public class Company extends BaseEntity {
         if (contactEmail != null) this.contactEmail = contactEmail;
         if (contactPhone != null) this.contactPhone = contactPhone;
     }
+
 }

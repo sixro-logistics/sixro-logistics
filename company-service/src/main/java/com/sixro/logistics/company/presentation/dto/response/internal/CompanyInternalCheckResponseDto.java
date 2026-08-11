@@ -6,14 +6,12 @@ import java.util.UUID;
 
 public record CompanyInternalCheckResponseDto(
         UUID companyId,
-        String companyName,
-        Boolean isDeleted
+        String companyName
 ) {
     public static CompanyInternalCheckResponseDto from(Company company) {
         return new CompanyInternalCheckResponseDto(
                 company.getCompanyId(),
-                company.getCompanyName(),
-                company.isDeleted()
+                company.getCompanyName()
         );
     }
 }
