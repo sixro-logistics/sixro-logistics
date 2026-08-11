@@ -1,10 +1,8 @@
 package com.sixro.logistics.inventory.application.facade;
 
 import com.sixro.logistics.common.core.exception.BaseException;
-import com.sixro.logistics.inventory.application.command.InventoryCheckCommand;
 import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
-import com.sixro.logistics.inventory.application.result.InventoryCheckResult;
 import com.sixro.logistics.inventory.application.result.InventoryGetOneResult;
 import com.sixro.logistics.inventory.application.result.InventorySearchResult;
 import com.sixro.logistics.inventory.application.service.inventory.InventoryQueryService;
@@ -23,10 +21,6 @@ import java.util.UUID;
 public class InventoryQueryFacade {
 
     private final InventoryQueryService inventoryQueryService;
-
-    public InventoryCheckResult checkInventory(InventoryCheckCommand command) {
-        return inventoryQueryService.checkInventory(command);
-    }
 
     public InventoryGetOneResult getOneInventory(
             UUID userId, UserRole userRole, UUID affiliationId, UUID inventoryId

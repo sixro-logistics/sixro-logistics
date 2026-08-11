@@ -3,7 +3,6 @@ package com.sixro.logistics.inventory.application.facade;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.inventory.application.command.*;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
-import com.sixro.logistics.inventory.domain.event.OrderCreatedItem;
 import com.sixro.logistics.inventory.application.model.ProductInfo;
 import com.sixro.logistics.inventory.application.port.HubQueryPort;
 import com.sixro.logistics.inventory.application.port.ProductQueryPort;
@@ -14,7 +13,6 @@ import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,6 +21,7 @@ public class InventoryCommandFacade {
 
     private final InventoryCommandService inventoryCommandService;
     private final InventoryQueryService inventoryQueryService;
+
     private final HubQueryPort hubQueryPort;
     private final ProductQueryPort productQueryPort;
 
@@ -129,22 +128,16 @@ public class InventoryCommandFacade {
         return inventoryCommandService.deleteInventory(inventoryId);
     }
 
-    public void deductStock(UUID orderId, UUID hubId, List<OrderCreatedItem> items) {
-        InventoryDeductCommand command = new InventoryDeductCommand(
-                orderId,
-                hubId,
-                items
-                        .stream()
-                        .map(item
-                                        -> new InventoryDeductItem(
-                                                item.productId(),
-                                                item.quantity()
-                                            )
-                        )
-                        .toList()
-        );
-
+    public void deductInventory(InventoryDeductCommand command) {
         inventoryCommandService.deductInventory(command);
+    }
+
+    public void restoreInventory(InventoryRestoreCommand command) {
+        inventoryCommandService.restoreInventory(command);
+    }
+
+    public void restoreInventoryByEvent(InventoryRestoreByEventCommand command) {
+        inventoryCommandService.restoreInventoryByEvent(command);
     }
 
     private InventoryCreateServiceCommand createServiceCommand(

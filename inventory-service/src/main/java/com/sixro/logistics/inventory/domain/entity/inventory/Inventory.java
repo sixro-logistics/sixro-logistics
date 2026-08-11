@@ -79,6 +79,11 @@ public class Inventory extends BaseEntity {
         stock -= quantity;
     }
 
-    // restoreStock
+    public void restoreStock(Integer quantity) {
+        if(quantity == null || quantity < 1){
+            throw new BaseException(InventoryErrorCode.INVALID_QUANTITY);
+        }
+        stock += quantity;
+    }
 
 }

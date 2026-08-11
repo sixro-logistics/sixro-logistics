@@ -2,7 +2,7 @@ package com.sixro.logistics.inventory.presentation.dto.response;
 
 import java.util.UUID;
 
-public record InventoryResultItem(
+public record InventoryResponseItem(
         UUID productId,
         Integer stock
 ) {

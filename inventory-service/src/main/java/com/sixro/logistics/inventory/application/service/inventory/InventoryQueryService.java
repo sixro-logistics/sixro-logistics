@@ -1,7 +1,6 @@
 package com.sixro.logistics.inventory.application.service.inventory;
 
 import com.sixro.logistics.common.core.exception.BaseException;
-import com.sixro.logistics.inventory.application.command.InventoryCheckCommand;
 import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
 import com.sixro.logistics.inventory.application.result.*;
@@ -21,24 +20,7 @@ import java.util.UUID;
 public class InventoryQueryService {
 
     private final InventoryRepository inventoryRepository;
-
-    public InventoryCheckResult checkInventory(InventoryCheckCommand command){
-        List<Inventory> inventories = inventoryRepository
-                .findAllByHubIdAndProductIdInAndIsDeletedFalse(
-                        command.hubId(),
-                        command.productIds()
-                );
-
-        List<InventoryResultItem> items = inventories.stream()
-                .map(inventory -> new InventoryResultItem(
-                        inventory.getProductId(),
-                        inventory.getStock()
-                ))
-                .toList();
-
-        return new InventoryCheckResult(command.hubId(), items);
-    }
-
+    
     public InventoryGetOneResult getOneInventory(UUID inventoryId) {
 
         Inventory inventory = inventoryRepository.findByIdAndIsDeletedFalse(inventoryId)
