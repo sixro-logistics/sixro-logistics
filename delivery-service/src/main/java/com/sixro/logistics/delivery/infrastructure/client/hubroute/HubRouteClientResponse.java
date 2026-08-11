@@ -6,6 +6,9 @@ import java.util.UUID;
 public record HubRouteClientResponse(
         UUID originHubId,
         UUID destHubId,
+        Long totalDistanceM,
+        Long totalDurationS,
+        Long totalCostWon,
         List<Route> routes
 ) {
     public record Route(
@@ -14,7 +17,8 @@ public record HubRouteClientResponse(
             UUID originHubId,
             UUID destHubId,
             Long expectedDistanceM,
-            Long expectedDurationS
+            Long expectedDurationS,
+            Long expectedCostWon
     ) {
     }
 }

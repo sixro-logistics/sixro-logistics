@@ -18,15 +18,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HubRouteClientAdapter implements HubRouteQueryPort {
 
+    private static final String DEFAULT_SEARCH_TYPE = "OPTIMAL";
+
     private final HubRouteClient hubRouteClient;
 
     @Override
     public Optional<HubRoutePathInfo> findPath(UUID originHubId, UUID destHubId, List<HubRouteProductInfo> products) {
         try {
             CommonResponse<HubRouteClientResponse> response = hubRouteClient.getPath(
-                    originHubId,
-                    destHubId,
-                    HubRouteClientRequest.from(products)
+                    DEFAULT_SEARCH_TYPE,
+                    HubRouteClientRequest.from(originHubId, destHubId, products)
             );
 
             if (response == null || !response.success() || response.data() == null || response.data().routes() == null) {

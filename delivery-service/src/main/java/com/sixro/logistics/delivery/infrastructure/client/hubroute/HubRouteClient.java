@@ -6,15 +6,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.UUID;
-
 @FeignClient(name = "hub-service", contextId = "hubRouteClient", path = "/api/v1/internal/hub-routes")
 public interface HubRouteClient {
 
-    @PostMapping("/path")
+    @PostMapping("/paths")
     CommonResponse<HubRouteClientResponse> getPath(
-            @RequestParam("originHubId") UUID originHubId,
-            @RequestParam("destHubId") UUID destHubId,
+            @RequestParam("searchType") String searchType,
             @RequestBody HubRouteClientRequest request
     );
 }
