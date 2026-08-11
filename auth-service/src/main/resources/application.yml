@@ -84,3 +84,8 @@ logging:
 
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'
+
+# User Service 내부 API 호출용 OpenFeign Timeout
+user-service-client:
+  connect-timeout: ${AUTH_USER_CONNECT_TIMEOUT:2s}
+  read-timeout: ${AUTH_USER_READ_TIMEOUT:3s}

@@ -102,3 +102,11 @@ logging:
 outbox:
   publisher:
     fixed-delay: 1000
+
+# Hub/Company 소속 검증용 OpenFeign Timeout
+affiliation-client:
+  # 대상 서비스와 연결을 맺기까지 기다리는 최대 시간
+  connect-timeout: ${AFFILIATION_CONNECT_TIMEOUT:2s}
+
+  # 연결 후 응답을 기다리는 최대 시간
+  read-timeout: ${AFFILIATION_READ_TIMEOUT:3s}

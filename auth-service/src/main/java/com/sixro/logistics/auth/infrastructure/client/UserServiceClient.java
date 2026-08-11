@@ -1,6 +1,7 @@
 package com.sixro.logistics.auth.infrastructure.client;
 
 import com.sixro.logistics.auth.domain.model.UserRole;
+import com.sixro.logistics.auth.infrastructure.client.config.UserServiceClientConfig;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalAdminCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalCreateUserResponse;
@@ -23,7 +24,11 @@ import java.util.UUID;
  * <p>회원가입 시 사용자 생성을 요청하고,
  * 로그인 시 비밀번호와 상태 검증에 필요한 인증 정보를 조회합니다.</p>
  */
-@FeignClient(name = "user-service")
+@FeignClient(
+        name = "user-service",
+        contextId = "authUserServiceClient",
+        configuration = UserServiceClientConfig.class
+)
 public interface UserServiceClient {
 
     // 암호화된 비밀번호를 포함한 사용자 정보를 User Service에 생성 요청합니다.
