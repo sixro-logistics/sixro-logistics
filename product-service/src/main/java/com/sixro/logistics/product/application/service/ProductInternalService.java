@@ -4,6 +4,7 @@ import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.product.domain.entity.Product;
 import com.sixro.logistics.product.domain.repository.internal.ProductInternalRepository;
 import com.sixro.logistics.product.exception.ProductErrorCode;
+import com.sixro.logistics.product.presentation.dto.response.ProductResponseDto;
 import com.sixro.logistics.product.presentation.dto.response.internal.ProductInternalResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class ProductInternalService {
 
 
     /**
-     * 상품 존재 유무 확인(여러개)
+     * 상품 존재 유무 확인(list)
      */
     public List<ProductInternalResponseDto> getProductsByIds(List<UUID> productIds) {
         if (productIds == null || productIds.isEmpty()) {
@@ -38,5 +39,18 @@ public class ProductInternalService {
         return products.stream()
                 .map(ProductInternalResponseDto::from)
                 .toList();
+    }
+
+    /**
+     * 상품 상세 조회
+     */
+    public ProductInternalResponseDto getProductsById(UUID productId) {
+        Product product = productInternalRepository
+                .findByProductIdAndIsDeletedFalse(productId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("존재하지 않는 상품입니다.")
+                );
+
+        return ProductInternalResponseDto.from(product);
     }
 }
