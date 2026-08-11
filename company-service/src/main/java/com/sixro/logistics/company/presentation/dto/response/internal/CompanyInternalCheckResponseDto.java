@@ -6,12 +6,16 @@ import java.util.UUID;
 
 public record CompanyInternalCheckResponseDto(
         UUID companyId,
-        String companyName
+        UUID hubId,
+        String companyName,
+        String address
 ) {
     public static CompanyInternalCheckResponseDto from(Company company) {
         return new CompanyInternalCheckResponseDto(
                 company.getCompanyId(),
-                company.getCompanyName()
+                company.getHubId(),
+                company.getCompanyName(),
+                company.getAddress()
         );
     }
 }
