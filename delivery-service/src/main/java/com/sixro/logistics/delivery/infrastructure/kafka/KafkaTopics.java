@@ -6,4 +6,5 @@ public final class KafkaTopics {
     }
 
     public static final String ORDER_CONFIRMED = "order-confirmed";
+    public static final String DELIVERY_CREATED = "delivery.created";
 }
