@@ -3,7 +3,6 @@ package com.sixro.logistics.hub.common.auth;
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
-import com.sixro.logistics.hub.hub.application.auth.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.stereotype.Component;
