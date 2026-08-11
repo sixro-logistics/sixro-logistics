@@ -1,6 +1,7 @@
 package com.sixro.logistics.user.infrastructure.client.config;
 
 import feign.Request;
+import feign.Retryer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 
@@ -12,8 +13,8 @@ import java.time.Duration;
  * <p>소속 서비스 장애로 User Service 요청이 장시간 대기하지 않도록
  * 연결 및 응답 Timeout을 제한합니다.</p>
  *
- * <p>현재 설정은 Timeout만 적용하며 Retry와 Circuit Breaker는
- * 별도 정책으로 적용합니다.</p>
+ * <p>연결 및 응답 Timeout을 제한하고, 일시적인 네트워크 장애에
+ * 대해서만 제한적으로 재시도합니다.</p>
  */
 public class AffiliationClientConfig {
 
@@ -39,6 +40,36 @@ public class AffiliationClientConfig {
                 connectTimeout,
                 readTimeout,
                 false
+        );
+    }
+
+    /**
+     * 일시적인 연결 실패와 Timeout에 대한 재시도 정책입니다.
+     *
+     * maxAttempts에는 최초 호출이 포함되므로
+     * 3으로 설정하면 최초 1회와 재시도 2회가 수행됩니다.
+     */
+    @Bean
+    public Retryer affiliationRetryer(
+            @Value(
+                    "${affiliation-client.retry.initial-interval:200ms}"
+            )
+            Duration initialInterval,
+
+            @Value(
+                    "${affiliation-client.retry.max-interval:1s}"
+            )
+            Duration maxInterval,
+
+            @Value(
+                    "${affiliation-client.retry.max-attempts:3}"
+            )
+            int maxAttempts
+    ) {
+        return new Retryer.Default(
+                initialInterval.toMillis(),
+                maxInterval.toMillis(),
+                maxAttempts
         );
     }
 }

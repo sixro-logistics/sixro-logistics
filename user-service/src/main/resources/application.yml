@@ -110,3 +110,13 @@ affiliation-client:
 
   # 연결 후 응답을 기다리는 최대 시간
   read-timeout: ${AFFILIATION_READ_TIMEOUT:3s}
+
+  retry:
+    # 첫 재시도 전 대기 시간
+    initial-interval: ${AFFILIATION_RETRY_INITIAL_INTERVAL:200ms}
+
+    # 재시도 간 최대 대기 시간
+    max-interval: ${AFFILIATION_RETRY_MAX_INTERVAL:1s}
+
+    # 최초 호출 포함 최대 시도 횟수
+    max-attempts: ${AFFILIATION_RETRY_MAX_ATTEMPTS:3}
