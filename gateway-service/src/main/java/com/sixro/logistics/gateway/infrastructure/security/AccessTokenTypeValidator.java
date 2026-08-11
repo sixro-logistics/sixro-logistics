@@ -1,5 +1,6 @@
 package com.sixro.logistics.gateway.infrastructure.security;
 
+import com.sixro.logistics.common.constant.JwtClaimConstants;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
@@ -12,11 +13,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public class AccessTokenTypeValidator
         implements OAuth2TokenValidator<Jwt> {
 
-    private static final String TOKEN_TYPE_CLAIM =
-            "tokenType";
-
-    private static final String ACCESS_TOKEN_TYPE =
-            "ACCESS";
+    private static final String ACCESS_TOKEN_TYPE =  "ACCESS";
 
     private static final OAuth2Error INVALID_TOKEN_TYPE =
             new OAuth2Error(
@@ -29,9 +26,7 @@ public class AccessTokenTypeValidator
     public OAuth2TokenValidatorResult validate(
             Jwt jwt
     ) {
-        String tokenType = jwt.getClaimAsString(
-                TOKEN_TYPE_CLAIM
-        );
+        String tokenType = jwt.getClaimAsString(JwtClaimConstants.TOKEN_TYPE);
 
         if (ACCESS_TOKEN_TYPE.equals(tokenType)) {
             return OAuth2TokenValidatorResult.success();

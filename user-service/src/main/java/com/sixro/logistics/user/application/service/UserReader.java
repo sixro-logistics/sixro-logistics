@@ -35,8 +35,12 @@ public class UserReader {
     public User getAccessibleUser(UUID userId) {
         User user = getById(userId);
 
-        if (user.isDeleted()) {
-            throw new BaseException(UserErrorCode.DEACTIVATED_USER);
+        if (user.isDeleted()
+                || user.getDeletedAt() != null
+                || user.getDeletedBy() != null) {
+            throw new BaseException(
+                    UserErrorCode.DEACTIVATED_USER
+            );
         }
 
         return user;

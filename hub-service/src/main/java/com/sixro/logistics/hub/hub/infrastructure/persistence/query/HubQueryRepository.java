@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface HubNativeQueryRepository extends Repository<Hub, UUID> {
+public interface HubQueryRepository extends Repository<Hub, UUID> {
 
     Optional<Hub> findById(UUID id);
 
