@@ -22,10 +22,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 /**
- * Auth Service에서 호출하는 내부 사용자 생성 API입니다.
+ * 내부 서비스에서 사용하는 사용자 관리 API입니다.
  *
- * <p>Auth, Delivery 등 내부 서비스에서 사용자 생성,
- * 인증 정보 조회 및 사용자 검증에 사용합니다.</p>
+ * <p>Auth, Delivery, Order 등 내부 서비스에서 사용자 생성,
+ * 인증 정보 조회 및 사용자 상태 검증에 사용합니다.</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -97,8 +97,12 @@ public class UserInternalController {
     }
 
     /**
-     * Auth Service의 Access Token 재발급 시 필요한
-     * 최신 사용자 상태, 권한 및 소속 정보를 조회합니다.
+     * 내부 서비스에서 사용자 상태, 권한 및 소속 정보를 조회합니다.
+     *
+     * <p>Auth Service의 토큰 재발급과 Order Service의
+     * 주문 수령인 검증 등에 사용합니다.</p>
+     *
+     * <p>논리 삭제된 사용자는 조회되지 않습니다.</p>
      */
     @GetMapping("/{userId}/status")
     public CommonResponse<InternalUserStatusResponse> getUserStatus(
