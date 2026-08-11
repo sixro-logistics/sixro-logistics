@@ -54,8 +54,14 @@ public class DeliveryCreationService {
                 .map(CreateDeliveryItemCommand::getCompanyId)
                 .collect(java.util.stream.Collectors.toCollection(HashSet::new));
 
+        // 이벤트용 상품 정보 구성
+        List<DeliveryCreationData.ProductData> products = command.getOrderItems().stream()
+                .map(item -> new DeliveryCreationData.ProductData(
+                        item.getProductId(), item.getQuantity())
+                ).toList();
+
         DeliveryCreationData creationData = new DeliveryCreationData(
-                command.getOrderId(), supplierCompanyIds, command.getReceiverCompanyId(),
+                command.getTraceId(), command.getOrderId(), products, supplierCompanyIds, command.getReceiverCompanyId(),
                 command.getOriginHubId(), companyHubInfo.destHubId(), command.getDeliveryAddress(),
                 command.getDeliveryDeadline(), command.getRequests(), recipient.username(),
                 recipient.slackId(), routes);
@@ -65,7 +71,7 @@ public class DeliveryCreationService {
     }
 
     private void validateCommand(CreateDeliveryCommand command) {
-        if (command == null || command.getOrderId() == null || command.getOriginHubId() == null
+        if (command == null || isBlank(command.getTraceId()) || command.getOrderId() == null || command.getOriginHubId() == null
                 || command.getReceiverCompanyId() == null || command.getReceiverId() == null
                 || command.getDeliveryDeadline() == null || isBlank(command.getDeliveryAddress())
                 || command.getDeliveryAddress().length() > 500 || command.getOrderItems() == null

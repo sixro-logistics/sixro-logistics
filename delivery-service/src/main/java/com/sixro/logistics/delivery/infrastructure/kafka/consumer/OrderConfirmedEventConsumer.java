@@ -9,9 +9,11 @@ import com.sixro.logistics.delivery.infrastructure.kafka.event.OrderConfirmedEve
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -21,27 +23,33 @@ public class OrderConfirmedEventConsumer {
     private final DeliveryCreationService deliveryCreationService;
 
     @KafkaListener(topics = KafkaTopics.ORDER_CONFIRMED)
-    public void consume(OrderConfirmedEvent event) {
+    public void consume(OrderConfirmedEvent event,
+                        @Header(name = "trace-id", required = false) String traceId) {
+
+        // 이벤트 추적 ID 확인
+        String resolvedTraceId = resolveTraceId(traceId);
+
         // 주문 확정 이벤트 수신
         OrderConfirmedData data = event.data();
-        log.info("OrderConfirmedEvent 수신: eventId={}, orderId={}", event.eventId(), data.orderId());
+        log.info("OrderConfirmedEvent 수신: eventId={}, orderId={}, traceId={}",
+                event.eventId(), data.orderId(), resolvedTraceId);
 
         // 배송 생성 요청 변환
-        CreateDeliveryCommand command = toCommand(event);
+        CreateDeliveryCommand command = toCommand(event, resolvedTraceId);
 
         // 배송 생성 처리
         boolean created = deliveryCreationService.createDelivery(command);
         if (!created) {
-            log.info("중복 OrderConfirmedEvent 처리 생략: eventId={}, orderId={}",
-                    event.eventId(), data.orderId());
+            log.info("중복 OrderConfirmedEvent 처리 생략: eventId={}, orderId={}, traceId={}",
+                    event.eventId(), data.orderId(), resolvedTraceId);
             return;
         }
 
-        log.info("OrderConfirmedEvent 배송 생성 완료: eventId={}, orderId={}",
-                event.eventId(), data.orderId());
+        log.info("OrderConfirmedEvent 배송 생성 완료: eventId={}, orderId={}, traceId={}",
+                event.eventId(), data.orderId(), resolvedTraceId);
     }
 
-    private CreateDeliveryCommand toCommand(OrderConfirmedEvent event) {
+    private CreateDeliveryCommand toCommand(OrderConfirmedEvent event, String traceId) {
         OrderConfirmedData data = event.data();
         List<CreateDeliveryItemCommand> orderItems = data.items() == null
                 ? null
@@ -50,7 +58,14 @@ public class OrderConfirmedEventConsumer {
                 .toList();
 
         return new CreateDeliveryCommand(
-                data.orderId(), data.hubId(), data.receiverCompanyId(), data.receiverId(),
+                traceId, data.orderId(), data.hubId(), data.receiverCompanyId(), data.receiverId(),
                 data.deliveryAddress(), data.deliveryDeadline(), data.requests(), orderItems);
+    }
+
+    private String resolveTraceId(String traceId) {
+        if (traceId == null || traceId.isBlank()) {
+            return UUID.randomUUID().toString();
+        }
+        return traceId;
     }
 }

@@ -7,27 +7,38 @@ import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
 import com.sixro.logistics.delivery.domain.port.DeliveryManagerRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
+import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreatedEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class DeliveryCreationTransactionService {
 
+    private static final LocalTime WORK_START_TIME = LocalTime.of(9, 0);
+    private static final LocalTime WORK_END_TIME = LocalTime.of(18, 0);
+
     private final DeliveryRepositoryPort deliveryRepositoryPort;
     private final DeliveryRouteRepositoryPort deliveryRouteRepositoryPort;
     private final DeliveryManagerRepositoryPort deliveryManagerRepositoryPort;
+    private final OutboxService outboxService;
 
     public DeliveryCreationTransactionService(DeliveryRepositoryPort deliveryRepositoryPort,
-                                              DeliveryRouteRepositoryPort deliveryRouteRepositoryPort,
-                                              DeliveryManagerRepositoryPort deliveryManagerRepositoryPort) {
+                                               DeliveryRouteRepositoryPort deliveryRouteRepositoryPort,
+                                               DeliveryManagerRepositoryPort deliveryManagerRepositoryPort,
+                                               OutboxService outboxService) {
         this.deliveryRepositoryPort = deliveryRepositoryPort;
         this.deliveryRouteRepositoryPort = deliveryRouteRepositoryPort;
         this.deliveryManagerRepositoryPort = deliveryManagerRepositoryPort;
+        this.outboxService = outboxService;
     }
 
     @Transactional
@@ -65,7 +76,108 @@ public class DeliveryCreationTransactionService {
             deliveryRouteRepositoryPort.saveAll(deliveryRoutes);
         }
 
+        // 배송 생성 이벤트 구성
+        DeliveryCreatedEvent event = createDeliveryCreatedEvent(data, savedDelivery, deliveryRoutes);
+
+        // Outbox 이벤트 저장
+        outboxService.save(event, data.traceId());
+
         return true;
+    }
+
+    private DeliveryCreatedEvent createDeliveryCreatedEvent(
+            DeliveryCreationData data, Delivery delivery, List<DeliveryRoute> deliveryRoutes) {
+
+        // 이벤트 기본 정보 생성
+        LocalDateTime occurredAt = LocalDateTime.now();
+        UUID eventId = UUID.randomUUID();
+
+        // 이벤트 상품 정보 구성
+        List<DeliveryCreatedEvent.Product> products = new ArrayList<>();
+
+        for (DeliveryCreationData.ProductData productData : data.products()) {
+            DeliveryCreatedEvent.Product product = new DeliveryCreatedEvent.Product(productData.productId(), productData.quantity());
+            products.add(product);
+        }
+
+        // 이벤트 배송경로 및 총 예상 시간 구성
+        long totalHubRouteExpectedDurationS = 0L;
+        List<DeliveryCreatedEvent.Route> routes = new ArrayList<>();
+
+        for (DeliveryRoute deliveryRoute : deliveryRoutes) {
+            DeliveryCreatedEvent.Route route = new DeliveryCreatedEvent.Route(
+                    deliveryRoute.getRouteSequence(), deliveryRoute.getOriginHubId(),
+                    deliveryRoute.getDestHubId(), deliveryRoute.getExpectedDurationS()
+            );
+
+            routes.add(route);
+            totalHubRouteExpectedDurationS += deliveryRoute.getExpectedDurationS();
+        }
+
+        // 배송 담당자 근무시간
+        DeliveryCreatedEvent.DeliveryManagerWorkingHours workingHours =
+                new DeliveryCreatedEvent.DeliveryManagerWorkingHours(WORK_START_TIME, WORK_END_TIME);
+
+        // 배송 담당자 목록 구성
+        List<DeliveryCreatedEvent.DeliveryManagerInfo> deliveryManagers = createDeliveryManagerInfos(delivery, deliveryRoutes);
+
+        // 이벤트 데이터 구성
+        DeliveryCreatedEvent.DeliveryCreatedData eventData = new DeliveryCreatedEvent.DeliveryCreatedData(
+                delivery.getOrderId(), delivery.getDeliveryId(), delivery.getDeliveryDeadline(),
+                delivery.getRequests(), delivery.getDeliveryAddress(), products,
+                delivery.getOriginHubId(), delivery.getDestHubId(), totalHubRouteExpectedDurationS,
+                routes, workingHours, deliveryManagers);
+
+        // 배송 생성 이벤트 생성
+        return new DeliveryCreatedEvent(eventId, occurredAt, eventData);
+    }
+
+    private List<DeliveryCreatedEvent.DeliveryManagerInfo> createDeliveryManagerInfos(Delivery delivery, List<DeliveryRoute> deliveryRoutes) {
+
+        // 배송 담당자 중복 확인용
+        Set<UUID> managerIds = new HashSet<>();
+        List<DeliveryManager> managers = new ArrayList<>();
+
+        // 업체 배송 담당자 추가
+        if (delivery.getDeliveryManager() != null) {
+            DeliveryManager deliveryManager = delivery.getDeliveryManager();
+            UUID deliveryManagerId = deliveryManager.getDeliveryManagerId();
+
+            managerIds.add(deliveryManagerId);
+            managers.add(deliveryManager);
+        }
+
+        // 허브 배송 담당자 추가
+        for (DeliveryRoute deliveryRoute : deliveryRoutes) {
+            if (deliveryRoute.getDeliveryManager() != null) {
+                DeliveryManager deliveryManager = deliveryRoute.getDeliveryManager();
+                UUID deliveryManagerId = deliveryManager.getDeliveryManagerId();
+
+                if (!managerIds.contains(deliveryManagerId)) {
+                    managerIds.add(deliveryManagerId);
+                    managers.add(deliveryManager);
+                }
+            }
+        }
+
+        // 배송 담당자 정렬
+        managers.sort((firstManager, secondManager) ->
+                Integer.compare(firstManager.getDeliverySequence(), secondManager.getDeliverySequence())
+        );
+
+        // 배송 담당자 이벤트 정보 구성
+        List<DeliveryCreatedEvent.DeliveryManagerInfo> managerInfos = new ArrayList<>();
+
+        for (DeliveryManager manager : managers) {
+            DeliveryCreatedEvent.DeliveryManagerInfo managerInfo =
+                    new DeliveryCreatedEvent.DeliveryManagerInfo(
+                            manager.getDeliveryManagerId(), manager.getManagerType().name(),
+                            manager.getDeliverySequence());
+
+            managerInfos.add(managerInfo);
+        }
+
+        return managerInfos;
     }
 
     private Optional<DeliveryManager> selectNextCompanyManager(List<DeliveryManager> managers, UUID hubId) {

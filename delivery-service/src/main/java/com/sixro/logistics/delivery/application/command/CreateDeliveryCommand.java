@@ -9,6 +9,7 @@ import java.util.UUID;
 @Getter
 public class CreateDeliveryCommand {
 
+    private final String traceId;
     private final UUID orderId;
     private final UUID originHubId;
     private final UUID receiverCompanyId;
@@ -18,9 +19,10 @@ public class CreateDeliveryCommand {
     private final String requests;
     private final List<CreateDeliveryItemCommand> orderItems;
 
-    public CreateDeliveryCommand(UUID orderId, UUID originHubId, UUID receiverCompanyId, UUID receiverId,
+    public CreateDeliveryCommand(String traceId, UUID orderId, UUID originHubId, UUID receiverCompanyId, UUID receiverId,
                                  String deliveryAddress, LocalDateTime deliveryDeadline, String requests,
                                  List<CreateDeliveryItemCommand> orderItems) {
+        this.traceId = traceId;
         this.orderId = orderId;
         this.originHubId = originHubId;
         this.receiverCompanyId = receiverCompanyId;
