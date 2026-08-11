@@ -27,7 +27,7 @@ public class OrderCreatedEventConsumer {
                         @Header(name = "trace-id", required = false) String traceId) {
 
         // 이벤트 추적 ID 확인
-        String resolvedTraceId = resolveTraceId(traceId);
+        String resolvedTraceId = resolveTraceId(traceId, event.eventId());
 
         // 주문 생성 이벤트 수신
         OrderCreatedData data = event.data();
@@ -62,9 +62,9 @@ public class OrderCreatedEventConsumer {
                 data.deliveryAddress(), data.deliveryDeadline(), data.requests(), orderItems);
     }
 
-    private String resolveTraceId(String traceId) {
+    private String resolveTraceId(String traceId, UUID orderCreatedEventId) {
         if (traceId == null || traceId.isBlank()) {
-            return UUID.randomUUID().toString();
+            return orderCreatedEventId.toString();
         }
         return traceId;
     }

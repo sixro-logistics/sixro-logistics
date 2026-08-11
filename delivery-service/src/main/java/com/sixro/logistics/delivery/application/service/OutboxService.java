@@ -6,9 +6,12 @@ import com.sixro.logistics.delivery.domain.entity.outbox.Outbox;
 import com.sixro.logistics.delivery.domain.entity.outbox.OutboxEventType;
 import com.sixro.logistics.delivery.domain.port.OutboxRepositoryPort;
 import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreatedEvent;
+import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreationFailedEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 public class OutboxService {
 
     private final OutboxRepositoryPort outboxRepositoryPort;
@@ -35,6 +38,25 @@ public class OutboxService {
 
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("DeliveryCreatedEvent 이벤트 JSON 구성에 실패했습니다.", exception);
+        }
+    }
+
+    public void save(DeliveryCreationFailedEvent event, String traceId) {
+        try {
+            // 실패 이벤트 JSON
+            String payload = objectMapper.writeValueAsString(event);
+
+            // 실패 Outbox 이벤트 구성
+            Outbox outbox = Outbox.create(
+                    event.eventId(), event.data().orderId(), OutboxEventType.DELIVERY_CREATION_FAILED,
+                    traceId, payload, event.occurredAt()
+            );
+
+            // 실패 Outbox 이벤트 저장
+            outboxRepositoryPort.save(outbox);
+
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("DeliveryCreationFailedEvent 이벤트 JSON 구성에 실패했습니다.", exception);
         }
     }
 }

@@ -26,11 +26,11 @@ public class Outbox {
     @Column(name = "event_id", updatable = false, nullable = false)
     private UUID eventId;
 
-    // 이벤트 대상 배송의 deliveryId
+    // 이벤트 대상 ID: 배송생성은 deliveryId, 배송생성실패는 orderId
     @Column(name = "aggregate_id", updatable = false, nullable = false)
     private UUID aggregateId;
 
-    // DELIVERY_CREATED
+    // DELIVERY_CREATED, DELIVERY_CREATION_FAILED
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", updatable = false, nullable = false)
     private OutboxEventType eventType;
