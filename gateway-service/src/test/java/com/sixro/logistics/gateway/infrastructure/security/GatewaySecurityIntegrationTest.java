@@ -1,4 +1,4 @@
-package com.sixro.logistics.gateway.security;
+package com.sixro.logistics.gateway.infrastructure.security;
 
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.test.config.RedisTestContainerConfig;

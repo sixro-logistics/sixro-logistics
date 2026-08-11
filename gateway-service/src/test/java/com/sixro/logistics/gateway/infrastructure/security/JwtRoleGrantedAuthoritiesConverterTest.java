@@ -1,4 +1,4 @@
-package com.sixro.logistics.gateway.security;
+package com.sixro.logistics.gateway.infrastructure.security;
 
 import com.sixro.logistics.gateway.infrastructure.security.JwtRoleGrantedAuthoritiesConverter;
 import org.junit.jupiter.api.Test;
