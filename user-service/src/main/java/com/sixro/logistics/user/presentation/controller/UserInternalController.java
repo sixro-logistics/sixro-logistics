@@ -1,5 +1,6 @@
 package com.sixro.logistics.user.presentation.controller;
 
+import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.user.application.dto.InternalDeliveryUserResult;
 import com.sixro.logistics.user.application.dto.InternalUserAuthResult;
@@ -7,6 +8,8 @@ import com.sixro.logistics.user.application.dto.InternalUserStatusResult;
 import com.sixro.logistics.user.application.dto.UserResult;
 import com.sixro.logistics.user.application.service.UserCommandService;
 import com.sixro.logistics.user.application.service.UserQueryService;
+import com.sixro.logistics.user.domain.model.UserRole;
+import com.sixro.logistics.user.presentation.request.internal.InternalAdminCreateUserRequest;
 import com.sixro.logistics.user.presentation.request.internal.InternalCreateUserRequest;
 import com.sixro.logistics.user.presentation.response.internal.InternalCreateUserResponse;
 import com.sixro.logistics.user.presentation.response.internal.InternalDeliveryUserResponse;
@@ -19,10 +22,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 /**
- * Auth Service에서 호출하는 내부 사용자 생성 API입니다.
+ * 내부 서비스에서 사용하는 사용자 관리 API입니다.
  *
- * <p>Auth, Delivery 등 내부 서비스에서 사용자 생성,
- * 인증 정보 조회 및 사용자 검증에 사용합니다.</p>
+ * <p>Auth, Delivery, Order 등 내부 서비스에서 사용자 생성,
+ * 인증 정보 조회 및 사용자 상태 검증에 사용합니다.</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -31,6 +34,36 @@ public class UserInternalController {
 
     private final UserCommandService userCommandService;
     private final UserQueryService userQueryService;
+
+    /**
+     * MASTER_ADMIN이 Auth Service를 통해
+     * 승인 완료 상태의 사용자를 생성합니다.
+     */
+    @PostMapping("/admin-created")
+    public CommonResponse<InternalCreateUserResponse>
+    createApprovedUser(
+            @RequestHeader(HeaderConstants.USER_ID)
+            UUID requesterId,
+
+            @RequestHeader(HeaderConstants.USER_ROLE)
+            UserRole requesterRole,
+
+            @Valid @RequestBody
+            InternalAdminCreateUserRequest request
+    ) {
+        UserResult result =
+                userCommandService.createApprovedUser(
+                        request.toCommand(
+                                requesterId,
+                                requesterRole
+                        )
+                );
+
+        return CommonResponse.success(
+                "승인 완료 사용자를 생성했습니다.",
+                InternalCreateUserResponse.from(result)
+        );
+    }
 
     /**
      * Auth Service에서 전달한 회원가입 정보를 기반으로 사용자를 생성합니다.
@@ -64,8 +97,12 @@ public class UserInternalController {
     }
 
     /**
-     * Auth Service의 Access Token 재발급 시 필요한
-     * 최신 사용자 상태, 권한 및 소속 정보를 조회합니다.
+     * 내부 서비스에서 사용자 상태, 권한 및 소속 정보를 조회합니다.
+     *
+     * <p>Auth Service의 토큰 재발급과 Order Service의
+     * 주문 수령인 검증 등에 사용합니다.</p>
+     *
+     * <p>논리 삭제된 사용자는 조회되지 않습니다.</p>
      */
     @GetMapping("/{userId}/status")
     public CommonResponse<InternalUserStatusResponse> getUserStatus(

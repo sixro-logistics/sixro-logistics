@@ -20,6 +20,15 @@ spring:
       username: ${REDIS_USERNAME}
       password: ${REDIS_PASSWORD}
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: auth-user-security
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
   cloud:
     discovery:
       enabled: true
@@ -32,7 +41,7 @@ eureka:
     fetch-registry: true
 
     service-url:
-      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka}
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
 
 jwt:
   issuer: auth-service
@@ -51,15 +60,18 @@ management:
 
   endpoint:
     health:
+      # 개발환경
       show-details: always
+      # 운영환경
+  #      show-details: when_authorized
 
   tracing:
     sampling:
       probability: 1.0
 
-    zipkin:
-      tracing:
-        endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 springdoc:
   swagger-ui:
@@ -67,7 +79,13 @@ springdoc:
 
 logging:
   level:
-    org.springframework.boot.context.config: DEBUG
+    root: INFO
+    com.sixro.logistics.auth: INFO
 
   pattern:
-    console: '%clr(%-5level){green} [traceId=%X{traceId:-}, spanId=%X{spanId:-}] %clr(%logger{36}){cyan}: %msg%n'
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'
+
+# User Service 내부 API 호출용 OpenFeign Timeout
+user-service-client:
+  connect-timeout-ms: ${AUTH_USER_CONNECT_TIMEOUT_MS:2000}
+  read-timeout-ms: ${AUTH_USER_READ_TIMEOUT_MS:3000}

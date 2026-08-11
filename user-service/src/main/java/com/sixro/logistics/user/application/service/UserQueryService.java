@@ -70,8 +70,10 @@ public class UserQueryService {
     }
 
     /**
-     * Auth Service의 Access Token 재발급 시
-     * 최신 사용자 상태, 권한 및 소속 정보를 조회합니다.
+     * 내부 서비스에서 사용자의 최신 상태, 권한 및 소속 정보를 조회합니다.
+     *
+     * <p>논리 삭제된 사용자는 {@link UserReader#getAccessibleUser(UUID)}에서
+     * 차단됩니다.</p>
      */
     public InternalUserStatusResult getInternalUserStatus(UUID userId) {
         return InternalUserStatusResult.from(

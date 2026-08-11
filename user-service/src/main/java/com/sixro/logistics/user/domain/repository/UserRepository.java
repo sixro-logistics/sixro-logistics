@@ -20,15 +20,18 @@ public interface UserRepository {
     // username으로 Soft Delete되지 않은 사용자를 조회합니다.
     Optional<User> findActiveByUsername(String username);
 
-    // 동일한 username을 사용하는 활성 사용자가 존재하는지 확인합니다.
-    boolean existsActiveByUsername(String username);
+    /**
+     * 삭제 여부와 관계없이 username 중복을 검사합니다.
+     * 삭제된 사용자의 로그인 ID도 재사용하지 않습니다.
+     */
+    boolean existsByUsername(String username);
 
-    // 동일한 Slack ID를 사용하는 활성 사용자가 존재하는지 확인합니다.
-    boolean existsActiveBySlackId(String slackId);
+    // 삭제 여부와 관계없이 Slack ID 중복을 검사합니다.
+    boolean existsBySlackId(String slackId);
+
+    // 사용자 수정 시 자기 자신을 제외하고 Slack ID 중복을 검사합니다.
+    boolean existsBySlackIdAndUserIdNot(String slackId, UUID excludedUserId);
 
     // 검색 조건에 해당하는 활성 사용자를 조회합니다.
-    Page<User> search(
-            UserSearchCondition condition,
-            Pageable pageable
-    );
+    Page<User> search(UserSearchCondition condition, Pageable pageable);
 }

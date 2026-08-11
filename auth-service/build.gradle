@@ -41,6 +41,9 @@ dependencies {
     // Redis - Refresh Token 저장
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+
     // Eureka Client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
