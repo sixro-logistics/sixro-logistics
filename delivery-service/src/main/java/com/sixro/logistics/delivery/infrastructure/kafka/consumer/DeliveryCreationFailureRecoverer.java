@@ -5,14 +5,14 @@ import com.sixro.logistics.delivery.application.service.OutboxService;
 import com.sixro.logistics.delivery.domain.exception.DeliveryCreationKafkaErrorCode;
 import com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent;
 import com.sixro.logistics.delivery.infrastructure.kafka.event.OrderCreatedEvent;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.header.Header;
 import org.springframework.kafka.listener.ConsumerRecordRecoverer;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,9 +21,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DeliveryCreationFailureRecoverer implements ConsumerRecordRecoverer {
 
-    private static final String TRACE_ID_HEADER = "trace-id";
-
     private final OutboxService outboxService;
+    private final Tracer tracer;
 
     @Override
     public void accept(ConsumerRecord<?, ?> record, Exception exception) {
@@ -36,7 +35,7 @@ public class DeliveryCreationFailureRecoverer implements ConsumerRecordRecoverer
 
         // 배송 생성 실패 유형 확인
         DeliveryCreationKafkaErrorCode errorCode = resolveErrorCode(exception);
-        String traceId = resolveTraceId(record, orderCreatedEvent.eventId());
+        String traceId = resolveCurrentTraceId(orderCreatedEvent.eventId());
 
         // 배송 생성 실패 이벤트 구성
         DeliveryCreationFailedEvent.DeliveryCreationFailedData eventData =
@@ -69,16 +68,11 @@ public class DeliveryCreationFailureRecoverer implements ConsumerRecordRecoverer
         return DeliveryCreationKafkaErrorCode.DELIVERY_CREATION_FAILED;
     }
 
-    private String resolveTraceId(ConsumerRecord<?, ?> record, UUID orderCreatedEventId) {
-        Header traceIdHeader = record.headers().lastHeader(TRACE_ID_HEADER);
-        if (traceIdHeader == null || traceIdHeader.value() == null) {
+    private String resolveCurrentTraceId(UUID orderCreatedEventId) {
+        Span currentSpan = tracer.currentSpan();
+        if (currentSpan == null) {
             return orderCreatedEventId.toString();
         }
-
-        String traceId = new String(traceIdHeader.value(), StandardCharsets.UTF_8);
-        if (traceId.isBlank()) {
-            return orderCreatedEventId.toString();
-        }
-        return traceId;
+        return currentSpan.context().traceId();
     }
 }

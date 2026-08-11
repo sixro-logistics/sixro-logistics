@@ -35,7 +35,7 @@ public class Outbox {
     @Column(name = "event_type", updatable = false, nullable = false)
     private OutboxEventType eventType;
 
-    // Kafka Header 재구성용
+    // 원본 이벤트 Trace 로그 확인용
     @Column(name = "trace_id", updatable = false, nullable = false)
     private String traceId;
 
