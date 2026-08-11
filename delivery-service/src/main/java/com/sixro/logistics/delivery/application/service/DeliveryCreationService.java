@@ -12,10 +12,12 @@ import com.sixro.logistics.delivery.application.model.UserInfo;
 import com.sixro.logistics.delivery.application.port.CompanyQueryPort;
 import com.sixro.logistics.delivery.application.port.HubRouteQueryPort;
 import com.sixro.logistics.delivery.application.port.UserQueryPort;
+import com.sixro.logistics.delivery.domain.exception.DeliveryCreationKafkaErrorCode;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -67,7 +69,15 @@ public class DeliveryCreationService {
                 recipient.slackId(), routes);
 
         // 배송 및 배송경로 저장
-        return transactionService.create(creationData);
+        return saveDelivery(creationData);
+    }
+
+    private boolean saveDelivery(DeliveryCreationData creationData) {
+        try {
+            return transactionService.create(creationData);
+        } catch (RuntimeException exception) {
+            throw new BaseException(DeliveryCreationKafkaErrorCode.DELIVERY_SAVE_FAILED, exception);
+        }
     }
 
     private void validateCommand(CreateDeliveryCommand command) {
@@ -89,23 +99,43 @@ public class DeliveryCreationService {
     }
 
     private UserInfo findRecipient(UUID receiverId) {
-        UserInfo recipient = userQueryPort.findUser(receiverId)
-                .orElseThrow(() -> internalError("수령인 정보를 찾을 수 없습니다."));
+        Optional<UserInfo> recipientOptional;
 
+        try {
+            recipientOptional = userQueryPort.findUser(receiverId);
+        } catch (RuntimeException exception) {
+            throw new BaseException(DeliveryCreationKafkaErrorCode.RECEIVER_NOT_FOUND, exception);
+        }
+
+        if (recipientOptional.isEmpty()) {
+            throw new BaseException(DeliveryCreationKafkaErrorCode.RECEIVER_NOT_FOUND);
+        }
+
+        UserInfo recipient = recipientOptional.get();
         if (!receiverId.equals(recipient.userId()) || isBlank(recipient.username())
                 || recipient.username().length() > 50 || isBlank(recipient.slackId())
                 || recipient.slackId().length() > 100) {
-            throw internalError("수령인 응답 정보가 유효하지 않습니다.");
+            throw new BaseException(DeliveryCreationKafkaErrorCode.RECEIVER_NOT_FOUND);
         }
+
         return recipient;
     }
 
     private CompanyHubInfo findDestinationHub(UUID receiverCompanyId) {
-        CompanyHubInfo companyHubInfo = companyQueryPort.findHubInfo(receiverCompanyId)
-                .orElseThrow(() -> internalError("수령 업체의 목적지 허브를 찾을 수 없습니다."));
+        Optional<CompanyHubInfo> companyHubInfoOptional;
+        try {
+            companyHubInfoOptional = companyQueryPort.findHubInfo(receiverCompanyId);
+        } catch (RuntimeException exception) {
+            throw new BaseException(DeliveryCreationKafkaErrorCode.DESTINATION_HUB_NOT_FOUND, exception);
+        }
 
+        if (companyHubInfoOptional.isEmpty()) {
+            throw new BaseException(DeliveryCreationKafkaErrorCode.DESTINATION_HUB_NOT_FOUND);
+        }
+
+        CompanyHubInfo companyHubInfo = companyHubInfoOptional.get();
         if (!receiverCompanyId.equals(companyHubInfo.destCompanyId()) || companyHubInfo.destHubId() == null) {
-            throw internalError("수령 업체의 목적지 허브 응답이 유효하지 않습니다.");
+            throw new BaseException(DeliveryCreationKafkaErrorCode.DESTINATION_HUB_NOT_FOUND);
         }
         return companyHubInfo;
     }
@@ -115,12 +145,21 @@ public class DeliveryCreationService {
             return List.of();
         }
 
-        List<HubRouteProductInfo> products = command.getOrderItems().stream()
-                .map(item -> new HubRouteProductInfo(item.getProductId(), item.getQuantity()))
-                .toList();
-        HubRoutePathInfo path = hubRouteQueryPort.findPath(command.getOriginHubId(), destHubId, products)
-                .orElseThrow(() -> internalError("출발 허브에서 목적지 허브까지의 경로를 찾을 수 없습니다."));
+        Optional<HubRoutePathInfo> pathOptional;
+        try {
+            List<HubRouteProductInfo> products = command.getOrderItems().stream()
+                    .map(item -> new HubRouteProductInfo(item.getProductId(), item.getQuantity()))
+                    .toList();
+            pathOptional = hubRouteQueryPort.findPath(command.getOriginHubId(), destHubId, products);
+        } catch (RuntimeException exception) {
+            throw new BaseException(DeliveryCreationKafkaErrorCode.HUB_ROUTE_NOT_FOUND, exception);
+        }
 
+        if (pathOptional.isEmpty()) {
+            throw new BaseException(DeliveryCreationKafkaErrorCode.HUB_ROUTE_NOT_FOUND);
+        }
+
+        HubRoutePathInfo path = pathOptional.get();
         validateRoutePath(path, command.getOriginHubId(), destHubId);
 
         return path.routes().stream()
@@ -133,7 +172,7 @@ public class DeliveryCreationService {
     private void validateRoutePath(HubRoutePathInfo path, UUID originHubId, UUID destHubId) {
         if (!originHubId.equals(path.originHubId()) || !destHubId.equals(path.destHubId())
                 || path.routes() == null || path.routes().isEmpty()) {
-            throw internalError("허브 경로 응답이 유효하지 않습니다.");
+            throw new BaseException(DeliveryCreationKafkaErrorCode.HUB_ROUTE_NOT_FOUND);
         }
 
         UUID expectedOriginHubId = originHubId;
@@ -143,18 +182,14 @@ public class DeliveryCreationService {
                     || !expectedOriginHubId.equals(route.originHubId()) || route.destHubId() == null
                     || route.expectedDistanceM() == null || route.expectedDistanceM() < 0
                     || route.expectedDurationS() == null || route.expectedDurationS() < 0) {
-                throw internalError("허브 경로 구간 정보가 유효하지 않습니다.");
+                throw new BaseException(DeliveryCreationKafkaErrorCode.HUB_ROUTE_NOT_FOUND);
             }
             expectedOriginHubId = route.destHubId();
         }
 
         if (!destHubId.equals(expectedOriginHubId)) {
-            throw internalError("허브 경로가 목적지 허브까지 연결되지 않습니다.");
+            throw new BaseException(DeliveryCreationKafkaErrorCode.HUB_ROUTE_NOT_FOUND);
         }
-    }
-
-    private BaseException internalError(String message) {
-        return new BaseException(CommonErrorCode.INTERNAL_SERVER_ERROR, new IllegalStateException(message));
     }
 
     private boolean isBlank(String value) {

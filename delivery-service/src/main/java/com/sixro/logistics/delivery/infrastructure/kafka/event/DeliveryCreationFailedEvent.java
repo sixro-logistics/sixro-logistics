@@ -1,5 +1,7 @@
 package com.sixro.logistics.delivery.infrastructure.kafka.event;
 
+import com.sixro.logistics.delivery.domain.exception.DeliveryCreationKafkaErrorCode;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -12,7 +14,7 @@ public record DeliveryCreationFailedEvent(
     public record DeliveryCreationFailedData(
             UUID orderCreatedEventId,
             UUID orderId,
-            DeliveryCreationFailureCode failureCode,
+            DeliveryCreationKafkaErrorCode failureCode,
             String failureMessage
     ) {
     }

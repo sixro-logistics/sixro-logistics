@@ -1,6 +1,9 @@
-package com.sixro.logistics.delivery.infrastructure.kafka.event;
+package com.sixro.logistics.delivery.domain.exception;
 
-public enum DeliveryCreationFailureCode {
+import com.sixro.logistics.common.core.exception.ErrorCode;
+import org.springframework.http.HttpStatus;
+
+public enum DeliveryCreationKafkaErrorCode implements ErrorCode {
 
     RECEIVER_NOT_FOUND("수령인 정보를 확인할 수 없어 배송 생성에 실패했습니다."),
     DESTINATION_HUB_NOT_FOUND("목적지 허브를 확인할 수 없어 배송 생성에 실패했습니다."),
@@ -10,10 +13,21 @@ public enum DeliveryCreationFailureCode {
 
     private final String message;
 
-    DeliveryCreationFailureCode(String message) {
+    DeliveryCreationKafkaErrorCode(String message) {
         this.message = message;
     }
 
+    @Override
+    public HttpStatus getStatus() {
+        return HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+
+    @Override
+    public String getCode() {
+        return name();
+    }
+
+    @Override
     public String getMessage() {
         return message;
     }
