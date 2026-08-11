@@ -132,6 +132,13 @@ spring:
                 - Path=/api/v1/ai,/api/v1/ai/**
 
 eureka:
+  instance:
+    # 개발환경
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    # 운영환경
+    #    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:false}
+    instance-id: ${spring.application.name}:${server.port}
+
   client:
     # Gateway를 Eureka Server에 등록
     register-with-eureka: true

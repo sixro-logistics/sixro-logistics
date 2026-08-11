@@ -34,6 +34,15 @@ spring:
       enabled: true
 
 eureka:
+  instance:
+    # 개발환경
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    # 운영환경
+#    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:false}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    # 로컬 단일 인스턴스에서 확인하기 쉬운 고정 ID
+    instance-id: ${spring.application.name}:${server.port}
+
   client:
     # Auth Service를 Eureka Server에 등록
     register-with-eureka: true
