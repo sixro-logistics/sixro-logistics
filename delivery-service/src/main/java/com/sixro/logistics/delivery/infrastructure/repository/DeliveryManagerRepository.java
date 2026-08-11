@@ -27,7 +27,7 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
 
     @Query(value = """
             select max(delivery_sequence)
-            from p_delivery_manager
+            from delivery_schema.p_delivery_manager
             where manager_type = 'HUB_DELIVERY'
               and hub_id is null
             """, nativeQuery = true)
@@ -35,7 +35,7 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
 
     @Query(value = """
             select max(delivery_sequence)
-            from p_delivery_manager
+            from delivery_schema.p_delivery_manager
             where manager_type = 'COMPANY_DELIVERY'
               and hub_id = :hubId
             """, nativeQuery = true)

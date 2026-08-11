@@ -14,7 +14,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_delivery_manager")
+@Table(schema = "delivery_schema", name = "p_delivery_manager")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLRestriction("is_deleted = false")
