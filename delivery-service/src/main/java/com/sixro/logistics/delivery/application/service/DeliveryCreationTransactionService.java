@@ -7,7 +7,7 @@ import com.sixro.logistics.delivery.domain.entity.DeliveryRoute;
 import com.sixro.logistics.delivery.domain.port.DeliveryManagerRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreatedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreatedEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

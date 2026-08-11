@@ -1,8 +1,8 @@
 package com.sixro.logistics.delivery.infrastructure.kafka.producer;
 
 import com.sixro.logistics.delivery.infrastructure.kafka.KafkaTopics;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreatedEvent;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreationFailedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreatedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.springframework.kafka.core.KafkaTemplate;

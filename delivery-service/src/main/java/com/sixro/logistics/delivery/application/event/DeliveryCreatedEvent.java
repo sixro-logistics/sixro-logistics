@@ -1,4 +1,4 @@
-package com.sixro.logistics.delivery.infrastructure.kafka.event;
+package com.sixro.logistics.delivery.application.event;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 

@@ -3,7 +3,7 @@ package com.sixro.logistics.delivery.infrastructure.kafka.consumer;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.delivery.application.service.OutboxService;
 import com.sixro.logistics.delivery.domain.exception.DeliveryCreationKafkaErrorCode;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreationFailedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent;
 import com.sixro.logistics.delivery.infrastructure.kafka.event.OrderCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
