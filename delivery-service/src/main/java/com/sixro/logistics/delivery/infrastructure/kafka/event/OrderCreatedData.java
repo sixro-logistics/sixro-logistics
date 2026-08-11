@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public record OrderConfirmedData(
+public record OrderCreatedData(
         UUID orderId,
         UUID receiverId,
         UUID hubId,
@@ -12,6 +12,6 @@ public record OrderConfirmedData(
         String deliveryAddress,
         LocalDateTime deliveryDeadline,
         String requests,
-        List<OrderConfirmedItem> items
+        List<OrderCreatedItem> items
 ) {
 }

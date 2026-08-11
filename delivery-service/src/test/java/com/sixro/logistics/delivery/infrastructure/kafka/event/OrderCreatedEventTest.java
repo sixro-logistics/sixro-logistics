@@ -8,7 +8,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class OrderConfirmedEventTest {
+class OrderCreatedEventTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
@@ -37,7 +37,7 @@ class OrderConfirmedEventTest {
                 }
                 """;
 
-        OrderConfirmedEvent event = objectMapper.readValue(json, OrderConfirmedEvent.class);
+        OrderCreatedEvent event = objectMapper.readValue(json, OrderCreatedEvent.class);
 
         assertThat(event.eventId()).isEqualTo(UUID.fromString("c5d99fe2-7c8a-4c12-a686-a2907b39928a"));
         assertThat(event.occurredAt()).isEqualTo(LocalDateTime.of(2026, 8, 11, 3, 10));

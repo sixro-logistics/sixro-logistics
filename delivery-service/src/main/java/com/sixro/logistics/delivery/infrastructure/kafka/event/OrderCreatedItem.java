@@ -2,7 +2,7 @@ package com.sixro.logistics.delivery.infrastructure.kafka.event;
 
 import java.util.UUID;
 
-public record OrderConfirmedItem(
+public record OrderCreatedItem(
         UUID companyId,
         UUID productId,
         Integer quantity
