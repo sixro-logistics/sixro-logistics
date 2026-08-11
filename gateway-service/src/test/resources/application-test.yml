@@ -23,3 +23,8 @@ eureka:
     enabled: false
     register-with-eureka: false
     fetch-registry: false
+
+management:
+  # 테스트 결과를 외부 Zipkin으로 전송하지 않음
+  tracing:
+    enabled: false

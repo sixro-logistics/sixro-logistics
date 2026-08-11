@@ -1,6 +1,7 @@
 package com.sixro.logistics.user.presentation.response.internal;
 
 import com.sixro.logistics.user.application.dto.InternalUserAuthResult;
+import com.sixro.logistics.user.domain.model.AffiliationType;
 import com.sixro.logistics.user.domain.model.UserRole;
 import com.sixro.logistics.user.domain.model.UserStatus;
 
@@ -15,7 +16,10 @@ public record InternalUserAuthInfoResponse(
         String username,
         String encodedPassword,
         UserRole role,
-        UserStatus userStatus
+        UserStatus userStatus,
+        UUID affiliationId,
+        AffiliationType affiliationType,
+        boolean deleted
 ) {
 
     public static InternalUserAuthInfoResponse from(
@@ -26,7 +30,10 @@ public record InternalUserAuthInfoResponse(
                 result.username(),
                 result.encodedPassword(),
                 result.role(),
-                result.userStatus()
+                result.userStatus(),
+                result.affiliationId(),
+                result.affiliationType(),
+                result.deleted()
         );
     }
 }

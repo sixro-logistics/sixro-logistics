@@ -22,7 +22,7 @@ spring:
       resourceserver:
         jwt:
           # RS256 Access Token 검증에 사용할 PEM 공개키 위치
-          public-key-location: classpath:keys/public-key.pem
+          public-key-location: file:${JWT_PUBLIC_KEY_PATH}
 
   reactor:
     context-propagation: auto
@@ -47,6 +47,15 @@ spring:
 
           # lb:// Load Balancer를 통해 Eureka에서 ABC-service를 찾습니다.
           routes:
+            # MASTER 관리자 사용자 생성, 기존 회원가입과 별도 구현
+            # 비밀번호 암호화를 위해 Auth Service로 전달
+            - id: auth-admin-user-create
+              order: -10
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/v1/users
+                - Method=POST
+
             # Auth
             - id: auth-service
               uri: lb://auth-service
@@ -146,8 +155,10 @@ management:
 
   endpoint:
     health:
-      # 개발 환경에서 Health 상세 정보 표시
+      # 개발환경
       show-details: always
+      # 운영환경
+  #      show-details: when_authorized
 
   tracing:
     sampling:
@@ -158,5 +169,9 @@ management:
       endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 logging:
+  level:
+    root: INFO
+    com.sixro.logistics.gateway: INFO
+
   pattern:
-    console: '%clr(%-5level){green} %clr(%logger{36}.%M\(\)){cyan}: %msg%n'
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'

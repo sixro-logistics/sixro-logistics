@@ -1,0 +1,80 @@
+package com.sixro.logistics.hub.route.application.command;
+
+import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.hub.route.application.port.HubInfoPort;
+import com.sixro.logistics.hub.route.domain.policy.HubNetworkTopologyPolicy;
+import com.sixro.logistics.hub.route.domain.policy.HubNetworkTopologyPolicy.RoutePair;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class HubRouteInitService {
+
+    private final HubInfoPort hubInfoPort;
+    private final HubRouteCommandService hubRouteCommandService;
+    private final AtomicBoolean isRunning = new AtomicBoolean(false); // 실행 상태 락(Lock)
+
+    @Async
+    public void initializeRoutesBackground() {
+        if (!isRunning.compareAndSet(false, true)) {
+            log.warn("[HubRoute 초기화 배치] 이미 실행 중입니다. 중복 요청을 무시합니다.");
+            return;
+        }
+
+        try {
+            log.info("[HubRoute 초기화 배치] 시작");
+
+            // 전체 허브 목록을 가져와 Init 목적에 맞게 Map
+            Map<String, UUID> hubNameIdMap = hubInfoPort.getAllHubs().stream()
+                    .collect(Collectors.toMap(
+                            HubInfoPort.HubBasicInfo::hubName,
+                            HubInfoPort.HubBasicInfo::hubId
+                    ));
+
+            // 양방향 노선 목록 가져오기
+            Set<RoutePair> targetRoutes = HubNetworkTopologyPolicy.getInitialRoutePairs();
+
+            int successCount = 0, failCount = 0;
+
+            for (RoutePair pair : targetRoutes) {
+                try {
+                    UUID originId = hubNameIdMap.get(pair.originName());
+                    UUID destinationId = hubNameIdMap.get(pair.destinationName());
+
+                    if (originId == null || destinationId == null) {
+                        log.warn("[HubRoute 초기화 배치] 허브 매핑 실패 - {} ➔ {}", pair.originName(), pair.destinationName());
+                        failCount++;
+                        continue;
+                    }
+
+                    hubRouteCommandService.createRoute(new CreateHubRouteCommand(originId, destinationId));
+                    successCount++;
+                    log.info("[HubRoute 초기화 배치] 생성 성공 - {} ➔ {}", pair.originName(), pair.destinationName());
+
+                    Thread.sleep(500); // Rate Limit 방어
+
+                } catch (BaseException e) {
+                    log.warn("[HubRoute 초기화 배치] 생성 스킵 - {} ➔ {}, 사유: {}", pair.originName(), pair.destinationName(), e.getMessage());
+                    failCount++;
+                } catch (Exception e) {
+                    log.error("[HubRoute 초기화 배치] 생성 실패 - {} ➔ {}", pair.originName(), pair.destinationName(), e);
+                    failCount++;
+                }
+            }
+            log.info("[HubRoute 초기화 배치] 종료 - 시도: {}, 성공: {}, 스킵/실패: {}", targetRoutes.size(), successCount, failCount);
+
+        } finally {
+            isRunning.set(false); // 락 해제
+        }
+    }
+}

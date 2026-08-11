@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record InternalUserStatusResponse(
         UUID userId,
+        String username,
         UserRole role,
         UserStatus userStatus,
         UUID affiliationId,

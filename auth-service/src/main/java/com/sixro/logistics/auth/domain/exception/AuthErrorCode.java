@@ -121,6 +121,12 @@ public enum AuthErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "A018",
             "이미 사용 중인 Slack ID입니다."
+    ),
+
+    ADMIN_USER_CREATE_FORBIDDEN(
+            HttpStatus.FORBIDDEN,
+            "A019",
+            "사용자 생성 권한이 없습니다."
     )
     ;
 

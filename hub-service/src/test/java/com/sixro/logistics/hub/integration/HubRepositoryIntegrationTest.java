@@ -7,7 +7,7 @@ import com.sixro.logistics.hub.hub.domain.model.Hub;
 import com.sixro.logistics.hub.hub.domain.model.HubZone;
 import com.sixro.logistics.hub.hub.domain.model.Location;
 import com.sixro.logistics.hub.hub.infrastructure.persistence.command.HubJpaRepository;
-import com.sixro.logistics.hub.hub.infrastructure.persistence.query.HubNativeQueryRepository;
+import com.sixro.logistics.hub.hub.infrastructure.persistence.query.HubQueryRepository;
 import com.sixro.logistics.hub.hub.infrastructure.persistence.query.NearestHubProjection;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,7 @@ class HubRepositoryIntegrationTest {
     private HubJpaRepository hubJpaRepository;
 
     @Autowired
-    private HubNativeQueryRepository hubNativeQueryRepository;
+    private HubQueryRepository hubQueryRepository;
 
     @Test
     @DisplayName("Hub 정보를 저장하면 데이터베이스에 정상적으로 반영된다")
@@ -97,7 +97,7 @@ class HubRepositoryIntegrationTest {
 
         // when
         Optional<NearestHubProjection> result =
-                hubNativeQueryRepository.findNearestHubWithDistance(
+                hubQueryRepository.findNearestHubWithDistance(
                         127.1250,
                         37.4777
                 );

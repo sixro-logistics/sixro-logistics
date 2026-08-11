@@ -50,3 +50,40 @@ logging:
     root: INFO
     com.sixro.logistics: INFO
     org.springframework.web: INFO
+
+resilience4j:
+  retry:
+    instances:
+      tmapApi:
+        max-attempts: 3
+        wait-duration: 1s # 1차 재시도 대기 시간
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2 # 2차 재시도는 2 * 1s = 2s 후 시도
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+
+  circuitbreaker:
+    instances:
+      tmapApi:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20 # 최근 20번의 요청을 기준으로 통계 산출
+        minimum-number-of-calls: 10 # 최소 10번은 호출되어야 실패율 계산 시작
+        failure-rate-threshold: 50 # 50% 이상 실패 시 서킷 오픈 (TMAP 연동 중단)
+        slow-call-rate-threshold: 80 # 응답이 느린 요청이 80% 이상이어도 장애로 간주
+        slow-call-duration-threshold: 5s # 5초 이상 걸리면 느린 요청으로 간주 (Read Timeout 10s보다 짧게 설정)
+        wait-duration-in-open-state: 30s # 서킷 오픈 후 30초 대기 후 Half-Open 상태로 전환
+        permitted-number-of-calls-in-half-open-state: 5
+
+  ratelimiter:
+    instances:
+      tmapApi:
+        limit-refresh-period: 1s
+        limit-for-period: 3
+        timeout-duration: 30s
+
+# TMAP API 1,000건/일 무료
+tmap:
+  app-key: ${TMAP_APP_KEY}
+  route-base-url: "https://apis.openapi.sk.com/tmap"
