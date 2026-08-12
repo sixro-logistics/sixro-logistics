@@ -2,12 +2,11 @@ package com.sixro.logistics.auth.infrastructure.jwt;
 
 import com.sixro.logistics.auth.domain.exception.AuthErrorCode;
 import com.sixro.logistics.auth.domain.exception.AuthException;
+import com.sixro.logistics.auth.domain.model.AffiliationType;
 import com.sixro.logistics.auth.domain.model.TokenPair;
 import com.sixro.logistics.auth.domain.model.UserRole;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
+import com.sixro.logistics.common.constant.JwtClaimConstants;
+import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -33,10 +32,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JwtProvider {
 
-    private static final String ROLE_CLAIM = "role";
-    private static final String TOKEN_TYPE_CLAIM = "tokenType";
-    private static final String SESSION_ID_CLAIM = "sessionId";
-
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
     private static final String REFRESH_TOKEN_TYPE = "REFRESH";
 
@@ -47,20 +42,29 @@ public class JwtProvider {
     // 동일한 로그인 세션 정보로 Access Token과 Refresh Token을 발급합니다.
     public TokenPair issueTokenPair(
             UUID userId,
+            String username,
             UserRole role,
+            UUID affiliationId,
+            AffiliationType affiliationType,
             UUID sessionId
     ) {
         return new TokenPair(
                 createToken(
                         userId,
+                        username,
                         role,
+                        affiliationId,
+                        affiliationType,
                         sessionId,
                         ACCESS_TOKEN_TYPE,
                         properties.accessTokenExpiration()
                 ),
                 createToken(
                         userId,
+                        username,
                         role,
+                        affiliationId,
+                        affiliationType,
                         sessionId,
                         REFRESH_TOKEN_TYPE,
                         properties.refreshTokenExpiration()
@@ -119,7 +123,10 @@ public class JwtProvider {
     // 토큰 유형과 로그인 세션 정보를 포함한 RSA SHA-256 방식의 JWT를 생성합니다.
     private String createToken(
             UUID userId,
+            String username,
             UserRole role,
+            UUID affiliationId,
+            AffiliationType affiliationType,
             UUID sessionId,
             String tokenType,
             Duration expiration
@@ -127,18 +134,38 @@ public class JwtProvider {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plus(expiration);
 
-        PrivateKey privateKey =
-                privateKeyLoader.getPrivateKey();
+        PrivateKey privateKey = privateKeyLoader.getPrivateKey();
 
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .subject(userId.toString())
                 .issuer(properties.issuer())
                 .issuedAt(Date.from(issuedAt))
                 .expiration(Date.from(expiresAt))
                 .id(UUID.randomUUID().toString())
-                .claim(ROLE_CLAIM, role.name())
-                .claim(SESSION_ID_CLAIM, sessionId.toString())
-                .claim(TOKEN_TYPE_CLAIM, tokenType)
+                .claim(JwtClaimConstants.USERNAME, username)
+                .claim(JwtClaimConstants.ROLE, role.name())
+                .claim(
+                        JwtClaimConstants.SESSION_ID,
+                        sessionId.toString()
+                )
+                .claim(JwtClaimConstants.TOKEN_TYPE, tokenType);
+
+        // 마스터 관리자는 소속 정보가 없을 수 있습니다.
+        if (affiliationId != null) {
+            builder.claim(
+                    JwtClaimConstants.AFFILIATION_ID,
+                    affiliationId.toString()
+            );
+        }
+
+        if (affiliationType != null) {
+            builder.claim(
+                    JwtClaimConstants.AFFILIATION_TYPE,
+                    affiliationType.name()
+            );
+        }
+
+        return builder
                 .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
     }
@@ -181,7 +208,7 @@ public class JwtProvider {
             AuthErrorCode errorCode
     ) {
         String tokenType = claims.get(
-                TOKEN_TYPE_CLAIM,
+                JwtClaimConstants.TOKEN_TYPE,
                 String.class
         );
 
@@ -200,13 +227,13 @@ public class JwtProvider {
                     UUID.fromString(claims.getSubject()),
                     UserRole.valueOf(
                             claims.get(
-                                    ROLE_CLAIM,
+                                    JwtClaimConstants.ROLE,
                                     String.class
                             )
                     ),
                     UUID.fromString(
                             claims.get(
-                                    SESSION_ID_CLAIM,
+                                    JwtClaimConstants.SESSION_ID,
                                     String.class
                             )
                     ),

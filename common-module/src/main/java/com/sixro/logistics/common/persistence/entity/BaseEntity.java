@@ -44,6 +44,18 @@ public abstract class BaseEntity {
     private UUID deletedBy;
 
     public void softDelete(UUID deletedBy) {
+        if (deletedBy == null) {
+            throw new IllegalArgumentException(
+                    "삭제 처리 사용자 ID는 필수입니다."
+            );
+        }
+
+        if (this.isDeleted) {
+            throw new IllegalStateException(
+                    "이미 삭제된 데이터입니다."
+            );
+        }
+
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
         this.deletedBy = deletedBy;

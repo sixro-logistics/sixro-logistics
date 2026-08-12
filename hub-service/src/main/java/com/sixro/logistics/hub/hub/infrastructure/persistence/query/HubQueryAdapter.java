@@ -3,7 +3,6 @@ package com.sixro.logistics.hub.hub.infrastructure.persistence.query;
 import com.sixro.logistics.hub.hub.domain.model.Hub;
 import com.sixro.logistics.hub.hub.domain.model.HubWithDistance;
 import com.sixro.logistics.hub.hub.domain.model.HubZone;
-import com.sixro.logistics.hub.hub.domain.repository.HubQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,9 +13,9 @@ import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
-public class HubQueryAdapter implements HubQueryRepository {
+public class HubQueryAdapter implements com.sixro.logistics.hub.hub.domain.repository.HubQueryRepository {
 
-    private final HubNativeQueryRepository queryRepository;
+    private final HubQueryRepository queryRepository;
 
     @Override
     public Optional<Hub> findById(UUID id) {

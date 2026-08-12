@@ -1,5 +1,6 @@
 package com.sixro.logistics.gateway.infrastructure.filter;
 
+import com.sixro.logistics.common.constant.JwtClaimConstants;
 import com.sixro.logistics.gateway.application.security.SessionValidationService;
 import com.sixro.logistics.gateway.domain.exception.GatewaySecurityErrorCode;
 import com.sixro.logistics.gateway.infrastructure.exception.GatewayErrorResponseWriter;
@@ -29,8 +30,6 @@ import java.util.UUID;
 @Slf4j
 @RequiredArgsConstructor
 public class SessionValidationWebFilter implements WebFilter {
-
-    private static final String SESSION_ID_CLAIM = "sessionId";
 
     private final SessionValidationService sessionValidationService;
     private final GatewayErrorResponseWriter errorResponseWriter;
@@ -67,13 +66,9 @@ public class SessionValidationWebFilter implements WebFilter {
     private Mono<SessionCheckResult> validateSession(
             JwtAuthenticationToken authentication
     ) {
-        String userId =
-                authentication.getToken().getSubject();
+        String userId = authentication.getToken().getSubject();
 
-        String sessionId =
-                authentication.getToken().getClaimAsString(
-                        SESSION_ID_CLAIM
-                );
+        String sessionId = authentication.getToken().getClaimAsString(JwtClaimConstants.SESSION_ID);
 
         /*
          * userId 또는 sessionId가 누락되었거나

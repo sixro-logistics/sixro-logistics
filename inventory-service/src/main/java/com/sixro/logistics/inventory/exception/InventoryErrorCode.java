@@ -10,28 +10,22 @@ import org.springframework.http.HttpStatus;
 public enum InventoryErrorCode implements ErrorCode {
 
     // 400
-    INVALID_FILTER(
-            HttpStatus.BAD_REQUEST,
-            "I006",
-            "허브 ID, 상품 ID로만 필터링할 수 있습니다."
-    ),
-
     INVALID_SORT_FIELD(
             HttpStatus.BAD_REQUEST,
             "I007",
             "생성일시, 수정일시로만 정렬할 수 있습니다."
     ),
 
-    INVALID_SORT_DIRECTION(
-            HttpStatus.BAD_REQUEST,
-            "I008",
-            "정렬 방향은 asc, desc만 가능합니다."
-    ),
-
     INVALID_QUANTITY(
             HttpStatus.BAD_REQUEST,
             "I009",
             "수량은 1 이상이어야 합니다."
+    ),
+
+    INVALID_STOCK(
+            HttpStatus.BAD_REQUEST,
+            "I010",
+            "재고는 0 이상이어야 합니다."
     ),
 
     // 403

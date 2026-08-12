@@ -2,7 +2,7 @@ package com.sixro.logistics.hub.hub.application.command;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
-import com.sixro.logistics.hub.hub.application.auth.UserContext;
+import com.sixro.logistics.hub.common.auth.UserContext;
 import com.sixro.logistics.hub.hub.domain.exception.HubErrorCode;
 import com.sixro.logistics.hub.hub.domain.model.Address;
 import com.sixro.logistics.hub.hub.domain.model.Hub;

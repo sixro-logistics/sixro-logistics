@@ -8,11 +8,14 @@ import com.sixro.logistics.user.domain.model.UserStatus;
 import java.util.UUID;
 
 /**
- * Auth Service의 Access Token 재발급 시 사용하는
- * 최신 사용자 상태, 권한 및 소속 정보 응답 DTO입니다.
+ * 내부 서비스의 사용자 상태 검증에 사용하는 응답 DTO입니다.
+ *
+ * <p>Auth Service의 토큰 재발급과 Order Service의
+ * 주문 수령인 검증 등에 사용됩니다.</p>
  */
 public record InternalUserStatusResponse(
         UUID userId,
+        String username,
         UserRole role,
         UserStatus userStatus,
         UUID affiliationId,
@@ -24,6 +27,7 @@ public record InternalUserStatusResponse(
     ) {
         return new InternalUserStatusResponse(
                 result.userId(),
+                result.username(),
                 result.role(),
                 result.userStatus(),
                 result.affiliationId(),
