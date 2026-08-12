@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
-public class HubNetworkTopologyPolicy {
+public class RouteNetworkPolicy {
 
     // 허브 연결망 정보
     private static final Map<String, List<String>> TOPOLOGY = Map.of(
