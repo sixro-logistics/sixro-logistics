@@ -11,6 +11,8 @@ import com.sixro.logistics.notification.presentation.dto.request.SlackMessageSea
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageSendRequest;
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageUpdateDto;
 import com.sixro.logistics.notification.presentation.dto.response.SlackMessageResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.data.domain.Page;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+@Tag(name = "Notification", description = "메시지 목록 조회, 상세 조회, 등록 및 발송, 수정, 삭제 API")
 @RestController
 @RequestMapping("/api/v1/slack/messages")
 @RequiredArgsConstructor
@@ -32,7 +35,10 @@ public class SlackController {
 
     private final SlackService slackService;
 
-    // Slack 메시지 목록 조회 (마스터 권한)
+    @Operation(
+            summary = "Slack 메시지 목록 조회(마스터 권한)",
+            description = "모든 Slack 메시지 목록을 조회합니다."
+    )
     @GetMapping
     public ResponseEntity<CommonResponse<Page<SlackMessageResponse>>> getMessages(
             @RequestHeader("X-User-Role") String userRole,
@@ -48,7 +54,10 @@ public class SlackController {
         return ResponseEntity.ok(CommonResponse.success("메세지 조회에 성공했습니다.", response));
     }
 
-    // Slack 메시지 상세 조회 (마스터 권한)
+    @Operation(
+            summary = "Slack 메시지 상세 조회(마스터 권한)",
+            description = "(단건) Slack 메시지 상세 조회합니다."
+    )
     @GetMapping("/{slackMessageId}")
     public ResponseEntity<CommonResponse<SlackMessageResponse>> getMessage(
             @RequestHeader("X-User-Role") String userRole,
@@ -63,6 +72,10 @@ public class SlackController {
         return ResponseEntity.ok(CommonResponse.success("메세지 상세 조회에 성공했습니다.", response));
     }
 
+    @Operation(
+            summary = "Slack 메시지 등록 및 발송",
+            description = "Slack 메시지를 등록 및 발송합니다."
+    )
     // Slack 메시지 등록 및 발송 (ALL)
     @PostMapping
     public ResponseEntity<CommonResponse<SlackMessageResponse>> sendMessage(
@@ -73,7 +86,11 @@ public class SlackController {
         return ResponseEntity.ok(CommonResponse.success("메세지를 발송하였습니다.", response));
     }
 
-    // Slack 메시지 수정 (마스터 권한)
+
+    @Operation(
+            summary = "Slack 메시지 수정(마스터 권한)",
+            description = "Slack 메시지를 수정합니다."
+    )
     @PatchMapping("/{slackMessageId}")
     public ResponseEntity<CommonResponse<SlackMessageResponse>> updateMessage(
             @RequestHeader("X-User-Role") String userRole,
@@ -90,7 +107,10 @@ public class SlackController {
         return ResponseEntity.ok(CommonResponse.success("메세지를 수정하였습니다.", response));
     }
 
-    // Slack 메시지 삭제 (마스터 권한 - 논리 삭제)
+    @Operation(
+            summary = "Slack 메시지 삭제(마스터 권한)",
+            description = "Slack 메시지를 삭제합니다."
+    )
     @DeleteMapping("/{slackMessageId}")
     public ResponseEntity<CommonResponse<Void>> deleteMessage(
             @RequestHeader("X-User-Role") String userRole,
