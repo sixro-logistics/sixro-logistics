@@ -16,6 +16,8 @@ public interface DeliveryRepositoryPort {
 
     Optional<Delivery> findById(UUID deliveryId);
 
+    Optional<Delivery> findByOrderId(UUID orderId);
+
     Optional<Delivery> findByIdForUpdate(UUID deliveryId);
 
     Page<Delivery> searchDeliveries(DeliverySearchCondition condition, Pageable pageable);
