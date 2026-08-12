@@ -15,6 +15,8 @@ public interface DeliveryRouteRepositoryPort {
 
     Optional<DeliveryRoute> findById(UUID deliveryRouteId);
 
+    Optional<UUID> findDeliveryIdById(UUID deliveryRouteId);
+
     Optional<DeliveryRoute> findByIdForUpdate(UUID deliveryRouteId);
 
     Optional<DeliveryRoute> findByDeliveryIdAndRouteSequence(UUID deliveryId, Integer routeSequence);

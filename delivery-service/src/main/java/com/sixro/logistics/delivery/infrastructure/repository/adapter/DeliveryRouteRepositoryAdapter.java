@@ -37,6 +37,11 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     }
 
     @Override
+    public Optional<UUID> findDeliveryIdById(UUID deliveryRouteId) {
+        return deliveryRouteRepository.findDeliveryIdById(deliveryRouteId);
+    }
+
+    @Override
     public Optional<DeliveryRoute> findByIdForUpdate(UUID deliveryRouteId) {
         return deliveryRouteRepository.findByDeliveryRouteId(deliveryRouteId);
     }
