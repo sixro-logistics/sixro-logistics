@@ -30,12 +30,10 @@ public class InventoryCommandFacade {
             UserRole userRole, UUID affiliationId, InventoryCreateCommand command
     ){
 
-        // UserRole 검증
         if(userRole == UserRole.DELIVERY_MANAGER){
             throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
-        // 허브 관리자 권한 검증
         if(userRole == UserRole.HUB_ADMIN){
             if(!affiliationId.equals(command.hubId())){
                 throw new BaseException(CommonErrorCode.FORBIDDEN);
@@ -45,9 +43,6 @@ public class InventoryCommandFacade {
         HubInfo hubInfo = hubQueryPort.getHub(command.hubId());
         ProductInfo productInfo = productQueryPort.getProduct(command.productId());
 
-        //ProductInfo productInfo = new ProductInfo(UUID.randomUUID(), UUID.randomUUID());
-
-        // 업체 관리자 권한 검증
         if(userRole == UserRole.COMPANY_MANAGER){
             if(!affiliationId.equals(productInfo.companyId())){
                 throw new BaseException(CommonErrorCode.FORBIDDEN);

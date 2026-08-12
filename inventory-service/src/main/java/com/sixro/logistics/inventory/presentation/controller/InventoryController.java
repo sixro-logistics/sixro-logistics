@@ -74,7 +74,7 @@ public class InventoryController {
     @PatchMapping("/{inventoryId}")
     public ResponseEntity<CommonResponse<InventoryUpdateResponseDto>> updateInventory(
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID inventoryId,
             @Valid @RequestBody InventoryUpdateRequestDto requestDto
     ) {
@@ -96,7 +96,7 @@ public class InventoryController {
     @PatchMapping("/{inventoryId}/stock")
     public ResponseEntity<CommonResponse<InventoryStockInResponseDto>> stockInInventory(
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID inventoryId,
             @Valid @RequestBody InventoryStockInRequestDto requestDto
     ) {
@@ -119,7 +119,7 @@ public class InventoryController {
     public ResponseEntity<CommonResponse<InventoryDeleteResponseDto>> deleteInventory(
             @RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID inventoryId
     ) {
 
@@ -140,7 +140,7 @@ public class InventoryController {
     @GetMapping
     public ResponseEntity<CommonResponse<PageResponse<InventorySearchResponseDto>>> searchInventory(
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @ModelAttribute InventorySearchRequestDto requestDto,
             @PageableDefault(
                     sort = "createdAt",
