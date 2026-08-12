@@ -1,13 +1,13 @@
 package com.sixro.logistics.order.presentation.dto.response;
 
-import com.sixro.logistics.order.application.result.OrderCreateResult;
+import com.sixro.logistics.order.application.result.OrderGetOneResult;
 import com.sixro.logistics.order.domain.entity.order.OrderStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public record OrderCreateResponseDto(
+public record OrderGetOneResponseDto(
         UUID orderId,
         UUID receiverId,
         UUID hubId,
@@ -19,8 +19,8 @@ public record OrderCreateResponseDto(
         List<OrderResponseItem> orderItems
 ) {
 
-    public static OrderCreateResponseDto from(OrderCreateResult result){
-        return new OrderCreateResponseDto(
+    public static OrderGetOneResponseDto from(OrderGetOneResult result) {
+        return new OrderGetOneResponseDto(
                 result.orderId(),
                 result.receiverId(),
                 result.hubId(),

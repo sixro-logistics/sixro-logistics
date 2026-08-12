@@ -1,11 +1,11 @@
-package com.sixro.logistics.order.application.result;
+package com.sixro.logistics.order.presentation.dto.response;
 
 import com.sixro.logistics.order.domain.entity.order.OrderStatus;
+
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
-public record OrderCreateResult(
+public record OrderSearchResponseDto(
         UUID orderId,
         UUID receiverId,
         UUID hubId,
@@ -13,8 +13,6 @@ public record OrderCreateResult(
         String deliveryAddress,
         LocalDateTime deliveryDeadline,
         String requests,
-        OrderStatus orderStatus,
-        List<OrderResultItem> orderItems
+        OrderStatus orderStatus
 ) {
-
 }

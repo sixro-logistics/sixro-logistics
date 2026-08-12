@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableFeignClients
-@EnableJpaAuditing
 @EnableScheduling
 public class OrderServiceApplication {
 

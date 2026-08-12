@@ -1,8 +1,11 @@
 package com.sixro.logistics.order.infrastructure.client.product;
 
-import java.util.List;
+import java.util.UUID;
 
 public record ProductClientResponse(
-        List<ProductClientProduct> products
+        UUID productId,
+        String productName,
+        Integer price,
+        UUID companyId
 ) {
 }

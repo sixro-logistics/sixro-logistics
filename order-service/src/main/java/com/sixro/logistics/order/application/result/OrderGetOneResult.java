@@ -1,11 +1,12 @@
 package com.sixro.logistics.order.application.result;
 
 import com.sixro.logistics.order.domain.entity.order.OrderStatus;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public record OrderCreateResult(
+public record OrderGetOneResult(
         UUID orderId,
         UUID receiverId,
         UUID hubId,
@@ -16,5 +17,4 @@ public record OrderCreateResult(
         OrderStatus orderStatus,
         List<OrderResultItem> orderItems
 ) {
-
 }

@@ -1,6 +1,7 @@
 package com.sixro.logistics.order.domain.entity.order;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import com.sixro.logistics.order.exception.OrderErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -13,15 +14,16 @@ import java.util.UUID;
 @Table(name = "p_order_item"/*, schema = "order"*/)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class OrderItem /* extends BaseEntity */ {
+public class OrderItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "order_item_id", updatable = false)
     private UUID id;
 
-    @Column(name = "order_id", nullable = false, updatable = false)
-    private UUID orderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false, updatable = false)
+    private Order order;
 
     @Column(name = "product_id", nullable = false, updatable = false)
     private UUID productId;
@@ -35,19 +37,16 @@ public class OrderItem /* extends BaseEntity */ {
     @Column(nullable = false)
     private Integer quantity;
 
-    // 공급업체는 수정이 불가하여 필요 없으면 나중에 삭제
     @Column(name = "company_id", nullable = false, updatable = false)
     private UUID companyId;
 
     private OrderItem(
-            UUID orderId,
             UUID productId,
             String productName,
             Integer productPrice,
             Integer quantity,
             UUID companyId
     ) {
-        this.orderId = orderId;
         this.productId = productId;
         this.productName = productName;
         this.productPrice = productPrice;
@@ -56,7 +55,6 @@ public class OrderItem /* extends BaseEntity */ {
     }
 
     public static OrderItem create(
-            UUID orderId,
             UUID productId,
             String productName,
             Integer productPrice,
@@ -68,13 +66,16 @@ public class OrderItem /* extends BaseEntity */ {
         }
 
         return new OrderItem(
-                orderId,
                 productId,
                 productName,
                 productPrice,
                 quantity,
                 companyId
         );
+    }
+
+    public void assignOrder(Order order) {
+        this.order = order;
     }
 
 }
