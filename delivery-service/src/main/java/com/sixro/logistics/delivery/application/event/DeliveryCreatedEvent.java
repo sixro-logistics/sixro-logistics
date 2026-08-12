@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public record DeliveryCreatedEvent(
         UUID eventId,
-        LocalDateTime occurredAt,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime occurredAt,
         DeliveryCreatedData data
 ) {
 
