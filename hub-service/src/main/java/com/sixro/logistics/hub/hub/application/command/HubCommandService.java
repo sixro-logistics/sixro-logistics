@@ -9,6 +9,7 @@ import com.sixro.logistics.hub.hub.domain.model.Hub;
 import com.sixro.logistics.hub.hub.domain.model.Location;
 import com.sixro.logistics.hub.hub.domain.repository.HubCommandRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +20,10 @@ import java.util.UUID;
 @Transactional
 public class HubCommandService {
 
-    private final HubCommandRepository hubCommandRepository;
+    private static final String HUB_INFO = "hub:info";
+    public static final String HUB_INFO_INTERNAL = "hub:info:internal";
 
-    // TODO: Redis 캐싱 CacheEvict 추가
+    private final HubCommandRepository hubCommandRepository;
 
     public UUID createHub(HubCommand.Create command) {
         if (hubCommandRepository.existsByHubName(command.hubName())) {
@@ -39,6 +41,7 @@ public class HubCommandService {
         return hubCommandRepository.save(hub).getId();
     }
 
+    @CacheEvict(cacheNames = {HUB_INFO, HUB_INFO_INTERNAL}, key = "#hubId")
     public UUID updateHub(UUID hubId, HubCommand.Update command) {
         Hub hub = getHubOrThrow(hubId);
 
@@ -57,6 +60,7 @@ public class HubCommandService {
         return hub.getId();
     }
 
+    @CacheEvict(cacheNames = {HUB_INFO, HUB_INFO_INTERNAL}, key = "#hubId")
     public UUID changeHubStatus(UUID hubId, HubCommand.ChangeStatus command, UserContext userContext) {
         if (userContext.isHubAdmin() && !hubId.equals(userContext.affiliationId())) {
             throw new BaseException(CommonErrorCode.FORBIDDEN);
@@ -65,16 +69,17 @@ public class HubCommandService {
         Hub hub = getHubOrThrow(hubId);
         hub.changeStatus(command.hubStatus());
 
-        // TODO: HubStatusChangedEvent 발행 처리
+        // TODO: 수정 이벤트 발행 -> 전체 캐시 무효화, CLOSED 상태로 변화시 상세 처리 필요
 
         return hub.getId();
     }
 
+    @CacheEvict(cacheNames = {HUB_INFO, HUB_INFO_INTERNAL}, key = "#hubId")
     public void deleteHub(UUID hubId, UserContext userContext) {
         Hub hub = getHubOrThrow(hubId);
         hub.softDelete(userContext.userId());
 
-        // TODO: 캐시 무효화 및 연관된 하위 데이터(HubRoute 등) soft delete
+        // TODO: 삭제 이벤트 발행 -> 연관 데이터 soft delete, 전체 캐시 무효화
     }
 
     private Hub getHubOrThrow(UUID hubId) {

@@ -2,14 +2,16 @@ package com.sixro.logistics.hub.route.application.command;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.hub.route.application.port.HubInfoPort;
-import com.sixro.logistics.hub.route.domain.policy.HubNetworkTopologyPolicy;
-import com.sixro.logistics.hub.route.domain.policy.HubNetworkTopologyPolicy.RoutePair;
+import com.sixro.logistics.hub.route.domain.policy.RouteNetworkPolicy;
+import com.sixro.logistics.hub.route.domain.policy.RouteNetworkPolicy.RoutePair;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,8 +22,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HubRouteInitService {
 
+    public static final String HUB_ROUTE = "hub:route";
+    public static final String HUB_NETWORK_ACTIVE = "hub:network:active";
+
     private final HubInfoPort hubInfoPort;
     private final HubRouteCommandService hubRouteCommandService;
+    private final CacheManager cacheManager;
     private final AtomicBoolean isRunning = new AtomicBoolean(false); // 실행 상태 락(Lock)
 
     @Async
@@ -42,7 +48,7 @@ public class HubRouteInitService {
                     ));
 
             // 양방향 노선 목록 가져오기
-            Set<RoutePair> targetRoutes = HubNetworkTopologyPolicy.getInitialRoutePairs();
+            Set<RoutePair> targetRoutes = RouteNetworkPolicy.getInitialRoutePairs();
 
             int successCount = 0, failCount = 0;
 
@@ -73,6 +79,11 @@ public class HubRouteInitService {
             }
             log.info("[HubRoute 초기화 배치] 종료 - 시도: {}, 성공: {}, 스킵/실패: {}", targetRoutes.size(), successCount, failCount);
 
+            if (successCount > 0) {
+                log.info("[HubRoute 초기화 배치] 캐시 전체 무효화 수행");
+                Objects.requireNonNull(cacheManager.getCache(HUB_ROUTE)).clear();
+                Objects.requireNonNull(cacheManager.getCache(HUB_NETWORK_ACTIVE)).clear();
+            }
         } finally {
             isRunning.set(false); // 락 해제
         }

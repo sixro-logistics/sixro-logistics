@@ -13,6 +13,8 @@ import com.sixro.logistics.hub.route.domain.repository.HubRouteCommandRepository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.LineString;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -22,12 +24,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HubRouteCommandService {
 
+    public static final String HUB_ROUTE = "hub:route";
+    public static final String HUB_NETWORK_ACTIVE = "hub:network:active";
+
     private final HubRouteCommandRepository hubRouteCommandRepository; // 단순 조회를 위해 유지
     private final HubRouteStore hubRouteStore; // 트랜잭션 전담 스토어
     private final ExternalRoutePort externalRoutePort;
     private final HubInfoPort hubInfoPort;
     private final RouteCostCalculationPolicy routeCostCalculationPolicy;
 
+    // 새로운 노선이 생기면 허브망이 변경되므로 캐시 무효화
+    @CacheEvict(cacheNames = HUB_NETWORK_ACTIVE, allEntries = true)
     public UUID createRoute(CreateHubRouteCommand command) {
         if (hubRouteCommandRepository.existsByOriginHubIdAndDestinationHubId(command.originHubId(), command.destinationHubId())) {
             throw new BaseException(HubRouteErrorCode.DUPLICATE_HUB_ROUTE);
@@ -45,7 +52,7 @@ public class HubRouteCommandService {
 
         // HTTP 통신 구간
         RouteSnapshotResult snapshot = externalRoutePort.getRouteSnapshot(condition);
-        int calculatedBaseCost = routeCostCalculationPolicy.calculateCost(snapshot.distance());
+        int calculatedBaseCost = routeCostCalculationPolicy.calculateBaseCost(snapshot.distance());
 
         RouteCost routeCost = new RouteCost(calculatedBaseCost, snapshot.tollFee());
         HubRoute hubRoute = HubRoute.builder()
@@ -60,6 +67,11 @@ public class HubRouteCommandService {
         return hubRouteStore.save(hubRoute);
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = HUB_ROUTE, key = "#routeId"),
+            @CacheEvict(cacheNames = HUB_NETWORK_ACTIVE, allEntries = true)
+    })
+    @CacheEvict(cacheNames = HUB_ROUTE, key = "#routeId")
     public UUID syncRoute(UUID routeId, SyncHubRouteCommand command) {
         // 단건 조회
         HubRoute hubRoute = hubRouteCommandRepository.findById(routeId)
@@ -77,7 +89,7 @@ public class HubRouteCommandService {
 
         // HTTP 통신 구간
         RouteSnapshotResult snapshot = externalRoutePort.getRouteSnapshot(condition);
-        int recalculatedBaseCost = routeCostCalculationPolicy.calculateCost(snapshot.distance());
+        int recalculatedBaseCost = routeCostCalculationPolicy.calculateBaseCost(snapshot.distance());
         RouteCost recalculatedCost = new RouteCost(recalculatedBaseCost, snapshot.tollFee());
 
         LineString newRoutePath = snapshot.routePath() != null ? snapshot.routePath() : hubRoute.getRoutePath();
@@ -89,7 +101,7 @@ public class HubRouteCommandService {
 
         if (isChanged) {
             log.info("[HubRoute 단건 동기화] 데이터 변동 감지 및 이벤트 발행 - RouteID: {}", routeId);
-            // TODO: HubRouteChangedEvent 발행
+            // TODO: 수정 이벤트 발행
         }
 
         return hubRoute.getId();
@@ -106,7 +118,7 @@ public class HubRouteCommandService {
 
         // HTTP 통신 구간
         RouteSnapshotResult snapshot = externalRoutePort.getRouteSnapshot(condition);
-        int recalculatedBaseCost = routeCostCalculationPolicy.calculateCost(snapshot.distance());
+        int recalculatedBaseCost = routeCostCalculationPolicy.calculateBaseCost(snapshot.distance());
         RouteCost recalculatedCost = new RouteCost(recalculatedBaseCost, snapshot.tollFee());
 
         LineString newRoutePath = snapshot.routePath() != null ? snapshot.routePath() : hubRoute.getRoutePath();
@@ -121,6 +133,10 @@ public class HubRouteCommandService {
         return isChanged;
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = HUB_ROUTE, key = "#routeId"),
+            @CacheEvict(cacheNames = HUB_NETWORK_ACTIVE, allEntries = true)
+    })
     public UUID updateRoute(UUID routeId, UpdateHubRouteCommand command) {
         HubRoute hubRoute = hubRouteCommandRepository.findById(routeId)
                 .orElseThrow(() -> new BaseException(HubRouteErrorCode.HUB_ROUTE_NOT_FOUND));
@@ -129,9 +145,14 @@ public class HubRouteCommandService {
         return hubRouteStore.updateCostAndPath(routeId, hubRoute.getDistance(), hubRoute.getDuration(), updatedCost, hubRoute.getRoutePath());
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = HUB_ROUTE, key = "#routeId"),
+            @CacheEvict(cacheNames = HUB_NETWORK_ACTIVE, allEntries = true)
+    })
+    @CacheEvict(cacheNames = HUB_ROUTE, key = "#routeId")
     public void deleteRoute(UUID routeId, UUID deletedBy) {
         hubRouteStore.delete(routeId, deletedBy);
-        // TODO: 캐시 일괄 무효화 및 이벤트 발행
+        // TODO: 삭제 이벤트 발행
     }
 
     private boolean isRouteDataChanged(HubRoute hubRoute, RouteSnapshotResult snapshot, RouteCost newCost) {

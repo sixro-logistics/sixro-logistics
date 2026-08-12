@@ -1,11 +1,14 @@
 package com.sixro.logistics.hub.route.infrastructure.persistence.query;
 
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sixro.logistics.hub.route.domain.model.HubRoute;
+import com.sixro.logistics.hub.route.domain.model.RouteNetworkEdge;
 import com.sixro.logistics.hub.route.domain.repository.HubRouteQueryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +23,8 @@ import static com.sixro.logistics.hub.route.domain.model.QHubRoute.hubRoute;
 @Repository
 @RequiredArgsConstructor
 public class HubRouteQueryAdapter implements HubRouteQueryRepository {
+
+    private static final String HUB_NETWORK_OPERATING = "hub:network:operating";
 
     private final JPAQueryFactory queryFactory;
 
@@ -69,6 +74,27 @@ public class HubRouteQueryAdapter implements HubRouteQueryRepository {
         long totalCount = total != null ? total : 0L;
 
         return new PageImpl<>(content, pageable, totalCount);
+    }
+
+    /**
+     * 다익스트라 연산용 운영 노선망 조회 및 캐싱
+     */
+    @Override
+    @Cacheable(cacheNames = HUB_NETWORK_OPERATING)
+    public List<RouteNetworkEdge> findAllOperatingRouteEdges() {
+        return queryFactory
+                .select(Projections.constructor(RouteNetworkEdge.class,
+                        hubRoute.id,
+                        hubRoute.originHubId,
+                        hubRoute.destinationHubId,
+                        hubRoute.distance,
+                        hubRoute.duration,
+                        hubRoute.routeCost.baseCost,
+                        hubRoute.routeCost.tollFee
+                ))
+                .from(hubRoute)
+                .where(isNotDeleted())
+                .fetch();
     }
 
     private BooleanExpression isNotDeleted() {
