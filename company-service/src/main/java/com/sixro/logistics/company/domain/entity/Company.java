@@ -1,5 +1,6 @@
 package com.sixro.logistics.company.domain.entity;
 
+import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Company {
+public class Company extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -54,45 +55,6 @@ public class Company {
     @Column(name = "contact_phone", length = 30, nullable = false)
     private String contactPhone;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "created_by", nullable = false)
-    private UUID createdBy;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name = "updated_by", nullable = false)
-    private UUID updatedBy;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
-    @Column(name = "deleted_by")
-    private UUID deletedBy;
-
-    @Column(name = "is_deleted", nullable = false)
-    @Builder.Default
-    private Boolean isDeleted = false;
-
-    @PrePersist
-    protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-
-        this.createdAt = now;
-        this.updatedAt = now;
-
-        if (this.isDeleted == null) {
-            this.isDeleted = false;
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
-
     public void update(
             UUID hubId,
             String companyName,
@@ -103,25 +65,18 @@ public class Company {
             String detailAddress,
             String contactName,
             String contactEmail,
-            String contactPhone,
-            UUID updatedBy
+            String contactPhone
     ) {
-        this.hubId = hubId;
-        this.companyName = companyName;
-        this.companyType = companyType;
-        this.businessNumber = businessNumber;
-        this.zipcode = zipcode;
-        this.address = address;
-        this.detailAddress = detailAddress;
-        this.contactName = contactName;
-        this.contactEmail = contactEmail;
-        this.contactPhone = contactPhone;
-        this.updatedBy = updatedBy;
+        if (hubId != null) this.hubId = hubId;
+        if (companyName != null) this.companyName = companyName;
+        if (companyType != null) this.companyType = companyType;
+        if (businessNumber != null) this.businessNumber = businessNumber;
+        if (zipcode != null) this.zipcode = zipcode;
+        if (address != null) this.address = address;
+        if (detailAddress != null) this.detailAddress = detailAddress;
+        if (contactName != null) this.contactName = contactName;
+        if (contactEmail != null) this.contactEmail = contactEmail;
+        if (contactPhone != null) this.contactPhone = contactPhone;
     }
 
-    public void delete(UUID deletedBy) {
-        this.isDeleted = true;
-        this.deletedAt = LocalDateTime.now();
-        this.deletedBy = deletedBy;
-    }
 }

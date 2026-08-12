@@ -6,15 +6,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Refresh Token과 로그아웃 Access Token을 Redis에 저장하는 Repository 구현체입니다.
+ * Refresh Token을 Redis에 저장하는 Repository 구현체입니다.
  *
- * <p>Refresh Token은 사용자 ID를 키로 하여 해시값만 저장하고,
- * 로그아웃한 Access Token은 JWT ID를 키로 남은 유효 시간 동안 저장합니다.</p>
+ * <p>사용자별 하나의 Refresh Token만 유지하며,
+ * 새로운 로그인 또는 Token 재발급 시 기존 값은 새로운 해시값으로 교체됩니다.</p>
+ *
+ * <p>Refresh Token 원문은 저장하지 않고 해시값만 저장합니다.</p>
  */
 @Repository
 @RequiredArgsConstructor
@@ -23,11 +24,10 @@ public class RedisRefreshTokenRepository
 
     // 사용자별 Refresh Token 저장 키를 생성합니다.
     private static final String REFRESH_PREFIX = "refresh:";
-    // 로그아웃 Access Token의 블랙리스트 키를 생성합니다.
-    private static final String BLACKLIST_PREFIX = "blacklist:";
 
     private final StringRedisTemplate redisTemplate;
 
+    // Refresh Token 해시값을 해당 Token의 TTL과 함께 저장합니다.
     @Override
     public void save(RefreshToken refreshToken) {
         redisTemplate.opsForValue().set(
@@ -37,6 +37,7 @@ public class RedisRefreshTokenRepository
         );
     }
 
+    // 사용자 ID에 해당하는 현재 Refresh Token 해시값을 조회합니다.
     @Override
     public Optional<String> findTokenHashByUserId(UUID userId) {
         return Optional.ofNullable(
@@ -44,30 +45,10 @@ public class RedisRefreshTokenRepository
         );
     }
 
+    // 사용자 ID에 해당하는 Refresh Token을 삭제합니다.
     @Override
     public void deleteByUserId(UUID userId) {
         redisTemplate.delete(refreshKey(userId));
-    }
-
-    @Override
-    public void blacklistAccessToken(
-            String jwtId,
-            Duration ttl
-    ) {
-        if (ttl.isNegative() || ttl.isZero()) {
-            return;
-        }
-
-        redisTemplate.opsForValue().set(
-                BLACKLIST_PREFIX + jwtId,
-                "logout",
-                ttl
-        );
-    }
-
-    @Override
-    public boolean isBlacklisted(String jwtId) {
-        return redisTemplate.hasKey(BLACKLIST_PREFIX + jwtId);
     }
 
     private String refreshKey(UUID userId) {

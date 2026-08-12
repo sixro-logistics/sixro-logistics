@@ -15,11 +15,11 @@ import reactor.core.publisher.Mono;
  * JWT 인증이 완료된 Access Token이
  * Redis 블랙리스트에 등록되어 있는지 검사하는 필터입니다.
  *
- * <p>Spring Security의 JWT 인증 이후 실행되며,
- * 로그아웃된 Access Token은 더 이상 사용할 수 없도록 차단합니다.</p>
+ * <p>로그아웃된 Access Token은 더 이상 사용할 수 없도록 차단합니다.</p>
  *
- * <p>Redis에서 블랙리스트 상태를 확인하지 못하면 Fail Closed 정책에 따라
- * 요청을 차단하고 503 Service Unavailable을 반환합니다.</p>
+ * <p>Redis 조회에 실패하여 인증 상태를 확인할 수 없는 경우에는
+ * Fail Closed 정책에 따라 요청을 차단하고
+ * 503 Service Unavailable 응답을 반환합니다.</p>
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -35,9 +35,7 @@ public class AccessTokenBlacklistWebFilter implements WebFilter {
     ) {
         return exchange.getPrincipal()
                 .ofType(JwtAuthenticationToken.class)
-                .flatMap(authentication ->
-                        checkBlacklist(authentication)
-                )
+                .flatMap(this::checkBlacklist)
                 /*
                  * 공개 API처럼 인증 객체가 없는 요청은
                  * 블랙리스트 검사 없이 통과합니다.
@@ -63,6 +61,10 @@ public class AccessTokenBlacklistWebFilter implements WebFilter {
         String tokenId =
                 authentication.getToken().getId();
 
+        /*
+         * Access Token blacklist 검증을 위해
+         * JTI는 필수 Claim으로 취급합니다.
+         */
         if (tokenId == null || tokenId.isBlank()) {
             return Mono.just(
                     BlacklistCheckResult.invalid()
@@ -79,6 +81,10 @@ public class AccessTokenBlacklistWebFilter implements WebFilter {
                             exception
                     );
 
+                    /*
+                     * Redis 장애 등으로 인증 상태를 확인하지 못한 경우
+                     * Fail Closed 정책에 따라 요청을 허용하지 않습니다.
+                     */
                     return Mono.just(
                             BlacklistCheckResult.unavailableResult()
                     );
@@ -110,7 +116,7 @@ public class AccessTokenBlacklistWebFilter implements WebFilter {
         if (result.unavailable()) {
             return errorResponseWriter.write(
                     exchange,
-                    GatewaySecurityErrorCode.TOKEN_BLACKLIST_UNAVAILABLE
+                    GatewaySecurityErrorCode.AUTH_STATE_UNAVAILABLE
             );
         }
 

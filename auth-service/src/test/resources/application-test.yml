@@ -1,18 +1,18 @@
 spring:
-  config:
-    # 로컬 테스트에서는 프로젝트 루트의 .env 사용
-    # CI에서는 파일이 없어도 아래 테스트 기본값 사용
-    import: "optional:file:../.env[.properties]"
-
   data:
     redis:
-      # CI Redis 컨테이너도 동일한 인증정보로 실행해야 함
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      username: ${REDIS_USERNAME}
-      password: ${REDIS_PASSWORD}
+      host: localhost
+      port: 6379
+      username:
+      password:
+
+  kafka:
+    # 테스트에서 Kafka Consumer가 실제 Broker에 연결하지 않도록 설정
+    listener:
+      auto-startup: false
 
   cloud:
+    # 테스트에서는 Eureka 서비스 탐색을 사용하지 않음
     discovery:
       enabled: false
 
@@ -28,3 +28,8 @@ jwt:
   public-key-path: src/test/resources/keys/test-public-key.pem
   access-token-expiration: 30m
   refresh-token-expiration: 8h
+
+management:
+  # 테스트 결과를 외부 Zipkin으로 전송하지 않음
+  tracing:
+    enabled: false

@@ -1,12 +1,9 @@
 package com.sixro.logistics.company.application.service;
 
-import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.company.domain.entity.Company;
 import com.sixro.logistics.company.domain.repository.CompanyRepository;
-import com.sixro.logistics.company.exception.CompanyErrorCode;
 import com.sixro.logistics.company.presentation.dto.request.CompanyCreateRequestDto;
 import com.sixro.logistics.company.presentation.dto.request.CompanyUpdateRequestDto;
-import com.sixro.logistics.company.presentation.dto.response.CompanyCheckResponseDto;
 import com.sixro.logistics.company.presentation.dto.response.CompanyResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -101,9 +98,6 @@ public class CompanyService {
                 .contactName(request.getContactName())
                 .contactEmail(request.getContactEmail())
                 .contactPhone(request.getContactPhone())
-                .createdBy(userId)
-                .updatedBy(userId)
-                .isDeleted(false)
                 .build();
 
         Company savedCompany = companyRepository.save(company);
@@ -137,8 +131,7 @@ public class CompanyService {
                 request.getDetailAddress(),
                 request.getContactName(),
                 request.getContactEmail(),
-                request.getContactPhone(),
-                userId
+                request.getContactPhone()
         );
 
         return CompanyResponseDto.from(company);
@@ -159,18 +152,7 @@ public class CompanyService {
                         new IllegalArgumentException("존재하지 않는 업체입니다.")
                 );
 
-        company.delete(userId);
-    }
-
-    /**
-     * 업체 존재 유무 확인
-     */
-    public CompanyCheckResponseDto getCheckCompany(UUID companyId) {
-        Company company = companyRepository
-                .findByCompanyIdAndIsDeletedFalse(companyId)
-                .orElseThrow(() -> new BaseException(CompanyErrorCode.COMPANY_NOT_FOUND));
-
-        return CompanyCheckResponseDto.from(company);
+        company.softDelete(userId);
     }
 
     private Specification<Company> isNotDeleted() {

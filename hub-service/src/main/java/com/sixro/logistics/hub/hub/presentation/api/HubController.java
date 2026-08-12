@@ -6,7 +6,7 @@ import com.sixro.logistics.common.core.util.PageUtil;
 import com.sixro.logistics.hub.hub.application.command.HubCommandService;
 import com.sixro.logistics.hub.hub.application.query.HubQueryService;
 import com.sixro.logistics.hub.hub.domain.model.HubZone;
-import com.sixro.logistics.hub.hub.application.auth.UserContext;
+import com.sixro.logistics.hub.common.auth.UserContext;
 import com.sixro.logistics.hub.common.auth.RequireRole;
 import com.sixro.logistics.hub.hub.presentation.dto.HubDto;
 import jakarta.validation.Valid;

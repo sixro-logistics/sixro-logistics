@@ -6,7 +6,6 @@ import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.company.application.service.CompanyService;
 import com.sixro.logistics.company.presentation.dto.request.CompanyCreateRequestDto;
 import com.sixro.logistics.company.presentation.dto.request.CompanyUpdateRequestDto;
-import com.sixro.logistics.company.presentation.dto.response.CompanyCheckResponseDto;
 import com.sixro.logistics.company.presentation.dto.response.CompanyResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -158,13 +157,5 @@ public class CompanyController {
         );
 
         return ResponseEntity.ok(CommonResponse.success("업체가 성공적으로 삭제되었습니다."));
-    }
-
-    @GetMapping("/check/{companyId}")
-    public CommonResponse<CompanyCheckResponseDto> getCheckCompany(
-            @PathVariable("companyId") UUID companyId
-    ) {
-        CompanyCheckResponseDto response = companyService.getCheckCompany(companyId);
-        return CommonResponse.success("유효한 업체입니다.", response);
     }
 }
