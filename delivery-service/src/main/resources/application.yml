@@ -6,9 +6,9 @@ spring:
     import: "optional:file:../.env[.properties]"
 
   datasource:
-    url: ${USER_DB_URL}
-    username: ${USER_DB_USERNAME}
-    password: ${USER_DB_PASSWORD}
+    url: ${DELIVERY_DB_URL}
+    username: ${DELIVERY_DB_USERNAME}
+    password: ${DELIVERY_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -56,7 +56,7 @@ server:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:19090/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
   instance:
     prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
     ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
