@@ -2,25 +2,24 @@ spring:
   application:
     name: delivery-service
 
+  config:
+    import: "optional:file:../.env[.properties]"
+
   datasource:
-    url: jdbc:h2:mem:delivery_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS delivery_schema
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
+    url: ${USER_DB_URL}
+    username: ${USER_DB_USERNAME}
+    password: ${USER_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
-    open-in-view: false
     properties:
       hibernate:
         format_sql: true
-        use_sql_comments: true
 
   cloud:
-    discovery:
-      enabled: false
     openfeign:
       client:
         config:
@@ -28,7 +27,7 @@ spring:
             logger-level: FULL
 
   kafka:
-    bootstrap-servers: ${KAFKA_SERVER_URL:localhost:9092}
+    bootstrap-servers: ${KAFKA_SERVER_URL}
 
     consumer:
       group-id: delivery-service
@@ -51,11 +50,15 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
+server:
+  port: 19097
+
 eureka:
   client:
-    enabled: false
-    register-with-eureka: false
-    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:19090/eureka/
+  instance:
+    prefer-ip-address: true
 
 management:
   tracing:
@@ -64,8 +67,6 @@ management:
   zipkin:
     tracing:
       endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
-      export:
-        enabled: false
 
 logging:
   level:
