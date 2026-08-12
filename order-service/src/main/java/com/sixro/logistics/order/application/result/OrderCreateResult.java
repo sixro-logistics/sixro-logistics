@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record OrderCreateResult(
         UUID orderId,
+        UUID receiverId,
         UUID hubId,
         UUID receiverCompanyId,
         String deliveryAddress,

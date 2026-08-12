@@ -4,6 +4,5 @@ import java.util.UUID;
 
 public record HubInfo(
         UUID hubId
-        //HubStatus hubStatus
 ) {
 }

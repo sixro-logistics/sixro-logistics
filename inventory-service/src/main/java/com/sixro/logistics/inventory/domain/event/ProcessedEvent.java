@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Entity
 @Table(
-        name = "p_processed_event",
+        name = "p_inventory_processed_event",
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_processed_event_event_id",
