@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AiService {
 
-    @Value("${gemini.api-key}")
+    @Value("${gemini.api-key:dummy-gemini-key}")
     private String apiKey;
 
     @Value("${gemini.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent}")
