@@ -26,15 +26,21 @@ import com.sixro.logistics.delivery.infrastructure.repository.DeliveryManagerRep
 import com.sixro.logistics.delivery.infrastructure.repository.DeliveryRepository;
 import com.sixro.logistics.delivery.infrastructure.repository.DeliveryRouteRepository;
 import com.sixro.logistics.delivery.infrastructure.repository.OutboxRepository;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.test.utils.ContainerTestUtils;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -75,6 +81,12 @@ class OrderCreatedEventConsumptionIntegrationTest {
     private KafkaTemplate<String, Object> kafkaTemplate;
 
     @Autowired
+    private KafkaAdmin kafkaAdmin;
+
+    @Autowired
+    private KafkaListenerEndpointRegistry listenerEndpointRegistry;
+
+    @Autowired
     private DeliveryManagerRepository deliveryManagerRepository;
 
     @Autowired
@@ -104,6 +116,22 @@ class OrderCreatedEventConsumptionIntegrationTest {
     // 이번 테스트에서는 Outbox를 Kafka로 발행하지 않고 PENDING 저장까지만 검증합니다.
     @MockitoBean
     private OutboxPublisher outboxPublisher;
+
+    @BeforeEach
+    void startKafkaListener() {
+        // 이벤트 발행 전에 Topic과 현재 테스트의 Listener를 준비합니다.
+        kafkaAdmin.createOrModifyTopics(new NewTopic(KafkaTopics.ORDER_CREATED, 1, (short) 1));
+        listenerEndpointRegistry.getListenerContainers().forEach(container -> {
+            container.start();
+            ContainerTestUtils.waitForAssignment(container, 1);
+        });
+    }
+
+    @AfterEach
+    void stopKafkaListener() {
+        // 다음 테스트가 같은 Consumer Group의 파티션을 사용할 수 있도록 Listener를 중지합니다.
+        listenerEndpointRegistry.getListenerContainers().forEach(container -> container.stop());
+    }
 
     @Test
     @DisplayName("order.created 이벤트를 소비해 배송과 경로 및 PENDING Outbox를 저장한다")

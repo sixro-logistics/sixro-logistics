@@ -26,6 +26,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -120,8 +121,16 @@ class DeliveryCreationFailureRecoveryIntegrationTest {
         kafkaAdmin.createOrModifyTopics(
                 new NewTopic(KafkaTopics.ORDER_CREATED, 1, (short) 1),
                 new NewTopic(KafkaTopics.DELIVERY_CREATION_FAILED, 1, (short) 1));
-        listenerEndpointRegistry.getListenerContainers()
-                .forEach(container -> ContainerTestUtils.waitForAssignment(container, 1));
+        listenerEndpointRegistry.getListenerContainers().forEach(container -> {
+            container.start();
+            ContainerTestUtils.waitForAssignment(container, 1);
+        });
+    }
+
+    @AfterEach
+    void stopKafkaListener() {
+        // 다음 테스트가 같은 Consumer Group의 파티션을 사용할 수 있도록 Listener를 중지합니다.
+        listenerEndpointRegistry.getListenerContainers().forEach(container -> container.stop());
     }
 
     @Test
