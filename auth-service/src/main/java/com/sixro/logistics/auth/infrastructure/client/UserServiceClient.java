@@ -1,7 +1,6 @@
 package com.sixro.logistics.auth.infrastructure.client;
 
 import com.sixro.logistics.auth.domain.model.UserRole;
-import com.sixro.logistics.auth.infrastructure.client.config.UserServiceClientConfig;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalAdminCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalCreateUserResponse;
@@ -10,11 +9,7 @@ import com.sixro.logistics.auth.infrastructure.client.response.InternalUserStatu
 import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -26,8 +21,7 @@ import java.util.UUID;
  */
 @FeignClient(
         name = "user-service",
-        contextId = "authUserServiceClient",
-        configuration = UserServiceClientConfig.class
+        contextId = "authUserServiceClient"
 )
 public interface UserServiceClient {
 

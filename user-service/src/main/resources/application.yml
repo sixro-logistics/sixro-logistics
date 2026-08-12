@@ -24,7 +24,7 @@ spring:
       # 로컬 개발 단계에서 Entity 변경사항을 DB에 반영합니다.
       # 운영 환경에서는 Flyway 등 마이그레이션 도구 사용을 검토합니다.
       ddl-auto: update
-
+    show-sql: false
     open-in-view: false
 
     properties:
@@ -39,6 +39,7 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+    # User Service에서 Kafka Consumer가 필요해질 경우 활성화합니다.
 #    consumer:
 #      group-id: user-service-group
 #      auto-offset-reset: earliest
@@ -51,7 +52,28 @@ spring:
     discovery:
       enabled: true
 
+    # Hub / Company Service 내부 API 호출 Timeout
+    openfeign:
+      client:
+        config:
+          hub-service:
+            connectTimeout: 2000
+            readTimeout: 3000
+
+          company-service:
+            connectTimeout: 2000
+            readTimeout: 3000
+
 eureka:
+  instance:
+    # 개발환경
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    # 운영환경
+    #    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:false}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    # 로컬 단일 인스턴스에서 확인하기 쉬운 고정 ID
+    instance-id: ${spring.application.name}:${server.port}
+
   client:
     # User Service를 Eureka Server에 등록
     register-with-eureka: true
@@ -69,6 +91,9 @@ management:
         include:
           - health
           - info
+          - metrics
+          - circuitbreakers
+          - circuitbreakerevents
 
   endpoint:
     health:
@@ -80,7 +105,7 @@ management:
   tracing:
     sampling:
       probability: 1.0
-      # 운영환경
+      # 운영환경에서 필요 시 환경변수 사용
 #      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
 
   zipkin:
@@ -103,12 +128,35 @@ outbox:
   publisher:
     fixed-delay: 1000
 
-# Hub/Company 소속 검증용 OpenFeign Timeout
+# Hub / Company 소속 검증 API 재시도 정책
+#
+# Timeout은 spring.cloud.openfeign.client.config에서 관리하고,
+# 이 영역에는 애플리케이션에서 사용하는 Retry 정책만 관리합니다.
 affiliation-client:
-  connect-timeout-ms: ${AFFILIATION_CONNECT_TIMEOUT_MS:2000}
-  read-timeout-ms: ${AFFILIATION_READ_TIMEOUT_MS:3000}
-
   retry:
-    initial-interval-ms: ${AFFILIATION_RETRY_INITIAL_INTERVAL_MS:200}
-    max-interval-ms: ${AFFILIATION_RETRY_MAX_INTERVAL_MS:1000}
-    max-attempts: ${AFFILIATION_RETRY_MAX_ATTEMPTS:3}
+    initial-interval-ms: 200
+    max-interval-ms: 1000
+    max-attempts: 3
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      hubAffiliation:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.sixro.logistics.user.infrastructure.client.config.AffiliationFailurePredicate
+
+      companyAffiliation:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.sixro.logistics.user.infrastructure.client.config.AffiliationFailurePredicate
