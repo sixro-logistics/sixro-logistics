@@ -1,9 +1,11 @@
 package com.sixro.logistics.hub.route.infrastructure.persistence.query;
 
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sixro.logistics.hub.route.domain.model.HubRoute;
+import com.sixro.logistics.hub.route.domain.model.RouteNetworkEdge;
 import com.sixro.logistics.hub.route.domain.repository.HubRouteQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,7 +24,7 @@ import static com.sixro.logistics.hub.route.domain.model.QHubRoute.hubRoute;
 @RequiredArgsConstructor
 public class HubRouteQueryAdapter implements HubRouteQueryRepository {
 
-    private static final String HUB_NETWORK_ACTIVE = "hub:network:active";
+    private static final String HUB_NETWORK_OPERATING = "hub:network:operating";
 
     private final JPAQueryFactory queryFactory;
 
@@ -75,13 +77,22 @@ public class HubRouteQueryAdapter implements HubRouteQueryRepository {
     }
 
     /**
-     * 다익스트라 연산용 활성 노선망 전체 조회 캐싱
+     * 다익스트라 연산용 운영 노선망 조회 및 캐싱
      */
     @Override
-    @Cacheable(cacheNames = HUB_NETWORK_ACTIVE)
-    public List<HubRoute> findAllActiveRoutes() {
+    @Cacheable(cacheNames = HUB_NETWORK_OPERATING)
+    public List<RouteNetworkEdge> findAllOperatingRouteEdges() {
         return queryFactory
-                .selectFrom(hubRoute)
+                .select(Projections.constructor(RouteNetworkEdge.class,
+                        hubRoute.id,
+                        hubRoute.originHubId,
+                        hubRoute.destinationHubId,
+                        hubRoute.distance,
+                        hubRoute.duration,
+                        hubRoute.routeCost.baseCost,
+                        hubRoute.routeCost.tollFee
+                ))
+                .from(hubRoute)
                 .where(isNotDeleted())
                 .fetch();
     }

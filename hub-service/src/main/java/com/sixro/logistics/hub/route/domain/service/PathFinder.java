@@ -2,35 +2,38 @@ package com.sixro.logistics.hub.route.domain.service;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.hub.route.domain.exception.HubRouteErrorCode;
-import com.sixro.logistics.hub.route.domain.model.HubRoute;
 import com.sixro.logistics.hub.route.domain.model.HubTransferMetric;
+import com.sixro.logistics.hub.route.domain.model.RouteNetworkEdge;
 import com.sixro.logistics.hub.route.domain.strategy.RoutingWeightStrategy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+/**
+ * 다익스트라 알고리즘 구현
+ */
 @Service
 public class PathFinder {
 
     private record NodeState(UUID hubId, double totalWeight) {}
 
-    public List<HubRoute> findOptimalPath(
-            List<HubRoute> allRoutes,
+    public List<RouteNetworkEdge> findOptimalPath(
+            List<RouteNetworkEdge> allEdges,
             UUID originHubId,
             UUID destinationHubId,
             RoutingWeightStrategy weightStrategy,
             Map<UUID, HubTransferMetric> transferMetrics
     ) {
-        // 인접 리스트 그래프 구성
-        Map<UUID, List<HubRoute>> graph = new HashMap<>();
-        for (HubRoute route : allRoutes) {
-            graph.computeIfAbsent(route.getOriginHubId(), k -> new ArrayList<>()).add(route);
+        // Route Network (운영 노선망) 인접 리스트로 구성
+        Map<UUID, List<RouteNetworkEdge>> graph = new HashMap<>();
+        for (RouteNetworkEdge edge : allEdges) {
+            graph.computeIfAbsent(edge.originHubId(), k -> new ArrayList<>()).add(edge);
         }
 
         // 초기화
         PriorityQueue<NodeState> pq = new PriorityQueue<>(Comparator.comparingDouble(n -> n.totalWeight));
         Map<UUID, Double> minWeightMap = new HashMap<>();
-        Map<UUID, HubRoute> edgeToMap = new HashMap<>(); // 경로 역추적용
+        Map<UUID, RouteNetworkEdge> edgeToMap = new HashMap<>();    // 경로 역추적용
 
         pq.add(new NodeState(originHubId, 0.0));
         minWeightMap.put(originHubId, 0.0);
@@ -50,14 +53,15 @@ public class PathFinder {
             }
 
             // 인접 노드 탐색
-            List<HubRoute> adjacentRoutes = graph.getOrDefault(current.hubId(), Collections.emptyList());
-            for (HubRoute edge : adjacentRoutes) {
+            List<RouteNetworkEdge> adjacentEdges = graph.getOrDefault(current.hubId(), Collections.emptyList());
+            for (RouteNetworkEdge edge : adjacentEdges) {
+                // TODO: 전략 패턴 파라미터도 RouteNetworkEdge로 통일되어야 합니다.
                 double newWeight = current.totalWeight() + weightStrategy.calculateWeight(edge, transferMetrics);
-                UUID nextHubId = edge.getDestinationHubId();
+                UUID nextHubId = edge.destinationHubId();
 
                 if (newWeight < minWeightMap.getOrDefault(nextHubId, Double.MAX_VALUE)) {
                     minWeightMap.put(nextHubId, newWeight);
-                    edgeToMap.put(nextHubId, edge); // 경로 기록
+                    edgeToMap.put(nextHubId, edge);
                     pq.add(new NodeState(nextHubId, newWeight));
                 }
             }
@@ -69,13 +73,13 @@ public class PathFinder {
             throw new BaseException(HubRouteErrorCode.HUB_ROUTE_NOT_FOUND);
         }
 
-        List<HubRoute> optimalPath = new ArrayList<>();
+        List<RouteNetworkEdge> optimalPath = new ArrayList<>();
         UUID currentTracker = destinationHubId;
 
         while (!currentTracker.equals(originHubId)) {
-            HubRoute route = edgeToMap.get(currentTracker);
-            optimalPath.add(route);
-            currentTracker = route.getOriginHubId();
+            RouteNetworkEdge edge = edgeToMap.get(currentTracker);
+            optimalPath.add(edge);
+            currentTracker = edge.originHubId();
         }
 
         // 출발지 -> 도착지 순서로 정리

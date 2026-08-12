@@ -1,8 +1,8 @@
 package com.sixro.logistics.hub.route.domain.strategy;
 
-import com.sixro.logistics.hub.route.domain.model.HubRoute;
 import com.sixro.logistics.hub.route.domain.model.HubTransferMetric;
 import com.sixro.logistics.hub.route.domain.model.PathSearchType;
+import com.sixro.logistics.hub.route.domain.model.RouteNetworkEdge;
 import com.sixro.logistics.hub.route.domain.policy.RouteCostCalculationPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -22,7 +22,7 @@ public class CostWeightStrategy implements RoutingWeightStrategy {
     }
 
     @Override
-    public double calculateWeight(HubRoute hubRoute, Map<UUID, HubTransferMetric> metrics) {
-        return costCalculationPolicy.calculatePathCost(hubRoute);
+    public double calculateWeight(RouteNetworkEdge routeNetworkEdge, Map<UUID, HubTransferMetric> metrics) {
+        return costCalculationPolicy.calculatePathCost(routeNetworkEdge);
     }
 }

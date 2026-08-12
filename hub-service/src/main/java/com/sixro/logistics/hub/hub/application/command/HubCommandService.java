@@ -69,7 +69,7 @@ public class HubCommandService {
         Hub hub = getHubOrThrow(hubId);
         hub.changeStatus(command.hubStatus());
 
-        // TODO: 수정 이벤트 발행 -> hub:route 캐시 무효화
+        // TODO: 수정 이벤트 발행 -> 전체 캐시 무효화, CLOSED 상태로 변화시 상세 처리 필요
 
         return hub.getId();
     }
@@ -79,7 +79,7 @@ public class HubCommandService {
         Hub hub = getHubOrThrow(hubId);
         hub.softDelete(userContext.userId());
 
-        // TODO: 삭제 이벤트 발행 -> 연관 데이터 soft delete, hub:route 캐시 무효화
+        // TODO: 삭제 이벤트 발행 -> 연관 데이터 soft delete, 전체 캐시 무효화
     }
 
     private Hub getHubOrThrow(UUID hubId) {

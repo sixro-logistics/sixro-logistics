@@ -1,6 +1,6 @@
 package com.sixro.logistics.hub.route.domain.policy;
 
-import com.sixro.logistics.hub.route.domain.model.HubRoute;
+import com.sixro.logistics.hub.route.domain.model.RouteNetworkEdge;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,10 +26,10 @@ public class RouteCostPolicy implements RouteCostCalculationPolicy {
     }
 
     @Override
-    public int calculatePathCost(HubRoute hubRoute) {
-        int baseCost = hubRoute.getRouteCost().getBaseCost();
-        int tollFee = hubRoute.getRouteCost().getTollFee();
-        int fuelCost = (int) Math.round(hubRoute.getDistance() * COST_PER_METER_FUEL);
+    public int calculatePathCost(RouteNetworkEdge hubRouteNetworkEdgeRoute) {
+        int baseCost = hubRouteNetworkEdgeRoute.getRouteCost().getBaseCost();
+        int tollFee = hubRouteNetworkEdgeRoute.getRouteCost().getTollFee();
+        int fuelCost = (int) Math.round(hubRouteNetworkEdgeRoute.distance() * COST_PER_METER_FUEL);
 
         return baseCost + tollFee + fuelCost;
     }

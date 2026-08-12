@@ -1,8 +1,8 @@
 package com.sixro.logistics.hub.route.domain.strategy;
 
-import com.sixro.logistics.hub.route.domain.model.HubRoute;
 import com.sixro.logistics.hub.route.domain.model.HubTransferMetric;
 import com.sixro.logistics.hub.route.domain.model.PathSearchType;
+import com.sixro.logistics.hub.route.domain.model.RouteNetworkEdge;
 import com.sixro.logistics.hub.route.domain.policy.RouteCostCalculationPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -25,13 +25,13 @@ public class OptimalWeightStrategy implements RoutingWeightStrategy {
     }
 
     @Override
-    public double calculateWeight(HubRoute hubRoute, Map<UUID, HubTransferMetric> metrics) {
+    public double calculateWeight(RouteNetworkEdge routeNetworkEdge, Map<UUID, HubTransferMetric> metrics) {
         // 재무적 비용
-        double financialCost = costCalculationPolicy.calculatePathCost(hubRoute);
+        double financialCost = costCalculationPolicy.calculatePathCost(routeNetworkEdge);
 
         // 시간적 비용
-        double moveTimeSeconds = hubRoute.getDuration();
-        HubTransferMetric destMetric = metrics.get(hubRoute.getDestinationHubId());
+        double moveTimeSeconds = routeNetworkEdge.duration();
+        HubTransferMetric destMetric = metrics.get(routeNetworkEdge.destinationHubId());
         // 환적시간 반영, 없으면 0 으로 계산
         double transferTimeSeconds = (destMetric != null) ? destMetric.getExpectedTransferTime() : 0.0;
 

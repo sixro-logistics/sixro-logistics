@@ -5,9 +5,9 @@ import com.sixro.logistics.hub.route.application.port.HubInfoPort;
 import com.sixro.logistics.hub.route.application.port.RouteMetricsPort;
 import com.sixro.logistics.hub.route.application.query.OptimalPathResult;
 import com.sixro.logistics.hub.route.domain.exception.HubRouteErrorCode;
-import com.sixro.logistics.hub.route.domain.model.HubRoute;
 import com.sixro.logistics.hub.route.domain.model.HubTransferMetric;
 import com.sixro.logistics.hub.route.domain.model.PathSearchType;
+import com.sixro.logistics.hub.route.domain.model.RouteNetworkEdge;
 import com.sixro.logistics.hub.route.domain.policy.RouteCostCalculationPolicy;
 import com.sixro.logistics.hub.route.domain.repository.HubRouteQueryRepository;
 import com.sixro.logistics.hub.route.domain.service.PathFinder;
@@ -43,14 +43,14 @@ public class FindOptimalPathService {
 
     public OptimalPathResult searchOptimalPath(UUID originHubId, UUID destinationHubId, PathSearchType searchType) {
         // 기초 데이터 로드
-        List<HubRoute> allRoutes = hubRouteQueryRepository.findAllActiveRoutes();
+        List<RouteNetworkEdge> allRoutes = hubRouteQueryRepository.findAllOperatingRouteEdges();
         Set<UUID> closedHubIds = hubInfoPort.findClosedHubIds();
 
         // 출도착 허브가 CLOSED 가 아닌지 유효성 검증
         validateOriginAndDestination(originHubId, destinationHubId, closedHubIds);
 
         // 운영 노선망 필터링 (Operating: != CLOSED && isDeleted = false)
-        List<HubRoute> validRoutes = filterValidRoutes(allRoutes, closedHubIds);
+        List<RouteNetworkEdge> validRoutes = filterValidRoutes(allRoutes, closedHubIds);
 
         // 운영 노선망(Route Network) 내 운영 노선(Route)의 출/도착 허브 ID 추출
         List<UUID> validHubIds = extractValidHubIds(validRoutes);
@@ -65,7 +65,7 @@ public class FindOptimalPathService {
         RoutingWeightStrategy strategy = getRoutingStrategy(searchType);
 
         // 다익스트라 실행
-        List<HubRoute> optimalPath = pathFinder.findOptimalPath(
+        List<RouteNetworkEdge> optimalPath = pathFinder.findOptimalPath(
                 validRoutes, originHubId, destinationHubId, strategy, transferMetricsMap
         );
 
@@ -80,16 +80,16 @@ public class FindOptimalPathService {
         if (closedHubIds.contains(destinationHubId)) throw new BaseException(HubRouteErrorCode.DESTINATION_HUB_CLOSED);
     }
 
-    private List<HubRoute> filterValidRoutes(List<HubRoute> allRoutes, Set<UUID> closedHubIds) {
+    private List<RouteNetworkEdge> filterValidRoutes(List<RouteNetworkEdge> allRoutes, Set<UUID> closedHubIds) {
         return allRoutes.stream()
-                .filter(route -> !closedHubIds.contains(route.getOriginHubId()) &&
-                        !closedHubIds.contains(route.getDestinationHubId()))
+                .filter(route -> !closedHubIds.contains(route.originHubId()) &&
+                        !closedHubIds.contains(route.destinationHubId()))
                 .toList();
     }
 
-    private List<UUID> extractValidHubIds(List<HubRoute> validRoutes) {
+    private List<UUID> extractValidHubIds(List<RouteNetworkEdge> validRoutes) {
         return validRoutes.stream()
-                .flatMap(route -> Stream.of(route.getOriginHubId(), route.getDestinationHubId()))
+                .flatMap(route -> Stream.of(route.originHubId(), route.destinationHubId()))
                 .distinct()
                 .toList();
     }
@@ -147,36 +147,36 @@ public class FindOptimalPathService {
 
     private OptimalPathResult createOptimalPathResult(
             UUID originHubId, UUID destinationHubId,
-            List<HubRoute> optimalPath,
+            List<RouteNetworkEdge> optimalPath,
             Map<UUID, HubTransferMetric> transferMetricsMap)
     {
         AtomicInteger sequence = new AtomicInteger(1);
 
         List<OptimalPathResult.RouteSegment> segments = optimalPath.stream()
                 .map(route -> new OptimalPathResult.RouteSegment(
-                        route.getId(),
+                        route.routeId(),
                         sequence.getAndIncrement(),
-                        route.getOriginHubId(),
-                        route.getDestinationHubId(),
-                        route.getDistance(),
-                        route.getDuration(), // 환적시간 미반영, TODO: dto에 구간별 환적시간 필드 추가
+                        route.originHubId(),
+                        route.destinationHubId(),
+                        route.distance(),
+                        route.duration(), // 간선은 도착시간이니 환적시간 미포함, TODO: dto에 구간별 환적시간 필드 별도 추가
                         costCalculationPolicy.calculatePathCost(route) // 구간별 비용 합산
                 )).toList();
 
         int totalCost = optimalPath.stream().mapToInt(costCalculationPolicy::calculatePathCost).sum(); // 총 비용 합산
-        int totalDistance = optimalPath.stream().mapToInt(HubRoute::getDistance).sum();
-        int totalDuration = calculateTotalDuration(optimalPath, transferMetricsMap); // 총 시간 합산 (환적시간 반영)
+        int totalDistance = optimalPath.stream().mapToInt(RouteNetworkEdge::distance).sum();
+        int totalDuration = calculateTotalDuration(optimalPath, transferMetricsMap); // 총 시간 합산 (총 환적시간 포함)
 
-//        int totalDuration = optimalPath.stream().mapToInt(HubRoute::getDuration).sum(); // 총 시간 합산 (환적시간 반영 x)
+//        int totalDuration = optimalPath.stream().mapToInt(HubRoute::duration).sum(); // 총 시간 합산 (총 환적시간 포함 x)
 
         return new OptimalPathResult(originHubId, destinationHubId, totalDistance, totalDuration, totalCost, segments);
     }
 
-    private int calculateTotalDuration(List<HubRoute> optimalPath, Map<UUID, HubTransferMetric> transferMetricsMap) {
+    private int calculateTotalDuration(List<RouteNetworkEdge> optimalPath, Map<UUID, HubTransferMetric> transferMetricsMap) {
         return optimalPath.stream().mapToInt(route -> {
-            HubTransferMetric destMetric = transferMetricsMap.get(route.getDestinationHubId());
+            HubTransferMetric destMetric = transferMetricsMap.get(route.destinationHubId());
             int transferTime = (destMetric != null) ? destMetric.getExpectedTransferTime() : 0;
-            return route.getDuration() + transferTime;
+            return route.duration() + transferTime;
         }).sum();
     }
 }

@@ -58,7 +58,7 @@ logging:
     root: INFO
     com.sixro.logistics: INFO
     org.springframework.web: INFO
-#    org.springframework.cache: TRACE
+    org.springframework.cache: TRACE
 
 resilience4j:
   retry:
@@ -104,6 +104,6 @@ cache:
     "hub:info": 86400             # 24시간
     "hub:info:internal": 86400    # 24시간
     "hub:route": 86400            # 24시간
-    "hub:metrics:congestion": 300 # 5분, 허브별 실시간 혼잡률 지표
+    "hub:metrics:volume": 300 # 5분, 허브별 실시간 혼잡률 지표
     "hub:network:active": 86400   # 24시간, 활성화된 전체 노선망 데이터
     "hub:info:closed": 86400      # 24시간, 폐쇄된 허브 ID 목록
