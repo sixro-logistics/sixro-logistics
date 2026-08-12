@@ -10,9 +10,9 @@ spring:
       - "optional:file:../.env[.properties]"
 
   datasource:
-    url: ${USER_DB_URL}
-    username: ${USER_DB_USERNAME}
-    password: ${USER_DB_PASSWORD}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -26,16 +26,19 @@ spring:
 
 eureka:
   instance:
-    prefer-ip-address: true # 호스트 이름 대신 IP 주소로 Eureka에 등록
-    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}} # 고유 인스턴스 ID 설정
-    hostname: localhost
+    # 개발환경
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    # 운영환경 prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:false}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    # 로컬 단일 인스턴스에서 확인하기 쉬운 고정 ID
+    instance-id: ${spring.application.name}:${server.port}
 
   client:
+    # product Service를 Eureka Server에 등록
     register-with-eureka: true
     fetch-registry: true
-    # Eureka Server 주소
     service-url:
-      defaultZone: http://${eureka.instance.hostname}:19090/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
 
 management:
   endpoints:
@@ -49,3 +52,26 @@ management:
       # Health Endpoint 상세 정보 표시
       # 운영 환경에서는 when-authorized 또는 never 권장
       show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+
+    zipkin:
+      tracing:
+        endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+
+  springdoc:
+    swagger-ui:
+      path: /swagger-ui.html
+
+  logging:
+    level:
+      root: INFO
+      com.sixro.logistics.user: INFO
+
+    pattern:
+      console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'
+
+  outbox:
+    publisher:
+      fixed-delay: 1000

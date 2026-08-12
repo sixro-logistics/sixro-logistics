@@ -7,6 +7,8 @@ import com.sixro.logistics.product.application.service.ProductService;
 import com.sixro.logistics.product.presentation.dto.request.ProductCreateRequestDto;
 import com.sixro.logistics.product.presentation.dto.request.ProductUpdateRequestDto;
 import com.sixro.logistics.product.presentation.dto.response.ProductResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,19 +21,17 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "Product", description = "상품 정보 조회, 상세 조회, 등록, 수정, 삭제 API")
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
 
-    /**
-     * 상품 목록 조회
-     * GET /products
-     * GET /products?companyId=UUID
-     * GET /products?productName=키보드
-     * GET /products?page=0&size=10
-     */
+    @Operation(
+            summary ="상품 목록 조회",
+            description ="모든 상품 목록 정보를 조회합니다."
+    )
     @GetMapping
     public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> getProducts(
             @RequestParam(required = false) UUID companyId,
@@ -52,16 +52,24 @@ public class ProductController {
     /**
      * 상품 상세 조회
      */
+    @Operation(
+            summary ="상품 상세 조회",
+            description ="(단건) 상품 상세 정보를 조회합니다."
+    )
     @GetMapping("/{productId}")
     public ResponseEntity<CommonResponse<ProductResponseDto>> getCompany(
             @PathVariable UUID productId
     ) {
-        return ResponseEntity.ok(CommonResponse.success("상품 목록 조회에 성공했습니다.", productService.getProduct(productId)));
+        return ResponseEntity.ok(CommonResponse.success("상품 상세 조회에 성공했습니다.", productService.getProduct(productId)));
     }
 
     /**
      * 상품 등록
      */
+    @Operation(
+            summary ="상품 등록",
+            description ="신규 상품을 등록합니다."
+    )
     @PostMapping
     public ResponseEntity<ProductResponseDto> createProduct(
             @Valid @RequestBody ProductCreateRequestDto request,
@@ -69,27 +77,22 @@ public class ProductController {
             @RequestHeader("X-User-Role") String userRole,
             @RequestHeader("X-Affiliation-Id") UUID affiliationId
     ) {
-        // 권한 검증: MASTER 또는 HUB_ADMIN 아닌 경우 예외 발생
-        if (!"MASTER_ADMIN".equalsIgnoreCase(userRole) && !"HUB_ADMIN".equalsIgnoreCase(userRole) && !"COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
-            // HUB_ADMIN은 본인 허브에 대한 상품만 등록 가능
-            if("HUB_ADMIN".equalsIgnoreCase(userRole)) {
-                if (!affiliationId.equals(request.getHubId())) {
-                    throw new BaseException(CommonErrorCode.FORBIDDEN);
-                }
-            }
 
-            // COMPANY_MANAGER 본인 상품에 대한 상품만 등록 가능
-            if("COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
-                if (!affiliationId.equals(request.getCompanyId())) {
-                    throw new BaseException(CommonErrorCode.FORBIDDEN);
-                }
+        if ("MASTER_ADMIN".equalsIgnoreCase(userRole)) {
+            // MASTER_ADMIN은 소속 정보 없이 모든 상품을 등록할 수 있습니다.
+        } else if ("HUB_ADMIN".equalsIgnoreCase(userRole)) {
+            // HUB_ADMIN은 자신의 담당 허브에만 상품을 등록할 수 있습니다.
+            if (affiliationId == null || !affiliationId.equals(request.getHubId())) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
-            
-            throw new BaseException(CommonErrorCode.FORBIDDEN);
+        } else if("COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
+            // COMPANY_MANAGER는 본인 업체에 대한 상품을 등록할 수 있습니다.
+            if (affiliationId == null || !affiliationId.equals(request.getCompanyId())) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
+            }
         }
 
-        ProductResponseDto response =
-                productService.createProduct(request, userId);
+        ProductResponseDto response = productService.createProduct(request, userId);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -99,28 +102,31 @@ public class ProductController {
     /**
      * 상품 수정
      */
+    @Operation(
+            summary ="상품 수정",
+            description ="기존 상품을 수정합니다."
+    )
     @PatchMapping("/{productId}")
-    public ResponseEntity<ProductResponseDto> updateProduct(
+    public ResponseEntity<CommonResponse<Void>> updateProduct(
             @PathVariable UUID productId,
             @Valid @RequestBody ProductUpdateRequestDto request,
             @RequestHeader("X-User-Id") UUID userId,
             @RequestHeader("X-User-Role") String userRole,
             @RequestHeader("X-Affiliation-Id") UUID affiliationId
     ) {
-        // 권한 검증: MASTER 또는 HUB_MANAGER가 아닌 경우 예외 발생
-        if (!"MASTER_ADMIN".equalsIgnoreCase(userRole) && !"HUB_ADMIN".equalsIgnoreCase(userRole) && !"COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
-            if("HUB_ADMIN".equalsIgnoreCase(userRole)) {
-                // HUB_ADMIN은 본인 허브에 대한 상품만 수정 가능
-                if (!affiliationId.equals(request.getHubId())) {
-                    throw new BaseException(CommonErrorCode.FORBIDDEN);
-                }
-            } else if("COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
-                // COMPANY_MANAGER는 본인 상품에 대한 상품만 수정 가능
-                if (!affiliationId.equals(request.getCompanyId())) {
-                    throw new BaseException(CommonErrorCode.FORBIDDEN);
-                }
+
+        if ("MASTER_ADMIN".equalsIgnoreCase(userRole)) {
+            // MASTER_ADMIN은 소속 정보 없이 모든 상품을 등록할 수 있습니다.
+        } else if ("HUB_ADMIN".equalsIgnoreCase(userRole)) {
+            // HUB_ADMIN은 자신의 담당 허브에만 상품을 등록할 수 있습니다.
+            if (affiliationId == null || !affiliationId.equals(request.getHubId())) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
-            throw new BaseException(CommonErrorCode.FORBIDDEN);
+        } else if("COMPANY_MANAGER".equalsIgnoreCase(userRole)) {
+            // COMPANY_MANAGER는 본인 업체에 대한 상품을 등록할 수 있습니다.
+            if (affiliationId == null || !affiliationId.equals(request.getCompanyId())) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
+            }
         }
 
         ProductResponseDto response =
@@ -130,12 +136,16 @@ public class ProductController {
                         userId
                 );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(CommonResponse.success("상품이 성공적으로 수정되었습니다."));
     }
 
     /**
      * 상품 삭제
      */
+    @Operation(
+            summary ="상품 삭제",
+            description ="기존 상품을 삭제합니다."
+    )
     @DeleteMapping("/{productId}")
     public ResponseEntity<CommonResponse<Void>> deleteProduct(
             @PathVariable UUID productId,
@@ -143,16 +153,16 @@ public class ProductController {
             @RequestHeader("X-User-Role") String userRole,
             @RequestHeader("X-Affiliation-Id") UUID affiliationId
     ) {
-        // 권한 검증: MASTER 또는 HUB_MANAGER가 아닌 경우 예외 발생
-        if (!"MASTER_ADMIN".equalsIgnoreCase(userRole) && !"HUB_ADMIN".equalsIgnoreCase(userRole)) {
-            if("HUB_ADMIN".equalsIgnoreCase(userRole)) {
-                ProductResponseDto resCompanyDto = productService.getProduct(productId);
-                // HUB_ADMIN은 본인 허브에 대한 상품만 삭제 가능
-                if (!affiliationId.equals(resCompanyDto.getHubId())) {
-                    throw new BaseException(CommonErrorCode.FORBIDDEN);
-                }
+
+        if ("MASTER_ADMIN".equalsIgnoreCase(userRole)) {
+            // MASTER_ADMIN은 소속 정보 없이 모든 상품을 등록할 수 있습니다.
+        } else if ("HUB_ADMIN".equalsIgnoreCase(userRole)) {
+            // HUB_ADMIN은 자신의 담당 허브에만 상품을 등록할 수 있습니다.
+            ProductResponseDto resCompanyDto = productService.getProduct(productId);
+
+            if (affiliationId == null || !affiliationId.equals(resCompanyDto.getHubId())) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
-            throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
         productService.deleteProduct(
@@ -160,6 +170,6 @@ public class ProductController {
                 userId
         );
 
-        return ResponseEntity.ok(CommonResponse.success("상품가 성공적으로 삭제되었습니다."));
+        return ResponseEntity.ok(CommonResponse.success("상품이 성공적으로 삭제되었습니다."));
     }
 }
