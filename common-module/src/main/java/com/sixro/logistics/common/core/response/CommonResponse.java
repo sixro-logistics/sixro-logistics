@@ -66,4 +66,13 @@ public record CommonResponse<T>(
         return success(HttpStatus.CREATED, message, data);
     }
 
+    /**
+     * HTTP 202 Accepted 비동기 수락 응답을 생성합니다.
+     */
+    public static <T> CommonResponse<T> accepted(
+            String message,
+            T data
+    ) {
+        return success(HttpStatus.ACCEPTED, message, data);
+    }
 }

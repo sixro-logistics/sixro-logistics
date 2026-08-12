@@ -36,10 +36,10 @@ public enum UserErrorCode implements ErrorCode {
             "유효하지 않은 소속 정보입니다."
     ),
 
-    APPROVED_USER_AFFILIATION_IMMUTABLE(
+    AFFILIATION_CHANGE_NOT_ALLOWED(
             HttpStatus.FORBIDDEN,
             "U005",
-            "승인된 사용자는 소속 정보를 수정할 수 없습니다."
+            "가입 대기 상태에서만 소속 정보를 수정할 수 있습니다."
     ),
 
     INVALID_APPROVE_STATUS(
@@ -76,9 +76,26 @@ public enum UserErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "U011",
             "이미 사용 중인 Slack ID입니다."
-    )
+    ),
 
+    AFFILIATION_NOT_FOUND(
+            HttpStatus.BAD_REQUEST,
+            "U012",
+            "존재하지 않거나 비활성화된 소속입니다."
+    ),
+
+    AFFILIATION_SERVICE_UNAVAILABLE(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "U013",
+            "소속 정보를 확인할 수 없습니다."
+    ),
+    MASTER_ADMIN_SIGN_UP_NOT_ALLOWED(
+            HttpStatus.FORBIDDEN,
+            "U014",
+            "MASTER_ADMIN은 일반 회원가입으로 생성할 수 없습니다."
+    )
     ;
+
 
     private final HttpStatus status;
     private final String code;

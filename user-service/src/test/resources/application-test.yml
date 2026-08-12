@@ -1,6 +1,7 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:user_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    # User 엔티티가 사용하는 user_schema를 H2 시작 시 생성
+    url: jdbc:h2:mem:user_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS user_schema
     username: sa
     password:
     driver-class-name: org.h2.Driver
@@ -17,6 +18,7 @@ spring:
         use_sql_comments: true
 
   cloud:
+    # 테스트에서는 Eureka 서비스 탐색을 사용하지 않음
     discovery:
       enabled: false
 
@@ -25,3 +27,8 @@ eureka:
     enabled: false
     register-with-eureka: false
     fetch-registry: false
+
+management:
+  # 테스트 결과를 외부 Zipkin으로 전송하지 않음
+  tracing:
+    enabled: false

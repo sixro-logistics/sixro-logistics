@@ -62,6 +62,8 @@ public class UserQueryRepositoryImpl implements UserQueryRepository {
     ) {
         return new BooleanExpression[]{
                 user.isDeleted.isFalse(),
+                user.deletedAt.isNull(),
+                user.deletedBy.isNull(),
                 usernameContains(condition.username()),
                 roleEq(condition.role()),
                 userStatusEq(condition.userStatus()),

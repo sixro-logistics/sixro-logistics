@@ -16,7 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_delivery")
+@Table(schema = "delivery_schema", name = "p_delivery")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLRestriction("is_deleted = false")
@@ -31,6 +31,7 @@ public class Delivery extends BaseEntity {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
+            schema = "delivery_schema",
             name = "p_delivery_supplier_company",
             joinColumns = @JoinColumn(name = "delivery_id"),
             uniqueConstraints = @UniqueConstraint(
