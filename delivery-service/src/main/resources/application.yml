@@ -14,10 +14,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
   cloud:
     openfeign:
@@ -53,6 +53,14 @@ spring:
 server:
   port: 19097
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
 eureka:
   client:
     # User Service를 Eureka Server에 등록
@@ -67,6 +75,7 @@ eureka:
   instance:
     prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
     ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    instance-id: ${spring.application.name}:${server.port}
 
 management:
   tracing:

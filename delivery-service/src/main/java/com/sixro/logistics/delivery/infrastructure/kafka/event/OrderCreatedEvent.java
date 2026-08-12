@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record OrderCreatedEvent(
         UUID eventId,
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime occurredAt,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) LocalDateTime occurredAt,
         OrderCreatedData data
 ) {
 }
