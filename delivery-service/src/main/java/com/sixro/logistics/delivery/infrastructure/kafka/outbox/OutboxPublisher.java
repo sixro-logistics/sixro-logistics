@@ -73,7 +73,7 @@ public class OutboxPublisher {
         if (outbox.getEventType() == OutboxEventType.DELIVERY_CREATED) {
             DeliveryCreatedEvent event = objectMapper.readValue(outbox.getPayload(), DeliveryCreatedEvent.class);
 
-            deliveryEventProducer.sendDeliveryCreatedEvent(event);
+            deliveryEventProducer.sendDeliveryCreatedEvent(event, outbox.getTraceId());
             return;
         }
 
@@ -81,7 +81,7 @@ public class OutboxPublisher {
             DeliveryCreationFailedEvent event =
                     objectMapper.readValue(outbox.getPayload(), DeliveryCreationFailedEvent.class);
 
-            deliveryEventProducer.sendDeliveryCreationFailedEvent(event);
+            deliveryEventProducer.sendDeliveryCreationFailedEvent(event, outbox.getTraceId());
             return;
         }
 

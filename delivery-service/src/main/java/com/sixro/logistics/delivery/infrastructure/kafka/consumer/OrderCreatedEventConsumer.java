@@ -11,6 +11,7 @@ import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,10 +26,11 @@ public class OrderCreatedEventConsumer {
     private final Tracer tracer;
 
     @KafkaListener(topics = KafkaTopics.ORDER_CREATED)
-    public void consume(OrderCreatedEvent event) {
+    public void consume(OrderCreatedEvent event,
+                        @Header(name = "trace-id", required = false) String originalTraceId) {
 
-        // Micrometer Trace ID 확인
-        String traceId = resolveCurrentTraceId(event.eventId());
+        // 이벤트 Trace ID 확인
+        String traceId = resolveTraceId(originalTraceId, event.eventId());
 
         // 주문 생성 이벤트 수신
         OrderCreatedData data = event.data();
@@ -63,7 +65,11 @@ public class OrderCreatedEventConsumer {
                 data.deliveryAddress(), data.deliveryDeadline(), data.requests(), orderItems);
     }
 
-    private String resolveCurrentTraceId(UUID orderCreatedEventId) {
+    private String resolveTraceId(String originalTraceId, UUID orderCreatedEventId) {
+        if (originalTraceId != null && !originalTraceId.isBlank()) {
+            return originalTraceId;
+        }
+
         Span currentSpan = tracer.currentSpan();
         if (currentSpan == null) {
             return orderCreatedEventId.toString();
