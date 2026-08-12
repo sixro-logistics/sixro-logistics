@@ -19,7 +19,6 @@ public class ProcessedEventService {
         return processedEventRepository.existsByEventId(eventId);
     }
 
-    @Transactional
     public void save(UUID eventId) {
         processedEventRepository.save(ProcessedEvent.create(eventId));
     }

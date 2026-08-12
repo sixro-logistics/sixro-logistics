@@ -21,6 +21,7 @@ import com.sixro.logistics.delivery.domain.enums.ManagerType;
 import com.sixro.logistics.delivery.domain.enums.RouteStatus;
 import com.sixro.logistics.delivery.domain.exception.DeliveryErrorCode;
 import com.sixro.logistics.delivery.domain.port.DeliveryManagerRepositoryPort;
+import com.sixro.logistics.delivery.domain.port.DeliveryRepositoryPort;
 import com.sixro.logistics.delivery.domain.port.DeliveryRouteRepositoryPort;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,11 +40,14 @@ import java.util.UUID;
 public class DeliveryRouteService {
 
     private final DeliveryRouteRepositoryPort deliveryRouteRepositoryPort;
+    private final DeliveryRepositoryPort deliveryRepositoryPort;
     private final DeliveryManagerRepositoryPort deliveryManagerRepositoryPort;
 
     public DeliveryRouteService(DeliveryRouteRepositoryPort deliveryRouteRepositoryPort,
+                                DeliveryRepositoryPort deliveryRepositoryPort,
                                 DeliveryManagerRepositoryPort deliveryManagerRepositoryPort) {
         this.deliveryRouteRepositoryPort = deliveryRouteRepositoryPort;
+        this.deliveryRepositoryPort = deliveryRepositoryPort;
         this.deliveryManagerRepositoryPort = deliveryManagerRepositoryPort;
     }
 
@@ -58,10 +62,17 @@ public class DeliveryRouteService {
     }
 
     public DeliveryRouteStatusResult updateDeliveryRouteStatus(UpdateDeliveryRouteStatusCommand command) {
-        // 배송 경로 조회
+        // 배송 ID 조회
+        UUID deliveryId = deliveryRouteRepositoryPort.findDeliveryIdById(command.getDeliveryRouteId())
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_NOT_FOUND));
+
+        // 배송 잠금 조회
+        Delivery delivery = deliveryRepositoryPort.findByIdForUpdate(deliveryId)
+                .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 배송 경로 잠금 조회
         DeliveryRoute deliveryRoute = deliveryRouteRepositoryPort.findByIdForUpdate(command.getDeliveryRouteId())
                 .orElseThrow(() -> new BaseException(DeliveryErrorCode.DELIVERY_ROUTE_NOT_FOUND));
-        Delivery delivery = deliveryRoute.getDelivery();
 
         // 변경 권한 검증
         validateUpdateAuthority(command, deliveryRoute);

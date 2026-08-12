@@ -82,4 +82,17 @@ public class Hub extends BaseEntity {
 
         this.maxCapacity = maxCapacity;
     }
+
+
+    /*
+    *
+    * - 용어 정의
+    *
+    * Operating Hub (운영 허브) / Operating Route (운영 노선): isDeleted = false && HubStatus != CLOSED
+    * Available Hub (가용 허브) / Available Route (가용 노선): isDeleted = false
+    *
+    * Topology: Route Network (노선망)
+    *
+    * */
+
 }

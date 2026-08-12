@@ -17,12 +17,18 @@ public enum HubRouteErrorCode implements ErrorCode {
     DUPLICATE_HUB_ROUTE(HttpStatus.CONFLICT, "HR007", "이미 존재하는 허브 노선입니다."),
     INVALID_LOCATION_BOUNDS(HttpStatus.BAD_REQUEST, "HR008", "좌표가 대한민국 영토 범위를 벗어났습니다."),
 
+    // 경로 탐색
+    PATH_NOT_FOUND(HttpStatus.UNPROCESSABLE_ENTITY, "H009", "출발지와 목적지 간의 유효한 이동 경로가 존재하지 않습니다."),
+    UNSUPPORTED_PATH_SEARCH_TYPE(HttpStatus.BAD_REQUEST, "H012", "지원하지 않는 경로 탐색 타입입니다."),
+    ORIGIN_HUB_CLOSED(HttpStatus.BAD_REQUEST, "HR013", "출발지 허브가 폐쇄(CLOSED) 상태이므로 경로를 탐색할 수 없습니다."),
+    DESTINATION_HUB_CLOSED(HttpStatus.BAD_REQUEST, "HR014", "도착지 허브가 폐쇄(CLOSED) 상태이므로 경로를 탐색할 수 없습니다."),
+
     // 외부 API 연동 에러코드
-    EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "HR009", "외부 경로 API 호출 중 오류가 발생했습니다."),
-    EXTERNAL_API_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "HR010", "외부 경로 서비스가 현재 응답하지 않습니다. (서킷 오픈)"),
-    EXTERNAL_API_RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "HR011", "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해주세요."),
-    EXTERNAL_API_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "HR012", "외부 경로 API 인증에 실패했습니다."),
-    EXTERNAL_API_BAD_REQUEST(HttpStatus.BAD_REQUEST, "HR013", "외부 경로 API에 잘못된 요청을 보냈습니다.");
+    EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "HR015", "외부 경로 API 호출 중 오류가 발생했습니다."),
+    EXTERNAL_API_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "HR016", "외부 경로 서비스가 현재 응답하지 않습니다. (서킷 오픈)"),
+    EXTERNAL_API_RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "HR017", "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해주세요."),
+    EXTERNAL_API_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "HR018", "외부 경로 API 인증에 실패했습니다."),
+    EXTERNAL_API_BAD_REQUEST(HttpStatus.BAD_REQUEST, "HR019", "외부 경로 API에 잘못된 요청을 보냈습니다.");
 
     private final HttpStatus status;
     private final String code;

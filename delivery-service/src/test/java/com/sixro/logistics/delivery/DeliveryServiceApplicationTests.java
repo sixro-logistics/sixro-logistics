@@ -1,11 +1,18 @@
 package com.sixro.logistics.delivery;
 
+import com.sixro.logistics.common.test.config.KafkaTestContainerConfig;
+import com.sixro.logistics.common.test.config.PostgresTestContainerConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@ImportTestcontainers({
+        PostgresTestContainerConfig.class,
+        KafkaTestContainerConfig.class
+})
 class DeliveryServiceApplicationTests {
 
     @Test

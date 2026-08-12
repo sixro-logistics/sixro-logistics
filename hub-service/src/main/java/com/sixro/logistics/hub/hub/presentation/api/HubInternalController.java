@@ -22,10 +22,10 @@ public class HubInternalController {
     private final HubInternalQueryService hubInternalQueryService;
 
     @GetMapping("/{hub_id}")
-    public CommonResponse<HubInternalResponse> getInternalHub(
+    public CommonResponse<HubInternalResponse> getInternalOperatingHub(
             @PathVariable("hub_id") UUID hubId
     ) {
-        HubInternalInfo info = hubInternalQueryService.getHub(hubId);
+        HubInternalInfo info = hubInternalQueryService.getOperatingHub(hubId);
         HubInternalResponse response = HubInternalResponse.from(info);
 
         return CommonResponse.success("허브 조회에 성공했습니다.", response);

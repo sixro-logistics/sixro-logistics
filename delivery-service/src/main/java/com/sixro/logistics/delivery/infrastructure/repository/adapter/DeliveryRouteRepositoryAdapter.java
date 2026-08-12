@@ -27,8 +27,18 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     }
 
     @Override
+    public List<DeliveryRoute> saveAll(List<DeliveryRoute> deliveryRoutes) {
+        return deliveryRouteRepository.saveAll(deliveryRoutes);
+    }
+
+    @Override
     public Optional<DeliveryRoute> findById(UUID deliveryRouteId) {
         return deliveryRouteRepository.findById(deliveryRouteId);
+    }
+
+    @Override
+    public Optional<UUID> findDeliveryIdById(UUID deliveryRouteId) {
+        return deliveryRouteRepository.findDeliveryIdById(deliveryRouteId);
     }
 
     @Override
@@ -50,6 +60,11 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     @Override
     public List<DeliveryRoute> findAllByDeliveryIdForUpdate(UUID deliveryId) {
         return deliveryRouteRepository.findAllByDelivery_DeliveryId(deliveryId);
+    }
+
+    @Override
+    public List<DeliveryRoute> findAllByDeliveryId(UUID deliveryId) {
+        return deliveryRouteRepository.findAllByDeliveryId(deliveryId);
     }
 
     @Override

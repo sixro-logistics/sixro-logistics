@@ -78,4 +78,9 @@ public class HubDto {
             String hubStatus,
             Double distanceInMeters
     ) {}
+
+    public record MetricResponse(
+            UUID hubId,
+            int currentVolume
+    ) {}
 }

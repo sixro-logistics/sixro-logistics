@@ -24,8 +24,23 @@ public class DeliveryRepositoryAdapter implements DeliveryRepositoryPort {
     }
 
     @Override
+    public boolean existsByOrderIdIncludingDeleted(UUID orderId) {
+        return deliveryRepository.existsByOrderIdIncludingDeleted(orderId);
+    }
+
+    @Override
+    public Delivery save(Delivery delivery) {
+        return deliveryRepository.save(delivery);
+    }
+
+    @Override
     public Optional<Delivery> findById(UUID deliveryId) {
         return deliveryRepository.findById(deliveryId);
+    }
+
+    @Override
+    public Optional<Delivery> findByOrderId(UUID orderId) {
+        return deliveryRepository.findByOrderId(orderId);
     }
 
     @Override

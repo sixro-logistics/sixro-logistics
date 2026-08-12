@@ -4,8 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
-@EnableJpaAuditing
+@EnableJpaAuditing(auditorAwareRef = "customAuditorAware")
+@EnableScheduling
 @EnableFeignClients(basePackages = "com.sixro.logistics.delivery.infrastructure.client")
 @SpringBootApplication
 public class DeliveryServiceApplication {

@@ -6,14 +6,12 @@ import com.sixro.logistics.hub.route.domain.model.HubRoute;
 import com.sixro.logistics.hub.route.domain.repository.HubRouteQueryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -22,9 +20,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HubRouteBatchService {
 
+    public static final String HUB_ROUTE = "hub:route";
+    public static final String HUB_NETWORK_ACTIVE = "hub:network:active";
+
     private final HubRouteQueryRepository hubRouteQueryRepository;
     private final HubRouteCommandService hubRouteCommandService;
     private final HubInfoPort hubInfoPort;
+    private final CacheManager cacheManager;
     private final AtomicBoolean isRunning = new AtomicBoolean(false); // 실행 상태 락
 
     @Async
@@ -86,8 +88,11 @@ public class HubRouteBatchService {
             // Batch 종료 후 대규모 변경이 있다면 벌크 이벤트 1회 발행
             if (!changedRouteIds.isEmpty()) {
                 log.info("[HubRoute 전체 동기화 배치] 대규모 변경 감지. 벌크 이벤트 발행 및 전체 캐시 무효화 진행");
-                // TODO: HubRoutesBulkChangedEvent 발행 (changedRouteIds 포함)
-                // TODO: 노선 목록 관련 캐시 Evict 수행
+                // TODO: 벌크 이벤트 발행
+
+                // 전체 캐시 무효화
+                Objects.requireNonNull(cacheManager.getCache(HUB_ROUTE)).clear();
+                Objects.requireNonNull(cacheManager.getCache(HUB_NETWORK_ACTIVE)).clear();
             }
 
         } finally {

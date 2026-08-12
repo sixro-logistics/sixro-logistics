@@ -9,17 +9,20 @@ import java.util.UUID;
 
 public record OrderCreateResponseDto(
         UUID orderId,
+        UUID receiverId,
         UUID hubId,
         UUID receiverCompanyId,
         String deliveryAddress,
         LocalDateTime deliveryDeadline,
         String requests,
         OrderStatus orderStatus,
-        List<OrderItemResponseDto> orderItems
+        List<OrderResponseItem> orderItems
 ) {
 
     public static OrderCreateResponseDto from(OrderCreateResult result){
-        return new OrderCreateResponseDto(result.orderId(),
+        return new OrderCreateResponseDto(
+                result.orderId(),
+                result.receiverId(),
                 result.hubId(),
                 result.receiverCompanyId(),
                 result.deliveryAddress(),
@@ -27,7 +30,7 @@ public record OrderCreateResponseDto(
                 result.requests(),
                 result.orderStatus(),
                 result.orderItems().stream()
-                        .map(item -> new OrderItemResponseDto(
+                        .map(item -> new OrderResponseItem(
                                 item.productId(),
                                 item.productName(),
                                 item.productPrice(),

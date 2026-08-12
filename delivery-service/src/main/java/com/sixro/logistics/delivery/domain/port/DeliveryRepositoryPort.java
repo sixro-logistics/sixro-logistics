@@ -10,7 +10,13 @@ import java.util.UUID;
 
 public interface DeliveryRepositoryPort {
 
+    boolean existsByOrderIdIncludingDeleted(UUID orderId);
+
+    Delivery save(Delivery delivery);
+
     Optional<Delivery> findById(UUID deliveryId);
+
+    Optional<Delivery> findByOrderId(UUID orderId);
 
     Optional<Delivery> findByIdForUpdate(UUID deliveryId);
 

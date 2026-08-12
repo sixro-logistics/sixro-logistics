@@ -6,14 +6,18 @@ import com.sixro.logistics.hub.hub.domain.exception.HubErrorCode;
 import com.sixro.logistics.hub.hub.domain.model.Hub;
 import com.sixro.logistics.hub.hub.domain.model.HubWithDistance;
 import com.sixro.logistics.hub.hub.domain.model.HubZone;
+import com.sixro.logistics.hub.hub.domain.repository.HubMetricQueryRepository;
 import com.sixro.logistics.hub.hub.domain.repository.HubQueryRepository;
 import com.sixro.logistics.hub.hub.presentation.dto.HubDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -21,10 +25,12 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class HubQueryService {
 
+    public static final String HUB_INFO = "hub:info";
+
     private final HubQueryRepository hubQueryRepository;
+    private final HubMetricQueryRepository hubMetricQueryRepository; // [추가됨]
 
-    // TODO: Redis Look-Aside 캐싱 추가
-
+    @Cacheable(cacheNames = HUB_INFO, key = "#hubId")
     public HubDto.Response getHub(UUID hubId) {
         Hub hub = hubQueryRepository.findById(hubId)
                 .orElseThrow(() -> new BaseException(HubErrorCode.HUB_NOT_FOUND));
@@ -37,7 +43,6 @@ public class HubQueryService {
         return PageResponse.from(hubPage, this::mapToResponse);
     }
 
-    // TODO: Hub Route 데이터 추가 후, 비즈니스 로직 개선
     public HubDto.NearestResponse getNearestHub(double longitude, double latitude) {
         HubWithDistance hubWithDistance = hubQueryRepository.findNearestHubWithDistance(longitude, latitude)
                 .orElseThrow(() -> new BaseException(HubErrorCode.HUB_NOT_FOUND));
@@ -48,6 +53,33 @@ public class HubQueryService {
                 hubWithDistance.hubStatus(),
                 hubWithDistance.distanceInMeters()
         );
+    }
+
+    public List<HubDto.Response> getHubsByIds(Set<UUID> hubIds) {
+        if (hubIds == null || hubIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Hub> hubs = hubQueryRepository.findByIdIn(hubIds);
+
+        return hubs.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public List<HubDto.MetricResponse> getHubMetricsByIds(Set<UUID> hubIds) {
+        if (hubIds == null || hubIds.isEmpty()) {
+            return List.of();
+        }
+
+        // Set을 List로 변환하여 인프라 어댑터에 전달
+        return hubMetricQueryRepository.findAllByHubIdIn(hubIds.stream().toList())
+                .stream()
+                .map(metric -> new HubDto.MetricResponse(
+                        metric.getHubId(),
+                        metric.getCurrentVolume()
+                ))
+                .toList();
     }
 
     private HubDto.Response mapToResponse(Hub hub) {

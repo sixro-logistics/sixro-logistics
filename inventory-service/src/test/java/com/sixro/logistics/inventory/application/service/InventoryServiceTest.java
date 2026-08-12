@@ -36,7 +36,7 @@ import java.util.UUID;
 class InventoryServiceTest {
 
     @InjectMocks
-    private InventoryCommandService inventoryService;
+    private InventoryCommandService inventoryCommandService;
 
     @InjectMocks
     private InventoryQueryService inventoryQueryService;
@@ -84,7 +84,7 @@ class InventoryServiceTest {
 
         // when
         InventoryCreateResult createResult =
-                inventoryService.createInventory(createCommand);
+                inventoryCommandService.createInventory(createCommand);
 
         // then
         assertThat(createResult).isNotNull();
@@ -142,7 +142,7 @@ class InventoryServiceTest {
 
         // when
         InventoryUpdateResult result =
-                inventoryService.updateInventory(
+                inventoryCommandService.updateInventory(
                         inventoryId,
                         command
                 );
@@ -174,7 +174,7 @@ class InventoryServiceTest {
 
         // when
         BaseException exception = catchThrowableOfType(
-                () -> inventoryService.updateInventory(
+                () -> inventoryCommandService.updateInventory(
                         inventoryId,
                         command
                 ),
@@ -221,7 +221,7 @@ class InventoryServiceTest {
 
         // when
         InventoryStockInCompanyResult result =
-                inventoryService.stockInInventory(
+                inventoryCommandService.stockInInventory(
                         inventoryId,
                         command
                 );
@@ -253,7 +253,7 @@ class InventoryServiceTest {
 
         // when
         BaseException exception = catchThrowableOfType(
-                () -> inventoryService.stockInInventory(
+                () -> inventoryCommandService.stockInInventory(
                         inventoryId,
                         command
                 ),
@@ -294,7 +294,7 @@ class InventoryServiceTest {
 
         // when
         InventoryDeleteResult result =
-                inventoryService.deleteInventory(inventoryId);
+                inventoryCommandService.deleteInventory(inventoryId);
 
         // then
         assertThat(result).isNotNull();
@@ -320,7 +320,7 @@ class InventoryServiceTest {
 
         // when
         BaseException exception = catchThrowableOfType(
-                () -> inventoryService.deleteInventory(inventoryId),
+                () -> inventoryCommandService.deleteInventory(inventoryId),
                 BaseException.class
         );
 
@@ -463,7 +463,7 @@ class InventoryServiceTest {
         ).willReturn(List.of(inventory));
 
         // when
-        inventoryService.restoreInventoryByEvent(command);
+        inventoryCommandService.restoreInventoryByEvent(command);
 
         // then
         assertThat(inventory.getStock())
@@ -517,7 +517,7 @@ class InventoryServiceTest {
                 .willReturn(true);
 
         // when
-        inventoryService.restoreInventoryByEvent(command);
+        inventoryCommandService.restoreInventoryByEvent(command);
 
         // then
         assertThat(inventory.getStock())

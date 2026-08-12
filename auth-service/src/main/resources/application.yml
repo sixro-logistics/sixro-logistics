@@ -33,7 +33,24 @@ spring:
     discovery:
       enabled: true
 
+    # User Service 내부 API 호출 Timeout
+    openfeign:
+      client:
+        config:
+          authUserServiceClient:
+            connect-timeout: 2000
+            read-timeout: 3000
+
 eureka:
+  instance:
+    # 개발환경
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    # 운영환경
+#    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:false}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    # 로컬 단일 인스턴스에서 확인하기 쉬운 고정 ID
+    instance-id: ${spring.application.name}:${server.port}
+
   client:
     # Auth Service를 Eureka Server에 등록
     register-with-eureka: true
@@ -84,8 +101,3 @@ logging:
 
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'
-
-# User Service 내부 API 호출용 OpenFeign Timeout
-user-service-client:
-  connect-timeout-ms: ${AUTH_USER_CONNECT_TIMEOUT_MS:2000}
-  read-timeout-ms: ${AUTH_USER_READ_TIMEOUT_MS:3000}

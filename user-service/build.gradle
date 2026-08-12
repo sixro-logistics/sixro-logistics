@@ -47,6 +47,10 @@ dependencies {
     // Internal Service Communication
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
+    // Circuit Breaker
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
+    implementation 'io.github.resilience4j:resilience4j-micrometer'
+
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 

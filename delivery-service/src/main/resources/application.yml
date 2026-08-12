@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: delivery-service
+
+  config:
+    import: "optional:file:../.env[.properties]"
+
+  datasource:
+    url: ${DELIVERY_DB_URL}
+    username: ${DELIVERY_DB_USERNAME}
+    password: ${DELIVERY_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-service:
+            logger-level: FULL
+
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER_URL}
+
+    consumer:
+      group-id: delivery-service
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.sixro.logistics.delivery.infrastructure.kafka.event.OrderCreatedEvent
+        spring.json.trusted.packages: com.sixro.logistics.delivery.infrastructure.kafka.event
+
+    listener:
+      ack-mode: record
+      observation-enabled: true
+
+    template:
+      observation-enabled: true
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: 19097
+
+eureka:
+  client:
+    # User Service를 Eureka Server에 등록
+    register-with-eureka: true
+
+    # Eureka Registry에서 다른 서비스 목록 조회
+    fetch-registry: true
+
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
+
+  instance:
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+
+logging:
+  level:
+    com.sixro.logistics.delivery.infrastructure.client.user.UserClient: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'

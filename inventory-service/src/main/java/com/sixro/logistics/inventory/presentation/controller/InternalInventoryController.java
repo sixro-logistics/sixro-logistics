@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/internal/v1/inventories")
+@RequestMapping("/api/v1/internal/inventories")
 public class InternalInventoryController {
 
     private final InventoryQueryFacade inventoryQueryFacade;
