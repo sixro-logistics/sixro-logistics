@@ -48,7 +48,7 @@ public class KafkaConsumer {
             );
 
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(
+            throw new EventDeserializationException(
                     "ORDER_CANCELED 이벤트 역직렬화에 실패했습니다.",
                     e
             );
