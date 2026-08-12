@@ -7,6 +7,7 @@ import com.sixro.logistics.inventory.application.command.InventoryCommandItem;
 import com.sixro.logistics.inventory.application.command.InventoryRestoreByEventCommand;
 import com.sixro.logistics.inventory.application.facade.InventoryCommandFacade;
 import com.sixro.logistics.inventory.domain.event.OrderCanceledEvent;
+import com.sixro.logistics.inventory.domain.event.OrderFailedEvent;
 import com.sixro.logistics.inventory.event.EventEnvelope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -54,4 +55,41 @@ public class KafkaConsumer {
             );
         }
     }
+
+    @KafkaListener(
+            topics = KafkaTopics.ORDER_FAILED,
+            groupId = "inventory-service"
+    )
+    public void consumeOrderFailed(String message) {
+
+        try {
+            EventEnvelope<OrderFailedEvent> event =
+                    objectMapper.readValue(
+                            message,
+                            new TypeReference<EventEnvelope<OrderFailedEvent>>() {}
+                    );
+
+            inventoryCommandFacade.restoreInventoryByEvent(
+                    new InventoryRestoreByEventCommand(
+                            event.eventId(),
+                            event.data().orderId(),
+                            event.data().hubId(),
+                            event.data().items()
+                                    .stream()
+                                    .map(item -> new InventoryCommandItem(
+                                            item.productId(),
+                                            item.quantity()
+                                    ))
+                                    .toList()
+                    )
+            );
+
+        } catch (JsonProcessingException e) {
+            throw new EventDeserializationException(
+                    "ORDER_FAILED 이벤트 역직렬화에 실패했습니다.",
+                    e
+            );
+        }
+    }
+
 }

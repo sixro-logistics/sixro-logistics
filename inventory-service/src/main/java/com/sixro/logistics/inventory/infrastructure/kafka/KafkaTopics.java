@@ -6,4 +6,7 @@ public final class KafkaTopics {
     }
 
     public static final String ORDER_CANCELED = "order.canceled";
+
+    public static final String ORDER_FAILED = "order.failed";
+
 }
