@@ -1,5 +1,6 @@
 package com.sixro.logistics.order.domain.entity.outbox;
 
+import com.sixro.logistics.common.persistence.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -8,10 +9,10 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_outbox" /*, schema = "" */)
+@Table(name = "p_order_outbox" /*, schema = "" */)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Outbox /* extends BaseEntity */ {
+public class Outbox extends BaseEntity {
 
     // Outbox의 pk
     @Id

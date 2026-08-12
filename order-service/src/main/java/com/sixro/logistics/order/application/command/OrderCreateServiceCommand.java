@@ -7,7 +7,7 @@ import java.util.UUID;
 public record OrderCreateServiceCommand(
 
         UUID hubId,
-        UUID ordererId,
+        UUID receiverId,
         UUID receiverCompanyId,
         String deliveryAddress,
         LocalDateTime deliveryDeadline,

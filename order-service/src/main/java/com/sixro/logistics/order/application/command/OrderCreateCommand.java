@@ -7,6 +7,7 @@ import java.util.UUID;
 public record OrderCreateCommand(
 
         UUID hubId,
+        UUID receiverId,
         UUID receiverCompanyId,
         LocalDateTime deliveryDeadline,
         String requests,
