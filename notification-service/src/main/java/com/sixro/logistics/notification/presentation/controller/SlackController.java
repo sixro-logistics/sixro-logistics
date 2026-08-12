@@ -3,23 +3,32 @@ package com.sixro.logistics.notification.presentation.controller;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.common.core.response.CommonResponse;
+import com.sixro.logistics.notification.application.client.SlackApiClient;
+import com.sixro.logistics.notification.application.service.AiService;
 import com.sixro.logistics.notification.application.service.SlackService;
+import com.sixro.logistics.notification.domain.event.DeliveryCreatedEvent;
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageSearchCondition;
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageSendRequest;
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageUpdateDto;
 import com.sixro.logistics.notification.presentation.dto.response.SlackMessageResponse;
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/slack/messages")
 @RequiredArgsConstructor
 public class SlackController {
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final AiService aiService;
+    private final SlackApiClient slackApiClient;
 
     private final SlackService slackService;
 
@@ -96,5 +105,22 @@ public class SlackController {
         slackService.deleteMessage(slackMessageId, userId);
 
         return ResponseEntity.ok(CommonResponse.success("메세지를 삭제하였습니다."));
+    }
+
+
+    // 1. 임시용 - Kafka를 통한 전체 이벤트 파이프라인 테스트
+    @PostMapping("/kafka-delivery-event")
+    public ResponseEntity<String> sendTestEvent(@RequestBody DeliveryCreatedEvent event) {
+        ProducerRecord<String, Object> record = new ProducerRecord<>(
+                "delivery.events",
+                event.getData().getDeliveryId().toString(),
+                event
+        );
+
+        record.headers().add("event-type", "DeliveryCreatedEvent".getBytes(StandardCharsets.UTF_8));
+        record.headers().add("trace-id", UUID.randomUUID().toString().getBytes(StandardCharsets.UTF_8));
+
+        kafkaTemplate.send(record);
+        return ResponseEntity.ok("Kafka 이벤트 발행 완료 (eventId: " + event.getEventId() + ")");
     }
 }

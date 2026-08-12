@@ -4,22 +4,18 @@ import com.sixro.logistics.notification.application.client.SlackApiClient;
 import com.sixro.logistics.notification.domain.entity.SendStatus;
 import com.sixro.logistics.notification.domain.entity.SlackMessage;
 import com.sixro.logistics.notification.domain.repository.SlackMessageRepository;
-import com.sixro.logistics.notification.presentation.dto.request.SlackMessageCreateDto;
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageSearchCondition;
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageSendRequest;
 import com.sixro.logistics.notification.presentation.dto.request.SlackMessageUpdateDto;
 import com.sixro.logistics.notification.presentation.dto.response.SlackMessageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -32,44 +28,6 @@ public class SlackService {
     private final SlackMessageRepository slackMessageRepository;
     private final AiService aiService;
     private final RestClient restClient = RestClient.create();
-
-
-    // Slack 메시지 등록 및 발송 (POST /slack/messages)
-    /*@Transactional
-    public SlackMessageResponse createAndSendMessage(SlackMessageCreateDto.Request request, UUID currentUserId) {
-        // 1. AI API 최종 발송 시한 산출 및 메시지 빌드
-        String deadlineText = aiService.calculateDeadline(request.getOrderInfo());
-        String content = buildOrderMessage(request.getOrderInfo(), deadlineText);
-
-        // 2. 메시지 엔티티 생성 (초기 상태 PENDING)
-        SlackMessage slackMessage = SlackMessage.builder()
-                .senderType(request.getSenderType())
-                .senderId(request.getSenderId())
-                .receiverSlackId(request.getReceiverSlackId())
-                .messageContent(content)
-                .messageType(request.getMessageType())
-                .sendStatus(SendStatus.PENDING)
-                .build();
-
-        slackMessageRepository.save(slackMessage);
-
-        // 3. Slack Webhook 실제 발송
-        try {
-            restClient.post()
-                    .uri(slackWebhookUrl)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("text", content))
-                    .retrieve()
-                    .toBodilessEntity();
-
-            slackMessage.updateSendStatus(SendStatus.SENT, null);
-        } catch (Exception e) {
-            log.error("Slack 메시지 발송 실패: {}", e.getMessage());
-            slackMessage.updateSendStatus(SendStatus.FAILED, e.getMessage());
-        }
-
-        return SlackMessageResponse.from(slackMessage);
-    }*/
 
     // Slack 메시지 목록 조회 (GET /slack/messages)
     public Page<SlackMessageResponse> getMessages(SlackMessageSearchCondition condition, Pageable pageable) {
@@ -139,26 +97,5 @@ public class SlackService {
 
         slackMessage.softDelete(currentUserId);
     }
-
-    /*private String buildOrderMessage(SlackMessageCreateDto.OrderInfo info, String deadlineText) {
-        return String.format("""
-                주문 번호 : %d
-                주문자 정보 : %s / %s
-                주문 시간 : %s
-                상품 정보 : %s %d박스
-                요청 사항 : %s
-                발송지 : %s
-                경유지 : %s
-                도착지 : %s
-                배송담당자 : %s / %s
-                위 내용을 기반으로 도출된 최종 발송 시한은 %s 입니다.
-                """,
-                info.getOrderId(), info.getCustomerName(), info.getCustomerEmail(),
-                info.getOrderTime(), info.getProductName(), info.getQuantity(),
-                info.getRequirement(), info.getOrigin(), info.getStopovers(),
-                info.getDestination(), info.getManagerName(), info.getManagerEmail(),
-                deadlineText
-        );
-    }*/
 
 }

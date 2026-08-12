@@ -3,6 +3,8 @@ package com.sixro.logistics.notification.presentation.dto.request;
 import com.sixro.logistics.notification.domain.entity.SenderType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +12,8 @@ import java.util.UUID;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class SlackMessageSendRequest {
 
     @NotNull(message = "발송 주체 타입은 필수입니다.")

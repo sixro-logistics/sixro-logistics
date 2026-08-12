@@ -27,7 +27,10 @@ dependencies {
     implementation project(':common-module')
 
     // OpenAI 호환 스타터 사용 (Google AI Studio Key 연동의 최적 방법)
-    implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
+    //implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
+
+    // Spring Data Redis 의존성 추가
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // Web
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -74,13 +77,32 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // .env 파일 자동 감지 및 시스템 환경변수 주입
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 }
+
 
 dependencyManagement {
     imports {
         mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
-        mavenBom "org.springframework.ai:spring-ai-bom:1.0.0-M1"
+        //mavenBom "org.springframework.ai:spring-ai-bom:1.0.0-M1"
     }
+}
+
+// === QueryDSL QClass 생성 설정 추가 ===
+def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile
+
+sourceSets {
+    main.java.srcDir querydslDir
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.generatedSourceOutputDirectory.set(file(querydslDir))
+}
+
+clean {
+    delete file(querydslDir)
 }
 
 tasks.named('bootRun') {
