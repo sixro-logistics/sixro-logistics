@@ -4,6 +4,7 @@ import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.delivery.application.result.DeliveryManagerIdsResult;
 import com.sixro.logistics.delivery.application.service.DeliveryInternalService;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryManagerIdsResDto;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+@Tag(name = "배송 내부 API", description = "서비스 간 배송 내부 API")
 @RestController
 @RequestMapping("/api/v1/internal/deliveries")
 public class DeliveryInternalController {

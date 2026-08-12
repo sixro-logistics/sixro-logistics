@@ -53,6 +53,14 @@ spring:
 server:
   port: 19097
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
 eureka:
   client:
     # User Service를 Eureka Server에 등록
