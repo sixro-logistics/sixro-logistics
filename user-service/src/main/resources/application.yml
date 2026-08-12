@@ -91,6 +91,9 @@ management:
         include:
           - health
           - info
+          - metrics
+          - circuitbreakers
+          - circuitbreakerevents
 
   endpoint:
     health:
@@ -134,3 +137,26 @@ affiliation-client:
     initial-interval-ms: 200
     max-interval-ms: 1000
     max-attempts: 3
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      hubAffiliation:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.sixro.logistics.user.infrastructure.client.config.AffiliationFailurePredicate
+
+      companyAffiliation:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.sixro.logistics.user.infrastructure.client.config.AffiliationFailurePredicate
