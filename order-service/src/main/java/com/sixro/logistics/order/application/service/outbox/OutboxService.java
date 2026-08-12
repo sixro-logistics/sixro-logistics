@@ -2,10 +2,13 @@ package com.sixro.logistics.order.application.service.outbox;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sixro.logistics.order.application.event.EventEnvelope;
 import com.sixro.logistics.order.domain.entity.outbox.AggregateType;
 import com.sixro.logistics.order.domain.entity.outbox.EventType;
 import com.sixro.logistics.order.domain.entity.outbox.Outbox;
+import com.sixro.logistics.order.domain.event.order.OrderCanceledEvent;
 import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
+import com.sixro.logistics.order.domain.event.order.OrderFailedEvent;
 import com.sixro.logistics.order.domain.repository.outbox.OutboxRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +24,26 @@ public class OutboxService {
     private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
 
-    public void save(OrderCreatedEvent event) {
-
+    public void saveOrderCreated(EventEnvelope<OrderCreatedEvent> event) {
         save(
-                event.orderId(),
+                event.data().orderId(),
                 EventType.ORDER_CREATED,
+                event
+        );
+    }
+
+    public void saveOrderCanceled(EventEnvelope<OrderCanceledEvent> event) {
+        save(
+                event.data().orderId(),
+                EventType.ORDER_CANCELED,
+                event
+        );
+    }
+
+    public void saveOrderFailed(EventEnvelope<OrderFailedEvent> event) {
+        save(
+                event.data().orderId(),
+                EventType.ORDER_FAILED,
                 event
         );
     }
@@ -35,9 +53,7 @@ public class OutboxService {
             EventType eventType,
             Object event
     ) {
-
         try {
-
             String payload = objectMapper.writeValueAsString(event);
 
             Outbox outbox = Outbox.create(
@@ -53,4 +69,5 @@ public class OutboxService {
             throw new RuntimeException("Outbox 직렬화에 실패했습니다.", e);
         }
     }
+
 }

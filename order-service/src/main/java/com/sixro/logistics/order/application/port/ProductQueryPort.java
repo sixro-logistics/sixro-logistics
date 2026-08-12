@@ -7,6 +7,8 @@ import java.util.UUID;
 
 public interface ProductQueryPort {
 
+    ProductInfo getProduct(UUID productId);
+
     List<ProductInfo> getProducts(List<UUID> productIds);
 
 }

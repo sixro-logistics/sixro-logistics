@@ -1,7 +1,9 @@
 package com.sixro.logistics.order.application.event;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sixro.logistics.order.domain.entity.outbox.Outbox;
+import com.sixro.logistics.order.domain.event.order.OrderCanceledEvent;
 import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
 import com.sixro.logistics.order.domain.repository.outbox.OutboxRepository;
 import com.sixro.logistics.order.infrastructure.kafka.KafkaProducer;
@@ -44,17 +46,32 @@ public class OutboxPublisher {
                 );
 
                 switch (outbox.getEventType()) {
+
                     case ORDER_CREATED -> {
-                        OrderCreatedEvent event =
+
+                        String payload = outbox.getPayload();
+
+                        EventEnvelope<OrderCreatedEvent> event =
                                 objectMapper.readValue(
-                                        outbox.getPayload(),
-                                        OrderCreatedEvent.class
+                                        payload,
+                                        new TypeReference<EventEnvelope<OrderCreatedEvent>>() {}
                                 );
 
                         kafkaProducer.sendOrderCreatedEvent(event);
                     }
 
-                    // TO DO: ORDER_CANCELLED 구현
+                    case ORDER_CANCELED -> {
+
+                        String payload = outbox.getPayload();
+
+                        EventEnvelope<OrderCanceledEvent> event =
+                                objectMapper.readValue(
+                                        payload,
+                                        new TypeReference<EventEnvelope<OrderCanceledEvent>>() {}
+                                );
+
+                        kafkaProducer.sendOrderCanceledEvent(event);
+                    }
 
                     default -> throw new IllegalArgumentException(
                             "지원하지 않는 EventType : "

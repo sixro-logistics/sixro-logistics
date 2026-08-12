@@ -15,9 +15,18 @@ public class ProductClientAdapter implements ProductQueryPort {
     private final ProductClient productClient;
 
     @Override
-    public List<ProductInfo> getProducts(List<UUID> productIds) {
+    public ProductInfo getProduct(UUID productId) {
 
         ProductClientResponse response =
+                productClient.getProduct(productId);
+
+        return null;
+    }
+
+    @Override
+    public List<ProductInfo> getProducts(List<UUID> productIds) {
+
+        ProductClientListResponse response =
                 productClient.getProducts(productIds);
 
         return response.products().stream()

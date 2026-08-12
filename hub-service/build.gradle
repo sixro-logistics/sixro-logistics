@@ -52,7 +52,6 @@ dependencies {
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-//    implementation 'org.redisson:redisson-spring-boot-starter:3.32.0' // TODO: 버전 재확인
 
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'

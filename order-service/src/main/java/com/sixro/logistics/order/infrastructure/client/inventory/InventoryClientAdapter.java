@@ -1,9 +1,10 @@
 package com.sixro.logistics.order.infrastructure.client.inventory;
 
-import com.sixro.logistics.common.core.response.CommonResponse;
-import com.sixro.logistics.order.application.model.InventoryInfo;
-import com.sixro.logistics.order.application.model.InventoryItemInfo;
-import com.sixro.logistics.order.application.port.InventoryQueryPort;
+import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.order.application.port.InventoryCommandPort;
+import com.sixro.logistics.order.application.port.InventoryCommandItem;
+import com.sixro.logistics.order.exception.OrderErrorCode;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -12,34 +13,51 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-public class InventoryClientAdapter implements InventoryQueryPort {
+public class InventoryClientAdapter implements InventoryCommandPort {
 
     private final InventoryClient inventoryClient;
 
     @Override
-    public InventoryInfo getInventories(UUID hubId, List<UUID> productIds) {
+    public void deductInventory(UUID hubId, List<InventoryCommandItem> items) {
 
-        InventoryClientResponse response =
-                inventoryClient.getInventories(
-                        new InventoryCheckRequest(hubId, productIds)
-                );
-
-        /*CommonResponse<InventoryClientResponse> response =
-                inventoryClient.getInventories(
-                        new InventoryCheckRequest(hubId, productIds)
-                );
-
-        InventoryClientResponse data = response.getData();*/
-
-        return new InventoryInfo(
-                response.hubId(),
-                response.inventories().stream()
-                        .map(item -> new InventoryItemInfo(
+        InventoryDeductRequest request = new InventoryDeductRequest(
+                hubId,
+                items.stream()
+                        .map(item -> new InventoryRequestItem(
                                 item.productId(),
-                                item.stock()
+                                item.quantity()
                         ))
                         .toList()
         );
+
+        try{
+            inventoryClient.deductInventory(request);
+        }catch(FeignException.NotFound e){
+            throw new BaseException(OrderErrorCode.INVENTORY_NOT_FOUND);
+        }
+
+    }
+
+    @Override
+    public void restoreInventory(
+            UUID hubId,
+            List<InventoryCommandItem> items
+    ) {
+        InventoryRestoreRequest request = new InventoryRestoreRequest(
+                hubId,
+                items.stream()
+                        .map(item -> new InventoryRequestItem(
+                                item.productId(),
+                                item.quantity()
+                        ))
+                        .toList()
+        );
+
+        try{
+            inventoryClient.restoreInventory(request);
+        }catch(FeignException e){
+            throw new BaseException(OrderErrorCode.INVENTORY_RESTORE_FAILED);
+        }
     }
 
 }

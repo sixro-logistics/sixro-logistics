@@ -55,6 +55,22 @@ public class DeliveryRoute extends BaseEntity {
 
     private LocalDateTime completedAt;
 
+    public static DeliveryRoute create(Delivery delivery, Integer routeSequence, UUID originHubId, UUID destHubId,
+                                       Long expectedDistanceM, Long expectedDurationS) {
+
+        DeliveryRoute deliveryRoute = new DeliveryRoute();
+
+        deliveryRoute.delivery = delivery;
+        deliveryRoute.routeSequence = routeSequence;
+        deliveryRoute.originHubId = originHubId;
+        deliveryRoute.destHubId = destHubId;
+        deliveryRoute.expectedDistanceM = expectedDistanceM;
+        deliveryRoute.expectedDurationS = expectedDurationS;
+        deliveryRoute.routeStatus = RouteStatus.HUB_TRANSIT_WAITING;
+
+        return deliveryRoute;
+    }
+
     public void updateStatus(RouteStatus routeStatus, LocalDateTime changedAt) {
         validateStatusTransition(routeStatus);
 

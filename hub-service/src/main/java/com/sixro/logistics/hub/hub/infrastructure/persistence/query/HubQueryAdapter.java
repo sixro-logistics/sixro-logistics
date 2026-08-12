@@ -1,6 +1,7 @@
 package com.sixro.logistics.hub.hub.infrastructure.persistence.query;
 
 import com.sixro.logistics.hub.hub.domain.model.Hub;
+import com.sixro.logistics.hub.hub.domain.model.HubStatus;
 import com.sixro.logistics.hub.hub.domain.model.HubWithDistance;
 import com.sixro.logistics.hub.hub.domain.model.HubZone;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +9,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -36,5 +39,22 @@ public class HubQueryAdapter implements com.sixro.logistics.hub.hub.domain.repos
                         projection.getHubStatus(),
                         projection.getDistanceInMeters()
                 ));
+    }
+
+    @Override
+    public List<Hub> findByIdIn(Set<UUID> ids) {
+        return queryRepository.findByIdIn(ids);
+    }
+
+    @Override
+    public List<Hub> findAllOperatingHubs() {
+        // CLOSED 상태가 아닌(ACTIVE, CONGESTED, MAINTENANCE) 허브만 필터링하여 반환합니다.
+        return queryRepository.findAllByHubStatusNot(HubStatus.CLOSED);
+    }
+
+    @Override
+    public Optional<Hub> findOperatingHubById(UUID id) {
+        return queryRepository.findById(id)
+                .filter(hub -> hub.getHubStatus() != HubStatus.CLOSED);
     }
 }

@@ -5,6 +5,7 @@ import com.sixro.logistics.hub.hub.domain.exception.HubErrorCode;
 import com.sixro.logistics.hub.hub.domain.model.Hub;
 import com.sixro.logistics.hub.hub.domain.repository.HubQueryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,10 +16,13 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class HubInternalQueryService {
 
+    public static final String HUB_INFO_INTERNAL = "hub:info:internal";
+
     private final HubQueryRepository hubQueryRepository;
 
-    public HubInternalInfo getHub(UUID hubId) {
-        Hub hub = hubQueryRepository.findById(hubId)
+    @Cacheable(cacheNames = HUB_INFO_INTERNAL, key = "#hubId")
+    public HubInternalInfo getOperatingHub(UUID hubId) {
+        Hub hub = hubQueryRepository.findOperatingHubById(hubId)
                 .orElseThrow(() -> new BaseException(HubErrorCode.HUB_NOT_FOUND));
 
         return new HubInternalInfo(
