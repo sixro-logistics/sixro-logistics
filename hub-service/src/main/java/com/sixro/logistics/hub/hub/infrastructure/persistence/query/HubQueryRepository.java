@@ -1,6 +1,7 @@
 package com.sixro.logistics.hub.hub.infrastructure.persistence.query;
 
 import com.sixro.logistics.hub.hub.domain.model.Hub;
+import com.sixro.logistics.hub.hub.domain.model.HubStatus;
 import com.sixro.logistics.hub.hub.domain.model.HubZone;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,7 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface HubQueryRepository extends Repository<Hub, UUID> {
@@ -24,7 +27,6 @@ public interface HubQueryRepository extends Repository<Hub, UUID> {
      * 특정 위/경도 기준 최인접 허브 검색 (PostGIS ST_Distance_Sphere)
      * - CLOSED(폐쇄), MAINTENANCE(점검중) 상태는 배송을 받을 수 없으므로 제외
      * - 가장 가까운 1건만 조회
-     * - TODO: 권역 기반 최인접 조회, 경로 기반 최인접 조회 2개로 분리 예정
      */
     @Query(value =
             "SELECT " +
@@ -43,4 +45,8 @@ public interface HubQueryRepository extends Repository<Hub, UUID> {
             @Param("longitude") double longitude,
             @Param("latitude") double latitude
     );
+
+    List<Hub> findByIdIn(Set<UUID> ids);
+
+    List<Hub> findAllByHubStatusNot(HubStatus hubStatus);
 }
