@@ -1,5 +1,7 @@
 package com.sixro.logistics.inventory.infrastructure.persistence.inventory;
 
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sixro.logistics.common.core.exception.BaseException;
@@ -38,6 +40,7 @@ public class InventoryQueryRepository {
                         productIdEq(command.productId()),
                         inventory.isDeleted.isFalse()
                 )
+                .orderBy(getOrderSpecifiers(pageable))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -91,6 +94,34 @@ public class InventoryQueryRepository {
         return productId != null
                 ? inventory.productId.eq(productId)
                 : null;
+    }
+
+    private OrderSpecifier<?>[] getOrderSpecifiers(Pageable pageable) {
+        return pageable.getSort()
+                .stream()
+                .map(order -> {
+                    Order direction = order.isAscending()
+                            ? Order.ASC
+                            : Order.DESC;
+
+                    return switch (order.getProperty()) {
+                        case "createdAt" ->
+                                new OrderSpecifier<>(
+                                        direction,
+                                        inventory.createdAt
+                                );
+                        case "updatedAt" ->
+                                new OrderSpecifier<>(
+                                        direction,
+                                        inventory.updatedAt
+                                );
+                        default ->
+                                throw new BaseException(
+                                        InventoryErrorCode.INVALID_SORT_FIELD
+                                );
+                    };
+                })
+                .toArray(OrderSpecifier[]::new);
     }
 
 }
