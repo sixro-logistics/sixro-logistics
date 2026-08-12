@@ -15,6 +15,7 @@ import com.sixro.logistics.auth.domain.repository.AuthStateRepository;
 import com.sixro.logistics.auth.domain.repository.RefreshTokenRepository;
 import com.sixro.logistics.auth.domain.repository.SessionRepository;
 import com.sixro.logistics.auth.infrastructure.client.UserServiceClient;
+import com.sixro.logistics.auth.infrastructure.client.UserServiceClientReader;
 import com.sixro.logistics.auth.infrastructure.client.UserServiceErrorMapper;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalCreateUserResponse;
@@ -25,6 +26,7 @@ import com.sixro.logistics.auth.infrastructure.jwt.JwtProvider;
 import com.sixro.logistics.auth.infrastructure.redis.TokenHashProvider;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -59,7 +61,9 @@ import java.util.UUID;
 public class AuthCommandService {
 
     private final UserServiceClient userServiceClient;
+    private final UserServiceClientReader userServiceClientReader;
     private final UserServiceErrorMapper userServiceErrorMapper;
+
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
 
@@ -413,15 +417,24 @@ public class AuthCommandService {
      *
      * <p>사용자 존재 여부가 외부에 노출되지 않도록
      * User Service의 404 응답은 아이디 또는 비밀번호 불일치로 변환합니다.</p>
+     *
+     * <p>Circuit Breaker가 OPEN 상태인 경우 User Service를 호출하지 않고
+     * 내부 서비스 통신 실패로 처리합니다.</p>
      */
     private InternalUserAuthInfoResponse getAuthInfo(
             String username
     ) {
         try {
             CommonResponse<InternalUserAuthInfoResponse> response =
-                    userServiceClient.getAuthInfo(username);
+                    userServiceClientReader.getAuthInfo(username);
 
             return requireData(response);
+
+        } catch (CallNotPermittedException exception) {
+            throw new AuthException(
+                    AuthErrorCode.USER_SERVICE_COMMUNICATION_FAILED,
+                    exception
+            );
 
         } catch (FeignException exception) {
             if (exception.status() == 404) {
@@ -441,15 +454,26 @@ public class AuthCommandService {
     /**
      * Token 재발급에 필요한 최신 사용자 상태와 권한 정보를
      * User Service에서 조회합니다.
+     *
+     * <p>Circuit Breaker가 OPEN 상태인 경우에는 User Service를
+     * 호출하지 않고 내부 서비스 통신 실패로 처리합니다.</p>
      */
     private InternalUserStatusResponse getUserStatus(
             UUID userId
     ) {
         try {
+
             CommonResponse<InternalUserStatusResponse> response =
-                    userServiceClient.getUserStatus(userId);
+                    userServiceClientReader.getUserStatus(userId);
 
             return requireData(response);
+
+        } catch (CallNotPermittedException exception) {
+
+            throw new AuthException(
+                    AuthErrorCode.USER_SERVICE_COMMUNICATION_FAILED,
+                    exception
+            );
 
         } catch (FeignException exception) {
             switch (exception.status()) {
@@ -525,10 +549,9 @@ public class AuthCommandService {
         }
 
         boolean valid = switch (command.role()) {
-            case HUB_ADMIN, DELIVERY_MANAGER ->
-                    command.affiliationType()
-                            == AffiliationType.HUB
-                            && command.affiliationId() != null;
+            case HUB_ADMIN, DELIVERY_MANAGER -> command.affiliationType()
+                    == AffiliationType.HUB
+                    && command.affiliationId() != null;
 
             case COMPANY_MANAGER -> command.affiliationType()
                     == AffiliationType.COMPANY

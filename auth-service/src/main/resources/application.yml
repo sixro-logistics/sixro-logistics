@@ -74,6 +74,9 @@ management:
         include:
           - health
           - info
+          - metrics
+          - circuitbreakers
+          - circuitbreakerevents
 
   endpoint:
     health:
@@ -101,3 +104,21 @@ logging:
 
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'
+
+# Auth Service에서 User Service의 인증 정보 조회 호출에 적용합니다.
+#
+# 사용자 생성 POST 요청은 조회용 Circuit Breaker 대상에서 제외하며,
+# 자동 Retry를 적용하지 않습니다.
+# 장애 발생 시 가짜 사용자 정보를 반환하는 fallback도 사용하지 않습니다.
+resilience4j:
+  circuitbreaker:
+    instances:
+      authUserService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.sixro.logistics.auth.infrastructure.client.config.AuthUserServiceFailurePredicate

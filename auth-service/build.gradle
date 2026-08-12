@@ -50,6 +50,10 @@ dependencies {
     // OpenFeign - User Service 내부 API 호출
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
+    // Circuit Breaker
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
+    implementation 'io.github.resilience4j:resilience4j-micrometer'
+
     // Actuator
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 

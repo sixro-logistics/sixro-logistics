@@ -16,6 +16,7 @@ import com.sixro.logistics.auth.domain.repository.AuthStateRepository;
 import com.sixro.logistics.auth.domain.repository.RefreshTokenRepository;
 import com.sixro.logistics.auth.domain.repository.SessionRepository;
 import com.sixro.logistics.auth.infrastructure.client.UserServiceClient;
+import com.sixro.logistics.auth.infrastructure.client.UserServiceClientReader;
 import com.sixro.logistics.auth.infrastructure.client.UserServiceErrorMapper;
 import com.sixro.logistics.auth.infrastructure.client.request.InternalCreateUserRequest;
 import com.sixro.logistics.auth.infrastructure.client.response.InternalCreateUserResponse;
@@ -25,6 +26,9 @@ import com.sixro.logistics.auth.infrastructure.jwt.JwtClaims;
 import com.sixro.logistics.auth.infrastructure.jwt.JwtProvider;
 import com.sixro.logistics.auth.infrastructure.redis.TokenHashProvider;
 import com.sixro.logistics.common.core.response.CommonResponse;
+import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,10 +51,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 회원가입, 로그인, 토큰 재발급 및 로그아웃의 핵심 인증 정책을
@@ -85,9 +86,12 @@ class AuthCommandServiceTest {
     private AuthStateRepository authStateRepository;
     @Mock
     private TokenHashProvider tokenHashProvider;
+    @Mock
+    private UserServiceClientReader userServiceClientReader;
 
     @InjectMocks
     private AuthCommandService authCommandService;
+
 
     @Test
     @DisplayName("회원가입 비밀번호를 암호화하여 User Service에 전달한다")
@@ -131,7 +135,7 @@ class AuthCommandServiceTest {
         InternalUserAuthInfoResponse user = approvedUser();
         TokenPair tokenPair = new TokenPair("access-token", "refresh-token");
 
-        when(userServiceClient.getAuthInfo("hubadmin1"))
+        when(userServiceClientReader.getAuthInfo("hubadmin1"))
                 .thenReturn(CommonResponse.success("사용자 조회", user));
         when(passwordEncoder.matches("Password1!", user.encodedPassword()))
                 .thenReturn(true);
@@ -187,7 +191,7 @@ class AuthCommandServiceTest {
     void login_wrongPassword_rejected() {
         InternalUserAuthInfoResponse user = approvedUser();
 
-        when(userServiceClient.getAuthInfo("hubadmin1"))
+        when(userServiceClientReader.getAuthInfo("hubadmin1"))
                 .thenReturn(CommonResponse.success("사용자 조회", user));
         when(passwordEncoder.matches("wrong", user.encodedPassword()))
                 .thenReturn(false);
@@ -221,7 +225,7 @@ class AuthCommandServiceTest {
                 AffiliationType.HUB,
                 false
         );
-        when(userServiceClient.getAuthInfo("hubadmin1"))
+        when(userServiceClientReader.getAuthInfo("hubadmin1"))
                 .thenReturn(CommonResponse.success("사용자 조회", user));
 
         AuthException exception = assertThrows(
@@ -249,7 +253,7 @@ class AuthCommandServiceTest {
                 AffiliationType.HUB,
                 true
         );
-        when(userServiceClient.getAuthInfo("hubadmin1"))
+        when(userServiceClientReader.getAuthInfo("hubadmin1"))
                 .thenReturn(CommonResponse.success("사용자 조회", user));
 
         AuthException exception = assertThrows(
@@ -290,7 +294,7 @@ class AuthCommandServiceTest {
                 .thenReturn(refreshClaims);
         when(sessionRepository.findSessionIdByUserId(USER_ID))
                 .thenReturn(Optional.of(SESSION_ID));
-        when(userServiceClient.getUserStatus(USER_ID))
+        when(userServiceClientReader.getUserStatus(USER_ID))
                 .thenReturn(CommonResponse.success("사용자 조회", currentUser));
         when(jwtProvider.issueTokenPair(
                 USER_ID,
@@ -355,7 +359,7 @@ class AuthCommandServiceTest {
                 .thenReturn(refreshClaims);
         when(sessionRepository.findSessionIdByUserId(USER_ID))
                 .thenReturn(Optional.of(SESSION_ID));
-        when(userServiceClient.getUserStatus(USER_ID))
+        when(userServiceClientReader.getUserStatus(USER_ID))
                 .thenReturn(CommonResponse.success("사용자 조회", currentUser));
         when(jwtProvider.issueTokenPair(
                 USER_ID,
@@ -457,5 +461,132 @@ class AuthCommandServiceTest {
                 AffiliationType.HUB,
                 false
         );
+    }
+
+    @Test
+    @DisplayName("User Service Circuit Breaker가 OPEN이면 로그인을 통신 실패로 처리한다")
+    void login_circuitBreakerOpen_throwsCommunicationFailure() {
+        CircuitBreaker circuitBreaker =
+                CircuitBreaker.ofDefaults("authUserService");
+
+        CallNotPermittedException circuitOpenException =
+                CallNotPermittedException
+                        .createCallNotPermittedException(
+                                circuitBreaker
+                        );
+
+        when(userServiceClientReader.getAuthInfo("hubadmin1"))
+                .thenThrow(circuitOpenException);
+
+        AuthException exception = assertThrows(
+                AuthException.class,
+                () -> authCommandService.login(
+                        new LoginCommand(
+                                "hubadmin1",
+                                "Password1!"
+                        )
+                )
+        );
+
+        assertThat(exception.getErrorCode())
+                .isEqualTo(
+                        AuthErrorCode.USER_SERVICE_COMMUNICATION_FAILED
+                );
+
+        verifyNoInteractions(
+                passwordEncoder,
+                jwtProvider,
+                authStateRepository
+        );
+    }
+
+    @Test
+    @DisplayName("User Service Circuit Breaker가 OPEN이면 토큰 재발급을 통신 실패로 처리한다")
+    void reissue_circuitBreakerOpen_throwsCommunicationFailure() {
+        JwtClaims refreshClaims = new JwtClaims(
+                USER_ID,
+                UserRole.HUB_ADMIN,
+                SESSION_ID,
+                "refresh-jti",
+                Instant.now().plus(REFRESH_EXPIRATION)
+        );
+
+        CircuitBreaker circuitBreaker =
+                CircuitBreaker.ofDefaults("authUserService");
+
+        CallNotPermittedException circuitOpenException =
+                CallNotPermittedException
+                        .createCallNotPermittedException(
+                                circuitBreaker
+                        );
+
+        when(jwtProvider.parseRefreshToken("refresh-token"))
+                .thenReturn(refreshClaims);
+
+        when(sessionRepository.findSessionIdByUserId(USER_ID))
+                .thenReturn(Optional.of(SESSION_ID));
+
+        when(userServiceClientReader.getUserStatus(USER_ID))
+                .thenThrow(circuitOpenException);
+
+        AuthException exception = assertThrows(
+                AuthException.class,
+                () -> authCommandService.reissue(
+                        new ReissueTokenCommand("refresh-token")
+                )
+        );
+
+        assertThat(exception.getErrorCode())
+                .isEqualTo(
+                        AuthErrorCode.USER_SERVICE_COMMUNICATION_FAILED
+                );
+
+        verifyNoInteractions(
+                tokenHashProvider,
+                authStateRepository
+        );
+    }
+
+    @Test
+    @DisplayName("User Service 사용자 생성 오류를 Auth 오류로 변환한다")
+    void signUp_userServiceFailure_convertsException() {
+        SignUpCommand command = new SignUpCommand(
+                "hubadmin1",
+                "Password1!",
+                "U-HUB-ADMIN",
+                UserRole.HUB_ADMIN,
+                HUB_ID,
+                AffiliationType.HUB
+        );
+
+        FeignException feignException =
+                mock(FeignException.class);
+
+        AuthException mappedException =
+                new AuthException(
+                        AuthErrorCode.DUPLICATE_USERNAME
+                );
+
+        when(passwordEncoder.encode("Password1!"))
+                .thenReturn("{bcrypt}encoded-password");
+
+        when(userServiceClient.createUser(
+                any(InternalCreateUserRequest.class)
+        )).thenThrow(feignException);
+
+        when(userServiceErrorMapper.convertUserCreateException(
+                feignException
+        )).thenReturn(mappedException);
+
+        AuthException exception = assertThrows(
+                AuthException.class,
+                () -> authCommandService.signUp(command)
+        );
+
+        assertThat(exception.getErrorCode())
+                .isEqualTo(AuthErrorCode.DUPLICATE_USERNAME);
+
+        verify(userServiceErrorMapper)
+                .convertUserCreateException(feignException);
     }
 }
