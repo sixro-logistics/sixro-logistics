@@ -5,6 +5,7 @@ import java.util.UUID;
 public record InventoryCreateResult(
         UUID inventoryId,
         UUID hubId,
+        UUID companyId,
         UUID productId,
         Integer stock
 ) {

@@ -128,7 +128,10 @@ public class AuthCommandService {
 
         TokenPair tokenPair = jwtProvider.issueTokenPair(
                 user.userId(),
+                user.username(),
                 user.role(),
+                user.affiliationId(),
+                user.affiliationType(),
                 sessionId
         );
 
@@ -207,7 +210,10 @@ public class AuthCommandService {
         TokenPair newTokenPair =
                 jwtProvider.issueTokenPair(
                         user.userId(),
+                        user.username(),
                         user.role(),
+                        user.affiliationId(),
+                        user.affiliationType(),
                         refreshClaims.sessionId()
                 );
 
@@ -396,7 +402,7 @@ public class AuthCommandService {
             return requireData(response);
 
         } catch (FeignException exception) {
-            throw userServiceErrorMapper.convertSignUpException(
+            throw userServiceErrorMapper.convertUserCreateException(
                     exception
             );
         }
