@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_order_item"/*, schema = "order"*/)
+@Table(name = "p_order_item", schema = "order_schema")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class OrderItem extends BaseEntity {

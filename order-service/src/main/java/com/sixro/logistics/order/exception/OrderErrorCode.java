@@ -68,7 +68,13 @@ public enum OrderErrorCode implements ErrorCode {
     INVENTORY_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "O007",
-            "재고가 등록되지 않은 상품이 포함되어 있습니다."
+            "재고를 찾을 수 없는 상품이 포함되어 있습니다."
+    ),
+
+    RECEIVER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "O016",
+            "수령인을 찾을 수 없습니다."
     ),
 
     // 409

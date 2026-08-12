@@ -1,10 +1,13 @@
 package com.sixro.logistics.order.infrastructure.persistence.order;
 
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.order.application.command.OrderSearchCommand;
 import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.domain.entity.order.Order;
+import com.sixro.logistics.order.exception.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -35,6 +38,7 @@ public class OrderQueryRepository {
                         companyIdEq(command.receiverCompanyId()),
                         order.isDeleted.isFalse()
                 )
+                .orderBy(getOrderSpecifiers(pageable))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -84,6 +88,28 @@ public class OrderQueryRepository {
     private BooleanExpression companyIdEq(UUID companyId){
         return companyId != null
                 ? order.receiverCompanyId.eq(companyId) : null;
+    }
+
+    private OrderSpecifier<?>[] getOrderSpecifiers(Pageable pageable) {
+        return pageable.getSort()
+                .stream()
+                .map(sortOrder -> {
+                    com.querydsl.core.types.Order direction =
+                            sortOrder.isAscending()
+                                    ? com.querydsl.core.types.Order.ASC
+                                    : com.querydsl.core.types.Order.DESC;
+
+                    return switch (sortOrder.getProperty()) {
+                        case "createdAt" -> new OrderSpecifier<>(direction, order.createdAt);
+
+                        case "updatedAt" -> new OrderSpecifier<>(direction, order.updatedAt);
+
+                        default -> throw new BaseException(
+                                OrderErrorCode.INVALID_SORT_FIELD
+                        );
+                    };
+                })
+                .toArray(OrderSpecifier[]::new);
     }
 
 }
