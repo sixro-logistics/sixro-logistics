@@ -12,6 +12,7 @@ import com.sixro.logistics.delivery.presentation.dto.res.ManagerCreateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.ManagerInfoResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.ManagerSearchResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.ManagerUpdateResDto;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "배송 담당자", description = "배송 담당자 관리 API")
 @RestController
 @RequestMapping("/api/v1/delivery-managers")
 public class DeliveryManagerController {

@@ -28,6 +28,7 @@ import com.sixro.logistics.delivery.presentation.dto.res.DeliveryManagerUpdateRe
 import com.sixro.logistics.delivery.presentation.dto.res.DeliverySearchResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryStatusUpdateResDto;
 import com.sixro.logistics.delivery.presentation.dto.res.DeliveryTrackingResDto;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,6 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+@Tag(name = "배송", description = "배송 관리 API")
 @RestController
 @RequestMapping("/api/v1/deliveries")
 public class DeliveryController {
