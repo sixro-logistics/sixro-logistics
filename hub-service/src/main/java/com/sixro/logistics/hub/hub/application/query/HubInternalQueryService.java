@@ -21,8 +21,8 @@ public class HubInternalQueryService {
     private final HubQueryRepository hubQueryRepository;
 
     @Cacheable(cacheNames = HUB_INFO_INTERNAL, key = "#hubId")
-    public HubInternalInfo getHub(UUID hubId) {
-        Hub hub = hubQueryRepository.findById(hubId)
+    public HubInternalInfo getOperatingHub(UUID hubId) {
+        Hub hub = hubQueryRepository.findOperatingHubById(hubId)
                 .orElseThrow(() -> new BaseException(HubErrorCode.HUB_NOT_FOUND));
 
         return new HubInternalInfo(

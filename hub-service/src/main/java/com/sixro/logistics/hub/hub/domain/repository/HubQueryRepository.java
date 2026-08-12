@@ -17,4 +17,5 @@ public interface HubQueryRepository {
     Optional<HubWithDistance> findNearestHubWithDistance(double longitude, double latitude);
     List<Hub> findByIdIn(Set<UUID> ids);
     List<Hub> findAllOperatingHubs();
+    Optional<Hub> findOperatingHubById(UUID id);
 }

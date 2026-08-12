@@ -51,4 +51,10 @@ public class HubQueryAdapter implements com.sixro.logistics.hub.hub.domain.repos
         // CLOSED 상태가 아닌(ACTIVE, CONGESTED, MAINTENANCE) 허브만 필터링하여 반환합니다.
         return queryRepository.findAllByHubStatusNot(HubStatus.CLOSED);
     }
+
+    @Override
+    public Optional<Hub> findOperatingHubById(UUID id) {
+        return queryRepository.findById(id)
+                .filter(hub -> hub.getHubStatus() != HubStatus.CLOSED);
+    }
 }
