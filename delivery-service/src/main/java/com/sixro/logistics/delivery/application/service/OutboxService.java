@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sixro.logistics.delivery.domain.entity.outbox.Outbox;
 import com.sixro.logistics.delivery.domain.entity.outbox.OutboxEventType;
 import com.sixro.logistics.delivery.domain.port.OutboxRepositoryPort;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreatedEvent;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreationFailedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreatedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

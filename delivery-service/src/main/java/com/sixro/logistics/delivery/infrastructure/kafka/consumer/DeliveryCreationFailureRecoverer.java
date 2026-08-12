@@ -3,8 +3,10 @@ package com.sixro.logistics.delivery.infrastructure.kafka.consumer;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.delivery.application.service.OutboxService;
 import com.sixro.logistics.delivery.domain.exception.DeliveryCreationKafkaErrorCode;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreationFailedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent;
 import com.sixro.logistics.delivery.infrastructure.kafka.event.OrderCreatedEvent;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -24,6 +26,7 @@ public class DeliveryCreationFailureRecoverer implements ConsumerRecordRecoverer
     private static final String TRACE_ID_HEADER = "trace-id";
 
     private final OutboxService outboxService;
+    private final Tracer tracer;
 
     @Override
     public void accept(ConsumerRecord<?, ?> record, Exception exception) {
@@ -71,14 +74,17 @@ public class DeliveryCreationFailureRecoverer implements ConsumerRecordRecoverer
 
     private String resolveTraceId(ConsumerRecord<?, ?> record, UUID orderCreatedEventId) {
         Header traceIdHeader = record.headers().lastHeader(TRACE_ID_HEADER);
-        if (traceIdHeader == null || traceIdHeader.value() == null) {
-            return orderCreatedEventId.toString();
+        if (traceIdHeader != null && traceIdHeader.value() != null) {
+            String originalTraceId = new String(traceIdHeader.value(), StandardCharsets.UTF_8);
+            if (!originalTraceId.isBlank()) {
+                return originalTraceId;
+            }
         }
 
-        String traceId = new String(traceIdHeader.value(), StandardCharsets.UTF_8);
-        if (traceId.isBlank()) {
+        Span currentSpan = tracer.currentSpan();
+        if (currentSpan == null) {
             return orderCreatedEventId.toString();
         }
-        return traceId;
+        return currentSpan.context().traceId();
     }
 }

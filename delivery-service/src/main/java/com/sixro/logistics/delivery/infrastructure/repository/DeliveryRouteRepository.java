@@ -5,6 +5,8 @@ import com.sixro.logistics.delivery.domain.enums.RouteStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -27,6 +29,10 @@ public interface DeliveryRouteRepository extends JpaRepository<DeliveryRoute, UU
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<DeliveryRoute> findAllByDelivery_DeliveryId(UUID deliveryId);
+
+    @Query("select deliveryRoute from DeliveryRoute deliveryRoute "
+            + "where deliveryRoute.delivery.deliveryId = :deliveryId")
+    List<DeliveryRoute> findAllByDeliveryId(@Param("deliveryId") UUID deliveryId);
 
     List<DeliveryRoute> findAllByDelivery_DeliveryIdOrderByRouteSequenceAsc(UUID deliveryId);
 

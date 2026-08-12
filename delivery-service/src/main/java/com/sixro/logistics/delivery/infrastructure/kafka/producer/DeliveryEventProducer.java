@@ -1,8 +1,8 @@
 package com.sixro.logistics.delivery.infrastructure.kafka.producer;
 
 import com.sixro.logistics.delivery.infrastructure.kafka.KafkaTopics;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreatedEvent;
-import com.sixro.logistics.delivery.infrastructure.kafka.event.DeliveryCreationFailedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreatedEvent;
+import com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -42,7 +42,6 @@ public class DeliveryEventProducer {
         RecordHeader traceIdHeader = new RecordHeader(
                 TRACE_ID_HEADER, traceId.getBytes(StandardCharsets.UTF_8)
         );
-
         record.headers().add(eventTypeHeader);
         record.headers().add(traceIdHeader);
 
@@ -67,7 +66,6 @@ public class DeliveryEventProducer {
         RecordHeader traceIdHeader = new RecordHeader(
                 TRACE_ID_HEADER, traceId.getBytes(StandardCharsets.UTF_8)
         );
-
         record.headers().add(eventTypeHeader);
         record.headers().add(traceIdHeader);
 

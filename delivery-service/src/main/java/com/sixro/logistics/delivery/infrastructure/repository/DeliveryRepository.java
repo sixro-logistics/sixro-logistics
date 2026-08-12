@@ -21,5 +21,7 @@ public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Delivery> findByDeliveryId(UUID deliveryId);
 
+    Optional<Delivery> findByOrderId(UUID orderId);
+
     boolean existsByDeliveryManager_DeliveryManagerIdAndDeliveryStatusNotIn(UUID deliveryManagerId, List<DeliveryStatus> completedStatuses);
 }

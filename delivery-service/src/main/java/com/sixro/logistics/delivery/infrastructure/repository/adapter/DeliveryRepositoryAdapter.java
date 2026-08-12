@@ -39,6 +39,11 @@ public class DeliveryRepositoryAdapter implements DeliveryRepositoryPort {
     }
 
     @Override
+    public Optional<Delivery> findByOrderId(UUID orderId) {
+        return deliveryRepository.findByOrderId(orderId);
+    }
+
+    @Override
     public Optional<Delivery> findByIdForUpdate(UUID deliveryId) {
         return deliveryRepository.findByDeliveryId(deliveryId);
     }
