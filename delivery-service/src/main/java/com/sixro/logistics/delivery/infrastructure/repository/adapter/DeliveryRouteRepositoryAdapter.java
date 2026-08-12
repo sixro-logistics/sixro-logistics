@@ -27,6 +27,11 @@ public class DeliveryRouteRepositoryAdapter implements DeliveryRouteRepositoryPo
     }
 
     @Override
+    public List<DeliveryRoute> saveAll(List<DeliveryRoute> deliveryRoutes) {
+        return deliveryRouteRepository.saveAll(deliveryRoutes);
+    }
+
+    @Override
     public Optional<DeliveryRoute> findById(UUID deliveryRouteId) {
         return deliveryRouteRepository.findById(deliveryRouteId);
     }
