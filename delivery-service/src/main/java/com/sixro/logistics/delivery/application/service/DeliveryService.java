@@ -405,7 +405,6 @@ public class DeliveryService {
             hasAuthority = isAssignedDeliveryManager || isAssignedDeliveryRouteManager;
         }
         else if ("COMPANY_MANAGER".equals(userRole)) {
-            // TODO: OrderConfirmedEvent 소비 시 공급업체/수령업체 ID가 포함된 Delivery 생성
             hasAuthority = command.getAffiliationId() != null
                     && (delivery.getSupplierCompanyIds().contains(command.getAffiliationId())
                     || Objects.equals(command.getAffiliationId(), delivery.getRecipientCompanyId()));

@@ -11,6 +11,8 @@ import java.util.UUID;
 
 public interface DeliveryRouteRepositoryPort {
 
+    List<DeliveryRoute> saveAll(List<DeliveryRoute> deliveryRoutes);
+
     Optional<DeliveryRoute> findById(UUID deliveryRouteId);
 
     Optional<DeliveryRoute> findByIdForUpdate(UUID deliveryRouteId);
@@ -20,6 +22,8 @@ public interface DeliveryRouteRepositoryPort {
     List<DeliveryRoute> findAllWaitingByDeliveryId(UUID deliveryId);
 
     List<DeliveryRoute> findAllByDeliveryIdForUpdate(UUID deliveryId);
+
+    List<DeliveryRoute> findAllByDeliveryId(UUID deliveryId);
 
     List<DeliveryRoute> findAllByDeliveryIdOrderByRouteSequenceAsc(UUID deliveryId);
 
