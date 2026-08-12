@@ -47,6 +47,22 @@ spring:
 
           # lb:// Load Balancer를 통해 Eureka에서 ABC-service를 찾습니다.
           routes:
+            # 로그인·회원가입·토큰 재발급 요청 제한
+            # 인증 전 요청이므로 요청자의 IP 주소를 기준으로 제한합니다.
+            - id: auth-rate-limited
+              order: -20
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/v1/auth/login,/api/v1/auth/signup,/api/v1/auth/reissue
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@clientIpKeyResolver}"
+                    redis-rate-limiter.replenishRate: 2
+                    redis-rate-limiter.burstCapacity: 5
+                    redis-rate-limiter.requestedTokens: 1
+
             # MASTER 관리자 사용자 생성, 기존 회원가입과 별도 구현
             # 비밀번호 암호화를 위해 Auth Service로 전달
             - id: auth-admin-user-create
