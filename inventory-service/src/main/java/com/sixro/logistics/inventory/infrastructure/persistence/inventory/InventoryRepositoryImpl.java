@@ -33,7 +33,7 @@ public class InventoryRepositoryImpl implements InventoryRepository {
 
     @Override
     public Optional<Inventory> findForUpdateByIdAndIsDeletedFalse(UUID inventoryId) {
-        return inventoryJpaRepository.findByIdAndIsDeletedFalse(inventoryId);
+        return inventoryJpaRepository.findForUpdateByIdAndIsDeletedFalse(inventoryId);
     }
 
     @Override
@@ -42,8 +42,8 @@ public class InventoryRepositoryImpl implements InventoryRepository {
     }
 
     @Override
-    public List<Inventory> findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsId) {
-        return inventoryJpaRepository.findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(hubId, productsId);
+    public List<Inventory> findAllForUpdateByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsId) {
+        return inventoryJpaRepository.findAllForUpdateByHubIdAndProductIdInAndIsDeletedFalse(hubId, productsId);
     }
 
     @Override

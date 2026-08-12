@@ -3,10 +3,8 @@ package com.sixro.logistics.inventory.application.service.inventory;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.inventory.application.command.*;
 import com.sixro.logistics.inventory.application.result.*;
-import com.sixro.logistics.inventory.application.service.outbox.OutboxService;
+import com.sixro.logistics.inventory.application.service.event.ProcessedEventService;
 import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
-import com.sixro.logistics.inventory.domain.event.InventoryDeductedEvent;
-import com.sixro.logistics.inventory.domain.event.InventoryDeductionFailedEvent;
 import com.sixro.logistics.inventory.domain.repository.inventory.InventoryRepository;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import jakarta.transaction.Transactional;
@@ -24,7 +22,7 @@ import java.util.stream.Collectors;
 public class InventoryCommandService {
 
     private final InventoryRepository inventoryRepository;
-    private final OutboxService outboxService;
+    private final ProcessedEventService processedEventService;
 
     public InventoryCreateResult createInventory(InventoryCreateServiceCommand command) {
 
@@ -93,43 +91,84 @@ public class InventoryCommandService {
 
     public void deductInventory(InventoryDeductCommand command) {
 
-        try {
-            Map<UUID, Integer> quantityMap = command.items()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            item -> item.productId(),
-                            item -> item.quantity()
-                    ));
+        Map<UUID, Integer> quantityMap = command.items()
+                .stream()
+                .collect(Collectors.toMap(
+                        item -> item.productId(),
+                        item -> item.quantity()
+                ));
 
-            List<Inventory> inventoryList =
-                    inventoryRepository
-                            .findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(
-                                    command.hubId(),
-                                    command.items()
-                                            .stream()
-                                            .map(item -> item.productId())
-                                            .toList()
-                            );
+        List<UUID> productIds = command.items()
+                .stream()
+                .map(item -> item.productId())
+                .toList();
 
-            for(Inventory inventory : inventoryList){
-                Integer quantity = quantityMap.get(inventory.getProductId());
-                inventory.deductStock(quantity);
-            }
+        List<Inventory> inventoryList =
+                inventoryRepository
+                        .findAllForUpdateByHubIdAndProductIdInAndIsDeletedFalse(
+                                command.hubId(),
+                                productIds
+                        );
 
-            // 재고 차감 성공
-            InventoryDeductedEvent event = new InventoryDeductedEvent(command.orderId());
-            outboxService.save(event);
+        // 요청한 상품 중 재고가 존재하지 않는 상품이 있는지 검증
+        if(inventoryList.size() != productIds.size()){
+            throw new BaseException(InventoryErrorCode.INVENTORY_NOT_FOUND);
+        }
 
-        } catch (BaseException e) {
-            // 재고 차감 실패
-            InventoryDeductionFailedEvent event =
-                    new InventoryDeductionFailedEvent(
-                            command.orderId(),
-                            e.getErrorCode().getCode(),
-                            e.getMessage()
-                    );
+        for(Inventory inventory : inventoryList){
+            Integer quantity = quantityMap.get(inventory.getProductId());
 
-            outboxService.save(event);
+            inventory.deductStock(quantity);
+        }
+
+    }
+
+    public void restoreInventory(InventoryRestoreCommand command) {
+        restoreStock(command.hubId(), command.items());
+    }
+
+    public void restoreInventoryByEvent(InventoryRestoreByEventCommand command) {
+        // 이미 소비한 이벤트
+        if(processedEventService.isProcessed(command.eventId())){
+            return;
+        }
+
+        restoreStock(command.hubId(), command.items());
+        processedEventService.save(command.eventId());
+    }
+
+    private void restoreStock(
+            UUID hubId,
+            List<InventoryCommandItem> items
+    ) {
+
+        Map<UUID, Integer> quantityMap = items.stream()
+                .collect(Collectors.toMap(
+                        InventoryCommandItem::productId,
+                        InventoryCommandItem::quantity
+                ));
+
+        List<UUID> productIds = items.stream()
+                .map(InventoryCommandItem::productId)
+                .toList();
+
+        List<Inventory> inventoryList =
+                inventoryRepository
+                        .findAllForUpdateByHubIdAndProductIdInAndIsDeletedFalse(
+                                hubId,
+                                productIds
+                        );
+
+        if(inventoryList.size() != productIds.size()){
+            throw new BaseException(
+                    InventoryErrorCode.INVENTORY_NOT_FOUND
+            );
+        }
+
+        for(Inventory inventory : inventoryList){
+            Integer quantity = quantityMap.get(inventory.getProductId());
+
+            inventory.restoreStock(quantity);
         }
     }
 

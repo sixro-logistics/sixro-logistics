@@ -22,7 +22,7 @@ public interface InventoryRepository {
             UUID hubId, List<UUID> productsId
     );
 
-    List<Inventory> findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(
+    List<Inventory> findAllForUpdateByHubIdAndProductIdInAndIsDeletedFalse(
             UUID hubId, List<UUID> productsId
     );
 

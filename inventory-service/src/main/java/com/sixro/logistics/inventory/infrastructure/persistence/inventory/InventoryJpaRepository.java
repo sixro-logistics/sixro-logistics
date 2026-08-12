@@ -19,6 +19,6 @@ public interface InventoryJpaRepository extends JpaRepository<Inventory, UUID> {
     List<Inventory> findAllByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    List<Inventory> findAllForDeductByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsid);
+    List<Inventory> findAllForUpdateByHubIdAndProductIdInAndIsDeletedFalse(UUID hubId, List<UUID> productsid);
 
 }

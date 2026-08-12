@@ -1,9 +1,9 @@
 package com.sixro.logistics.inventory.presentation.controller;
 
+import com.sixro.logistics.inventory.application.facade.InventoryCommandFacade;
 import com.sixro.logistics.inventory.application.facade.InventoryQueryFacade;
-import com.sixro.logistics.inventory.application.result.InventoryCheckResult;
-import com.sixro.logistics.inventory.presentation.dto.request.InventoryCheckRequestDto;
-import com.sixro.logistics.inventory.presentation.dto.response.InventoryCheckResponseDto;
+import com.sixro.logistics.inventory.presentation.dto.request.InventoryDeductRequestDto;
+import com.sixro.logistics.inventory.presentation.dto.request.InventoryRestoreRequestDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,19 +18,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalInventoryController {
 
     private final InventoryQueryFacade inventoryQueryFacade;
+    private final InventoryCommandFacade inventoryCommandFacade;
 
-    @PostMapping("/check")
-    public ResponseEntity<InventoryCheckResponseDto> createInventory(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
-            @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,*/
-            @Valid @RequestBody InventoryCheckRequestDto requestDto) {
+    @PostMapping("/deduct")
+    public ResponseEntity<Void> deductInventory(
+            @Valid @RequestBody InventoryDeductRequestDto requestDto) {
+        inventoryCommandFacade.deductInventory(requestDto.toCommand());
+        return ResponseEntity.ok().build();
+    }
 
-        InventoryCheckResult checkResult
-                = inventoryQueryFacade.checkInventory(requestDto.toCommand());
-
-        return ResponseEntity
-                .ok()
-                .body(InventoryCheckResponseDto.from(checkResult));
+    @PostMapping("/restore")
+    public ResponseEntity<Void> restoreInventory(
+            @Valid @RequestBody InventoryRestoreRequestDto requestDto
+    ) {
+        inventoryCommandFacade.restoreInventory(requestDto.toCommand());
+        return ResponseEntity.ok().build();
     }
 
 }
