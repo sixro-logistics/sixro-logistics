@@ -16,6 +16,10 @@ import java.util.UUID;
 @Repository
 public interface DeliveryRouteRepository extends JpaRepository<DeliveryRoute, UUID> {
 
+    @Query("select deliveryRoute.delivery.deliveryId from DeliveryRoute deliveryRoute "
+            + "where deliveryRoute.deliveryRouteId = :deliveryRouteId")
+    Optional<UUID> findDeliveryIdById(@Param("deliveryRouteId") UUID deliveryRouteId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<DeliveryRoute> findByDeliveryRouteId(UUID deliveryRouteId);
 

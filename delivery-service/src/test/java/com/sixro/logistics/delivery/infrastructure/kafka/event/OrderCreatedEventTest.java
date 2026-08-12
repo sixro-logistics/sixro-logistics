@@ -1,6 +1,8 @@
 package com.sixro.logistics.delivery.infrastructure.kafka.event;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -10,7 +12,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class OrderCreatedEventTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .findAndRegisterModules()
+            .enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    @Test
+    void serializeOccurredAtAsSecondPrecisionString() throws Exception {
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                UUID.randomUUID(),
+                LocalDateTime.of(2026, 8, 12, 13, 48, 28, 538_241_100),
+                null
+        );
+
+        JsonNode json = objectMapper.readTree(objectMapper.writeValueAsString(event));
+
+        assertThat(json.path("occurredAt").isTextual()).isTrue();
+        assertThat(json.path("occurredAt").asText()).isEqualTo("2026-08-12T13:48:28");
+    }
 
     @Test
     void deserializeCommonEnvelope() throws Exception {
