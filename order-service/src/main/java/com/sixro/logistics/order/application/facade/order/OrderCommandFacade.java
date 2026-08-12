@@ -12,6 +12,7 @@ import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.domain.entity.order.OrderStatus;
 import com.sixro.logistics.order.exception.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -69,13 +70,18 @@ public class OrderCommandFacade {
             throw new BaseException(OrderErrorCode.PRODUCT_NOT_FOUND);
         }
 
-        // 재고 차감 동기 처리
-        inventoryCommandPort.deductInventory(
-                command.hubId(),
-                inventoryItems
-        );
+        boolean inventoryDeducted = false;
 
         try{
+
+            // 재고 차감 동기 처리
+            inventoryCommandPort.deductInventory(
+                    command.hubId(),
+                    inventoryItems
+            );
+
+            inventoryDeducted = true;
+
             List<OrderCreateServiceItem> serviceItems =
                     createServiceItems(command, productInfo);
 
@@ -88,13 +94,15 @@ public class OrderCommandFacade {
 
             return orderCommandService.createOrder(serviceCommand);
 
-        }catch (Exception e){
+        }catch(Exception e){
 
             // 주문 생성 실패 시 재고 복원 동기 처리
-            inventoryCommandPort.restoreInventory(
-                    command.hubId(),
-                    inventoryItems
-            );
+            if(inventoryDeducted){
+                inventoryCommandPort.restoreInventory(
+                        command.hubId(),
+                        inventoryItems
+                );
+            }
 
             throw e;
         }

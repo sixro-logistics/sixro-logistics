@@ -35,15 +35,17 @@ public class OrderQueryFacade {
             }
         }
 
-        boolean isReceiverCompany = affiliationId.equals(result.receiverCompanyId());
+        if(userRole == UserRole.COMPANY_MANAGER) {
+            boolean isReceiverCompany = affiliationId.equals(result.receiverCompanyId());
 
-        boolean isSupplierCompany =
-                result.orderItems().stream()
-                        .anyMatch(item ->
-                                affiliationId.equals(item.companyId()));
+            boolean isSupplierCompany =
+                    result.orderItems().stream()
+                            .anyMatch(item ->
+                                    affiliationId.equals(item.companyId()));
 
-        if(!isReceiverCompany || !isSupplierCompany){
-            throw new BaseException(CommonErrorCode.FORBIDDEN);
+            if (!isReceiverCompany || !isSupplierCompany) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
+            }
         }
 
         // TO DO : 배송 담당자 API 호출 및 권한 검증
