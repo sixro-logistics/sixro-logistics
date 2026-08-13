@@ -39,7 +39,7 @@ Micrometer Tracing과 Zipkin을 통해 서비스 간 요청 흐름을 추적할 
 | Product Service | 상품 정보 관리                                |   [상세 보기](./product-service/README.md)    |
 | Order Service | 주문 생성과 상태 관리                            |    [상세 보기](./order-service/README.md)     |
 | Inventory Service | 허브별 상품 재고 관리                            |  [상세 보기](./inventory-service/README.md)   |
-| Delivery Service | 배송과 배송 담당자 관리                           |   [상세 보기](./delivery-service/README.md)   |
+| Delivery Service | 배송 및 배송 경로, 배송 담당자 관리                           |   [상세 보기](./delivery-service/README.md)   |
 | Notification Service | Slack 메시지 및 AI 기반 알림 처리                 | [상세 보기](./notification-service/README.md) |
 
 
