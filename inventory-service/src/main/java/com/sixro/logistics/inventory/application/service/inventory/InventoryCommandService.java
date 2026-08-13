@@ -5,6 +5,7 @@ import com.sixro.logistics.inventory.application.command.*;
 import com.sixro.logistics.inventory.application.result.*;
 import com.sixro.logistics.inventory.application.service.event.ProcessedEventService;
 import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
+import com.sixro.logistics.inventory.domain.entity.inventory.InventoryOperation;
 import com.sixro.logistics.inventory.domain.repository.inventory.InventoryRepository;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import jakarta.transaction.Transactional;
@@ -23,6 +24,7 @@ public class InventoryCommandService {
 
     private final InventoryRepository inventoryRepository;
     private final ProcessedEventService processedEventService;
+    private final InventoryIdempotencyService inventoryIdempotencyService;
 
     public InventoryCreateResult createInventory(InventoryCreateServiceCommand command) {
 
@@ -91,6 +93,12 @@ public class InventoryCommandService {
 
     public void deductInventory(InventoryDeductCommand command) {
 
+        if(inventoryIdempotencyService.isProcessed(
+                command.idempotencyKey()
+        )){
+            return;
+        }
+
         Map<UUID, Integer> quantityMap = command.items()
                 .stream()
                 .collect(Collectors.toMap(
@@ -121,10 +129,28 @@ public class InventoryCommandService {
             inventory.deductStock(quantity);
         }
 
+        inventoryIdempotencyService.save(
+                command.idempotencyKey(),
+                InventoryOperation.DEDUCT
+        );
+
     }
 
     public void restoreInventory(InventoryRestoreCommand command) {
+
+        if(inventoryIdempotencyService.isProcessed(
+                command.idempotencyKey()
+        )){
+            return;
+        }
+
         restoreStock(command.hubId(), command.items());
+
+        inventoryIdempotencyService.save(
+                command.idempotencyKey(),
+                InventoryOperation.RESTORE
+        );
+
     }
 
     public void restoreInventoryByEvent(InventoryRestoreByEventCommand command) {

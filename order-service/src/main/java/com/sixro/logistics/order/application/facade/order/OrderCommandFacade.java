@@ -12,9 +12,9 @@ import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.domain.entity.order.OrderStatus;
 import com.sixro.logistics.order.exception.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -70,12 +70,21 @@ public class OrderCommandFacade {
             throw new BaseException(OrderErrorCode.PRODUCT_NOT_FOUND);
         }
 
+        // 중복 차감, 복원 방지하기 위해 멱등키를 재고 서비스로 전달
+        UUID deductIdempotencyKey = command.idempotencyKey();
+
+        UUID restoreIdempotencyKey = UUID.nameUUIDFromBytes(
+                (command.idempotencyKey() + ":RESTORE")
+                        .getBytes(StandardCharsets.UTF_8)
+        );
+
         boolean inventoryDeducted = false;
 
         try{
 
             // 재고 차감 동기 처리
             inventoryCommandPort.deductInventory(
+                    deductIdempotencyKey,
                     command.hubId(),
                     inventoryItems
             );
@@ -99,6 +108,7 @@ public class OrderCommandFacade {
             // 주문 생성 실패 시 재고 복원 동기 처리
             if(inventoryDeducted){
                 inventoryCommandPort.restoreInventory(
+                        restoreIdempotencyKey,
                         command.hubId(),
                         inventoryItems
                 );
@@ -218,6 +228,7 @@ public class OrderCommandFacade {
             List<OrderCreateServiceItem> items
     ) {
         return new OrderCreateServiceCommand(
+                command.idempotencyKey(),
                 command.hubId(),
                 command.receiverId(),
                 command.receiverCompanyId(),

@@ -5,8 +5,16 @@ import java.util.UUID;
 
 public interface InventoryCommandPort {
 
-    void deductInventory(UUID hubId, List<InventoryCommandItem> items);
+    void deductInventory(
+            UUID idempotencyKey,
+            UUID hubId,
+            List<InventoryCommandItem> items
+    );
 
-    void restoreInventory(UUID hubId, List<InventoryCommandItem> items);
+    void restoreInventory(
+            UUID idempotencyKey,
+            UUID hubId,
+            List<InventoryCommandItem> items
+    );
 
 }

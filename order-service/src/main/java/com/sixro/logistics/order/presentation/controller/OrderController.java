@@ -32,10 +32,11 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<CommonResponse<OrderCreateResponseDto>> createOrder(
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @Valid @RequestBody OrderCreateRequestDto requestDto){
 
         OrderCreateResult result
-                = orderCommandFacade.createOrder(requestDto.toCommand());
+                = orderCommandFacade.createOrder(requestDto.toCommand(idempotencyKey));
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -48,12 +49,13 @@ public class OrderController {
 
     @GetMapping("/{orderId}")
     public ResponseEntity<CommonResponse<OrderGetOneResponseDto>> getOneOrder(
+            @RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
             @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID orderId){
 
         OrderGetOneResult result =
-                orderQueryFacade.getOneOrder(userRole, affiliationId, orderId);
+                orderQueryFacade.getOneOrder(userId, userRole, affiliationId, orderId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)

@@ -35,8 +35,9 @@ public record OrderCreateRequestDto(
 
 ) {
 
-        public OrderCreateCommand toCommand() {
+        public OrderCreateCommand toCommand(UUID idempotencyKey) {
                 return new OrderCreateCommand(
+                        idempotencyKey,
                         hubId,
                         receiverId,
                         receiverCompanyId,

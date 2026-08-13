@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record OrderCreateServiceCommand(
-
+        UUID idempotencyKey,
         UUID hubId,
         UUID receiverId,
         UUID receiverCompanyId,
@@ -13,6 +13,5 @@ public record OrderCreateServiceCommand(
         LocalDateTime deliveryDeadline,
         String requests,
         List<OrderCreateServiceItem> orderItems
-
 ) {
 }

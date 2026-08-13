@@ -29,6 +29,28 @@ CREATE TABLE IF NOT EXISTS inventory_schema.p_inventory
     CHECK (stock >= 0)
     );
 
+-- 재고 멱등성
+CREATE TABLE IF NOT EXISTS inventory_schema.p_inventory_idempotency
+(
+    id                UUID         NOT NULL,
+    idempotency_key   UUID         NOT NULL,
+    operation         VARCHAR(20)  NOT NULL,
+
+    CONSTRAINT pk_inventory_idempotency
+    PRIMARY KEY (id),
+
+    CONSTRAINT uk_inventory_idempotency_key
+    UNIQUE (idempotency_key),
+
+    CONSTRAINT ck_inventory_idempotency_operation
+    CHECK (
+              operation IN (
+              'DEDUCT',
+              'RESTORE'
+                           )
+    )
+    );
+
 -- 처리된 이벤트
 CREATE TABLE IF NOT EXISTS inventory_schema.p_inventory_processed_event
 (

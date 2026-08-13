@@ -18,7 +18,9 @@ public class InventoryClientAdapter implements InventoryCommandPort {
     private final InventoryClient inventoryClient;
 
     @Override
-    public void deductInventory(UUID hubId, List<InventoryCommandItem> items) {
+    public void deductInventory(
+            UUID idempotencyKey, UUID hubId, List<InventoryCommandItem> items
+    ) {
 
         InventoryDeductRequest request = new InventoryDeductRequest(
                 hubId,
@@ -31,17 +33,23 @@ public class InventoryClientAdapter implements InventoryCommandPort {
         );
 
         try {
-            inventoryClient.deductInventory(request);
+
+            inventoryClient.deductInventory(
+                    idempotencyKey,
+                    request
+            );
+
         } catch (FeignException.NotFound e) {
             throw new BaseException(OrderErrorCode.INVENTORY_NOT_FOUND);
         } catch(FeignException.Conflict e) {
             throw new BaseException(OrderErrorCode.OUT_OF_STOCK);
-    }
+        }
 
     }
 
     @Override
     public void restoreInventory(
+            UUID idempotencyKey,
             UUID hubId,
             List<InventoryCommandItem> items
     ) {
@@ -56,8 +64,13 @@ public class InventoryClientAdapter implements InventoryCommandPort {
         );
 
         try{
-            inventoryClient.restoreInventory(request);
-        }catch(FeignException e){
+
+            inventoryClient.restoreInventory(
+                    idempotencyKey,
+                    request
+            );
+
+        } catch(FeignException e){
             throw new BaseException(OrderErrorCode.INVENTORY_RESTORE_FAILED);
         }
     }

@@ -40,6 +40,9 @@ class OrderCommandServiceTest {
     @Mock
     private ProcessedEventService processedEventService;
 
+    @Mock
+    private OrderIdempotencyService orderIdempotencyService;
+
     @InjectMocks
     private OrderCommandService orderService;
 
@@ -52,6 +55,7 @@ class OrderCommandServiceTest {
 
         // given
         UUID orderId = UUID.randomUUID();
+        UUID idempotencyKey = UUID.randomUUID();
         UUID hubId = UUID.randomUUID();
         UUID ordererId = UUID.randomUUID();
         UUID receiverCompanyId = UUID.randomUUID();
@@ -60,6 +64,7 @@ class OrderCommandServiceTest {
 
         OrderCreateServiceCommand command =
                 new OrderCreateServiceCommand(
+                        idempotencyKey,
                         hubId,
                         ordererId,
                         receiverCompanyId,
@@ -77,16 +82,8 @@ class OrderCommandServiceTest {
                         )
                 );
 
-        Order savedOrder = Order.create(
-                hubId,
-                ordererId,
-                receiverCompanyId,
-                "서울시 강남구",
-                command.deliveryDeadline(),
-                "문 앞"
-        );
-
-        setOrderId(savedOrder, orderId);
+        when(orderIdempotencyService.find(idempotencyKey))
+                .thenReturn(Optional.empty());
 
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> {
@@ -148,10 +145,12 @@ class OrderCommandServiceTest {
         assertThat(result.orderItems().getFirst().quantity())
                 .isEqualTo(3);
 
+        verify(orderIdempotencyService)
+                .save(idempotencyKey, orderId);
+
         verify(outboxService)
                 .saveOrderCreated(any(EventEnvelope.class));
     }
-
 
     @Test
     void updateOrder_success() {
