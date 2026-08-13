@@ -27,6 +27,13 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
+    listener:
+      ack-mode: record
+      observation-enabled: true
+
+    template:
+      observation-enabled: true
+
 server:
   port:
     19100
@@ -48,3 +55,17 @@ management:
     web:
       exposure:
         include: health,info
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+
+logging:
+  level:
+    com.sixro.logistics.delivery.infrastructure.client.user.UserClient: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'
