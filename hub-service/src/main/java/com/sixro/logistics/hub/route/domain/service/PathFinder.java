@@ -55,7 +55,6 @@ public class PathFinder {
             // 인접 노드 탐색
             List<RouteNetworkEdge> adjacentEdges = graph.getOrDefault(current.hubId(), Collections.emptyList());
             for (RouteNetworkEdge edge : adjacentEdges) {
-                // TODO: 전략 패턴 파라미터도 RouteNetworkEdge로 통일되어야 합니다.
                 double newWeight = current.totalWeight() + weightStrategy.calculateWeight(edge, transferMetrics);
                 UUID nextHubId = edge.destinationHubId();
 

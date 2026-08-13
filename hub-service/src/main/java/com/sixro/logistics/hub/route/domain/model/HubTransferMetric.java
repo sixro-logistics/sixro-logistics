@@ -13,9 +13,11 @@ public record HubTransferMetric(
 
     // 혼잡률 계산 팩토리 메서드
     public static HubTransferMetric of(UUID hubId, int baseTransferTimeSeconds, int currentVolume, int maxCapacity) {
-        if (maxCapacity <= 0) maxCapacity = 10000; // 0으로 나누기 방지, maxCapacity 의 최소값 활용
 
-        double utilization = (double) currentVolume / maxCapacity; // 적재율 = 물동량 / 최대 처리 용량
+        int storageCapacity = (int) (maxCapacity * 0.20);
+        if (storageCapacity <= 0) storageCapacity = 2000; // 0으로 나누기 방지, maxCapacity 의 최소값 활용
+
+        double utilization = (double) currentVolume / storageCapacity; // 적재율 = 물동량 / 처리 용량
         double rate = 1.0 + Math.pow(Math.max(0, utilization - 0.5) * 2, 3); // 혼잡률
 
         return new HubTransferMetric(hubId, baseTransferTimeSeconds, rate);

@@ -38,10 +38,10 @@ public class HubUtilizationMonitorScheduler {
 
         for (Hub hub : operatingHubs) {
             int maxCapacity = hub.getMaxCapacity(); // 최대 처리 용량
-            int deductAmount = Math.max(maxCapacity / MINUTES_PER_DAY, 1); // 분당 처리량 (최대 처리 용량 / 1440분 으로 설정)
+            int decreaseAmount = Math.max(maxCapacity / MINUTES_PER_DAY, 1); // 분당 처리량 (최대 처리 용량 / 1440분 으로 설정)
 
             // Redis Lua 스크립트 활용 물동량 차감
-            int currentVolume = hubMetricsPort.decreaseVolume(hub.getId(), deductAmount);
+            int currentVolume = hubMetricsPort.decreaseVolume(hub.getId(), decreaseAmount);
 
             // 상태 변경 확인, 변경 발생시 이벤트 발행
             evaluateAndTransitionStatus(hub, currentVolume, maxCapacity);
@@ -49,7 +49,10 @@ public class HubUtilizationMonitorScheduler {
     }
 
     private void evaluateAndTransitionStatus(Hub hub, int currentVolume, int maxCapacity) {
-        double utilization = (double) currentVolume / maxCapacity; // 적재율 = 물동량 / 최대 처리 용량
+        int storageCapacity = (int) (maxCapacity * 0.20);
+        if (storageCapacity <= 0) storageCapacity = 2000;
+
+        double utilization = (double) currentVolume / storageCapacity; // 적재율 = 물동량 / 최대 처리 용량
         HubStatus currentStatus = hub.getHubStatus();
 
         // 상태 전이 규칙 적용하여 상태 변화 판단
