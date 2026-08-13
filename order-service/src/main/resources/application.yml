@@ -29,8 +29,8 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
         spring.json.type.mapping: >
-          deliveryCreated:com.sixro.logistics.order.domain.event.delivery.DeliveryCreatedEvent,
-          deliveryCreationFailed:com.sixro.logistics.order.domain.event.delivery.DeliveryCreationFailedEvent
+          deliveryCreated:com.sixro.logistics.order.application.event.DeliveryCreatedEvent,
+          deliveryCreationFailed:com.sixro.logistics.order.application.event.DeliveryCreationFailedEvent
 
 server:
   port: 19096
