@@ -12,7 +12,7 @@ eureka:
     instance-id: ${spring.application.name}:${server.port}
   client:
     service-url:
-      defaultZone: http://localhost:19090/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
 
 spring:
   application:
@@ -109,7 +109,7 @@ management:
       probability: 1.0 # 100% 추적
   zipkin:
     tracing:
-      endpoint: ${ZIPKIN_ENDPOINT}
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 # TMAP API 1,000건/일 무료
 tmap:
