@@ -94,20 +94,8 @@ Order Service의 주문 생성 이벤트를 소비하고 User·Company·Hub Serv
 내부 API는 배송경로 담당자와 업체 배송 담당자를 함께 조회하며, `null`과 중복 ID를 제외합니다. 담당자가 배정되지 않은 경우 오류가 아닌 빈 배열을 반환합니다.
 
 ## 🔄 배송 생성 흐름
+<img width="700" height="800" src="https://github.com/user-attachments/assets/7befc2a1-c35f-484b-a26b-12a9af2ffd14" />
 
-```text
-Order Service
-    → order.created 발행
-    → Delivery Service 이벤트 소비
-    → User Service 수령인 정보 조회
-    → Company Service 수령 업체의 목적지 허브 조회
-    → Hub Service 출발·목적지 허브 간 경로 조회
-    → 배송 및 배송경로 생성
-    → 배송 담당자 순차 자동 배정
-    → DeliveryCreated Outbox 저장
-    → 트랜잭션 커밋
-    → Outbox Publisher가 delivery.created 발행
-```
 
 배송, 배송경로 및 `DeliveryCreatedEvent` Outbox는 하나의 DB 트랜잭션에서 저장합니다.
 
