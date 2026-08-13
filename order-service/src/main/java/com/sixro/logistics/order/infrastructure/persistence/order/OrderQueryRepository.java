@@ -4,6 +4,7 @@ import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.order.application.command.OrderSearchCommand;
 import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.domain.entity.order.Order;
@@ -74,9 +75,8 @@ public class OrderQueryRepository {
                     order.receiverCompanyId.eq(affiliationId)
                             .or(order.items.any().companyId.eq(affiliationId));
 
-            // TO DO: 자신이 담당한 주문 목록만 조회 가능, 임시 방편으로 아래와 같이 구현
             case DELIVERY_MANAGER ->
-                    order.receiverId.eq(userId);
+                    throw new BaseException(CommonErrorCode.FORBIDDEN);
         };
     }
 

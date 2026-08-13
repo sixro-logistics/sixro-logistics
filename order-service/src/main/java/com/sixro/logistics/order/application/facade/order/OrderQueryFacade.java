@@ -3,6 +3,8 @@ package com.sixro.logistics.order.application.facade.order;
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.order.application.command.OrderSearchCommand;
+import com.sixro.logistics.order.application.model.DeliveryManagerInfo;
+import com.sixro.logistics.order.application.port.DeliveryQueryPort;
 import com.sixro.logistics.order.application.result.OrderGetOneResult;
 import com.sixro.logistics.order.application.result.OrderSearchResult;
 import com.sixro.logistics.order.application.service.order.OrderQueryService;
@@ -22,9 +24,10 @@ import java.util.UUID;
 public class OrderQueryFacade {
 
     private final OrderQueryService orderQueryService;
+    private final DeliveryQueryPort deliveryQueryPort;
 
     public OrderGetOneResult getOneOrder(
-            UserRole userRole, UUID affiliationId, UUID orderId
+            UUID userId, UserRole userRole, UUID affiliationId, UUID orderId
     ) {
 
         OrderGetOneResult result = orderQueryService.getOneOrder(orderId);
@@ -48,7 +51,15 @@ public class OrderQueryFacade {
             }
         }
 
-        // TO DO : 배송 담당자 API 호출 및 권한 검증
+        if(userRole == UserRole.DELIVERY_MANAGER){
+            DeliveryManagerInfo deliveryManagerInfo =
+                    deliveryQueryPort.getDeliveryManagerIds(orderId);
+
+            if(deliveryManagerInfo == null ||
+                    !deliveryManagerInfo.deliveryManagerIds().contains(userId)) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
+            }
+        }
 
         return result;
     }
@@ -56,6 +67,11 @@ public class OrderQueryFacade {
     public OrderSearchResult searchOrder(
             UUID userId, UserRole userRole, UUID affiliationId,
             OrderSearchCommand command, Pageable pageable) {
+
+        // 구현하려면 배송 담당자 id를 통해 담당하는 주문 목록을 조회해야 함
+        if (userRole == UserRole.DELIVERY_MANAGER) {
+            throw new BaseException(CommonErrorCode.FORBIDDEN);
+        }
 
         Pageable validatedPageable = pageValidate(pageable);
 
