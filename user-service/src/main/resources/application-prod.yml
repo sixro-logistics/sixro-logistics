@@ -1,0 +1,87 @@
+server:
+  # 컨테이너 종료 시 진행 중인 요청을 정리합니다.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  datasource:
+    # 하나의 물리 DB인 sixro_db에서 user_schema를 사용합니다.
+    url: ${USER_DB_URL}
+    username: ${USER_DB_USERNAME:user_user}
+    password: ${USER_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: ${USER_DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${USER_DB_MIN_IDLE:2}
+      connection-timeout: 30000
+      validation-timeout: 5000
+
+  jpa:
+    hibernate:
+      # 운영 DB 구조는 DDL로 관리하고 Entity와의 일치 여부만 검사합니다.
+      ddl-auto: validate
+
+    show-sql: false
+    open-in-view: false
+
+    properties:
+      hibernate:
+        default_schema: user_schema
+        format_sql: false
+        use_sql_comments: false
+
+  kafka:
+    # Docker Kafka 서비스명 또는 AWS MSK Broker 주소
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+  cloud:
+    discovery:
+      enabled: true
+
+eureka:
+  instance:
+    # AWS Docker 환경에서는 127.0.0.1로 등록하지 않습니다.
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:user-service}
+    instance-id: ${spring.application.name}:${HOSTNAME:${random.value}}
+
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - metrics
+          - circuitbreakers
+
+  endpoint:
+    health:
+      show-details: when_authorized
+
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT}
+
+logging:
+  level:
+    root: INFO
+    com.sixro.logistics.user: INFO
+
+outbox:
+  publisher:
+    fixed-delay: ${OUTBOX_PUBLISHER_FIXED_DELAY:1000}

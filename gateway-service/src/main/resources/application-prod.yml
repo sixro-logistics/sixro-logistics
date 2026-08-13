@@ -1,0 +1,65 @@
+server:
+  # ALB 또는 Reverse Proxy가 전달한 Forwarded Header를 반영합니다.
+  forward-headers-strategy: framework
+
+  # 컨테이너 종료 시 진행 중인 요청을 정리합니다.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  data:
+    redis:
+      # Docker Redis 서비스명 또는 AWS ElastiCache Endpoint
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 컨테이너에 읽기 전용으로 마운트한 공개키
+          public-key-location: file:${JWT_PUBLIC_KEY_PATH}
+
+eureka:
+  instance:
+    # AWS Docker 환경에서는 127.0.0.1로 등록하지 않습니다.
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:gateway-service}
+    instance-id: ${spring.application.name}:${HOSTNAME:${random.value}}
+
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - metrics
+
+  endpoint:
+    health:
+      show-details: when_authorized
+
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT}
+
+logging:
+  level:
+    root: INFO
+    com.sixro.logistics.gateway: INFO

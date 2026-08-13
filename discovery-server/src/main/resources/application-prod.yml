@@ -1,0 +1,36 @@
+eureka:
+  instance:
+    # Docker Network 내부에서 접근 가능한 서비스 이름을 사용합니다.
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:discovery-server}
+
+  client:
+    # 단일 Eureka Server이므로 자기 자신을 등록하거나 조회하지 않습니다.
+    register-with-eureka: false
+    fetch-registry: false
+
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+  server:
+    # 일시적인 네트워크 문제로 서비스가 대량 제거되는 것을 방지합니다.
+    enable-self-preservation: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+
+  endpoint:
+    health:
+      show-details: when_authorized
+
+server:
+  # 컨테이너 종료 시 진행 중인 요청을 정리합니다.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
