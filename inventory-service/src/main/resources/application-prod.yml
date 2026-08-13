@@ -3,9 +3,9 @@ spring:
     name: inventory-service
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${INVENTORY_DB_URL}
+    username: ${INVENTORY_DB_USERNAME}
+    password: ${INVENTORY_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -28,15 +28,16 @@ server:
   port: 19100
 
 eureka:
+  instance:
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    instance-id: ${spring.application.name}:${server.port}
+
   client:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: ${EUREKA_SERVER_URL}
-
-  instance:
-    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
-    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
 
 management:
   endpoints:
