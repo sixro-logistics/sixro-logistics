@@ -37,10 +37,10 @@ public class DeliveryRoute extends BaseEntity {
     @Column(nullable = false)
     private UUID destHubId;
 
-    @Column(nullable = false)
+    @Column(name = "expected_distance_m", nullable = false)
     private Long expectedDistanceM;
 
-    @Column(nullable = false)
+    @Column(name = "expected_duration_s", nullable = false)
     private Long expectedDurationS;
 
     @Enumerated(EnumType.STRING)
