@@ -7,6 +7,7 @@ import com.sixro.logistics.order.application.result.*;
 import com.sixro.logistics.order.application.service.event.ProcessedEventService;
 import com.sixro.logistics.order.application.service.outbox.OutboxService;
 import com.sixro.logistics.order.domain.entity.order.Order;
+import com.sixro.logistics.order.domain.entity.order.OrderIdempotency;
 import com.sixro.logistics.order.domain.entity.order.OrderItem;
 import com.sixro.logistics.order.domain.event.order.*;
 import com.sixro.logistics.order.domain.repository.order.OrderRepository;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -26,10 +28,43 @@ public class OrderCommandService {
     private final OrderRepository orderRepository;
     private final OutboxService outboxService;
     private final ProcessedEventService processedEventService;
+    private final OrderIdempotencyService orderIdempotencyService;
 
     private UUID SYSTEM_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
     public OrderCreateResult createOrder(OrderCreateServiceCommand command) {
+
+        Optional<OrderIdempotency> existing =
+                orderIdempotencyService.find(command.idempotencyKey());
+
+        if(existing.isPresent()){
+
+            // 기존 주문 반환
+            Order order = orderRepository.findByIdWithItems(existing.get().getOrderId())
+                    .orElseThrow(() -> new BaseException(OrderErrorCode.ORDER_NOT_FOUND)
+            );
+
+            return new OrderCreateResult(
+                    order.getId(),
+                    order.getReceiverId(),
+                    order.getHubId(),
+                    order.getReceiverCompanyId(),
+                    order.getDeliveryAddress(),
+                    order.getDeliveryDeadline(),
+                    order.getRequests(),
+                    order.getOrderStatus(),
+                    order.getItems()
+                            .stream()
+                            .map(item -> new OrderResultItem(
+                                    item.getProductId(),
+                                    item.getProductName(),
+                                    item.getProductPrice(),
+                                    item.getQuantity(),
+                                    item.getCompanyId()
+                            ))
+                            .toList()
+            );
+        }
 
         Order order = Order.create(
                 command.hubId(),
@@ -53,6 +88,12 @@ public class OrderCommandService {
         orderItems.forEach(item -> order.addOrderItem(item));
 
         Order createdOrder = orderRepository.save(order);
+
+        // 주문 생성 성공 후 멱등키 기록
+        orderIdempotencyService.save(
+                command.idempotencyKey(),
+                createdOrder.getId()
+        );
 
         List<OrderResultItem> createdItems = createdOrder.getItems()
                 .stream()

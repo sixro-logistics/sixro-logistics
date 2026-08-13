@@ -228,6 +228,7 @@ public class OrderCommandFacade {
             List<OrderCreateServiceItem> items
     ) {
         return new OrderCreateServiceCommand(
+                command.idempotencyKey(),
                 command.hubId(),
                 command.receiverId(),
                 command.receiverCompanyId(),
