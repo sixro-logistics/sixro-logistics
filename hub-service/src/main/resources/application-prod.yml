@@ -1,0 +1,123 @@
+server:
+  port: ${HUB_SERVER_PORT:19098}
+
+eureka:
+  instance:
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    instance-id: ${spring.application.name}:${server.port}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL}
+
+spring:
+  application:
+    name: hub-service
+
+  datasource:
+    url: ${HUB_DB_URL}
+    username: ${HUB_DB_USERNAME}
+    password: ${HUB_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+
+    open-in-view: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+      lettuce:  # 커넥션 풀 설정
+        pool:
+          max-active: 8    # 풀에 할당할 수 있는 최대 커넥션 수
+          max-idle: 8      # 풀에 유지할 수 있는 최대 유휴(대기) 커넥션 수
+          min-idle: 0      # 항상 유지할 최소 유휴 커넥션 수
+          max-wait: 2000ms # 커넥션 할당 대기 최대 시간 (2초)
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      # Producer 설정
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      # Consumer 설정
+      group-id: hub-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*" # 모든 매핑 허용
+        spring.json.use.type.headers: false
+
+logging:
+  level:
+    root: INFO
+    com.sixro.logistics: INFO
+    org.springframework.web: INFO
+    org.springframework.cache: INFO
+
+resilience4j:
+  retry:
+    instances:
+      tmapApi:
+        max-attempts: 3
+        wait-duration: 1s # 1차 재시도 대기 시간
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2 # 2차 재시도는 2 * 1s = 2s 후 시도
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+
+  circuitbreaker:
+    instances:
+      tmapApi:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20 # 최근 20번의 요청을 기준으로 통계 산출
+        minimum-number-of-calls: 10 # 최소 10번은 호출되어야 실패율 계산 시작
+        failure-rate-threshold: 50 # 50% 이상 실패 시 서킷 오픈 (TMAP 연동 중단)
+        slow-call-rate-threshold: 80 # 응답이 느린 요청이 80% 이상이어도 장애로 간주
+        slow-call-duration-threshold: 5s # 5초 이상 걸리면 느린 요청으로 간주 (Read Timeout 10s보다 짧게 설정)
+        wait-duration-in-open-state: 30s # 서킷 오픈 후 30초 대기 후 Half-Open 상태로 전환
+        permitted-number-of-calls-in-half-open-state: 5
+
+  ratelimiter:
+    instances:
+      tmapApi:
+        limit-refresh-period: 1s
+        limit-for-period: 3
+        timeout-duration: 30s
+
+management:
+  tracing:
+    sampling:
+      probability: 0.1 # 10% 추적
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT}
+
+# TMAP API 1,000건/일 무료
+tmap:
+  app-key: ${TMAP_APP_KEY}
+  route-base-url: "https://apis.openapi.sk.com/tmap"
+
+# Redis Cache 설정
+cache:
+  default-ttl: 3600 # 1시간
+  ttls:
+    "hub:info": 86400             # 24시간
+    "hub:info:internal": 86400    # 24시간
+    "hub:route": 86400            # 24시간
+    "hub:metrics:volume": 300 # 5분, 허브별 실시간 혼잡률 지표
+    "hub:network:active": 86400   # 24시간, 활성화된 전체 노선망 데이터
+    "hub:info:closed": 86400      # 24시간, 폐쇄된 허브 ID 목록

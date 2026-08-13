@@ -12,7 +12,7 @@ eureka:
     instance-id: ${spring.application.name}:${server.port}
   client:
     service-url:
-      defaultZone: http://localhost:19090/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}
 
 spring:
   application:
@@ -51,17 +51,18 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
-      # Hub Producer 설정
+      # Producer 설정
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
-      # Route Consumer 설정
-      group-id: route-service-group
+      # Consumer 설정
+      group-id: hub-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*" # 모든 매핑 허용
+        spring.json.use.type.headers: false
 
 logging:
   level:
@@ -101,6 +102,14 @@ resilience4j:
         limit-refresh-period: 1s
         limit-for-period: 3
         timeout-duration: 30s
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # 100% 추적
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 # TMAP API 1,000건/일 무료
 tmap:

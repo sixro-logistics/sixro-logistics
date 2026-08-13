@@ -18,28 +18,39 @@ public class HubRedisMetricsAdapter implements HubMetricsPort {
     private static final String HUB_METRICS_VOLUME = "hub:metrics:volume";
 
     private final StringRedisTemplate redisTemplate;
-    private DefaultRedisScript<Long> deductScript; // 애플리케이션 기동 시 Lua 스크립트 로드
+    private DefaultRedisScript<Long> increaseScript;
+    private DefaultRedisScript<Long> decreaseScript;
 
+    // 애플리케이션 기동 시 Lua 스크립트 로드
     @PostConstruct
     public void init() {
-        deductScript = new DefaultRedisScript<>();
-        deductScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/deduct-volume.lua")));
-        deductScript.setResultType(Long.class);
+        increaseScript = new DefaultRedisScript<>();
+        increaseScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/increase-volume.lua")));
+        increaseScript.setResultType(Long.class);
+
+        decreaseScript = new DefaultRedisScript<>();
+        decreaseScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/decrease-volume.lua")));
+        decreaseScript.setResultType(Long.class);
     }
 
     @Override
-    public void increaseVolume(UUID hubId, int boxCount) {
-        // 허브 물동량 증가
-        redisTemplate.opsForValue().increment(generateKey(hubId), boxCount);
+    public int increaseVolume(UUID hubId, int increaseAmount) {
+        // 허브 물동량 즈가
+        Long updatedVolume = redisTemplate.execute(
+                increaseScript,
+                Collections.singletonList(generateKey(hubId)),
+                String.valueOf(increaseAmount)
+        );
+        return updatedVolume != null ? updatedVolume.intValue() : 0;
     }
 
     @Override
-    public int decreaseVolume(UUID hubId, int maxDeductAmount) {
+    public int decreaseVolume(UUID hubId, int decreaseAmount) {
         // 허브 물동량 차감
         Long remainingVolume = redisTemplate.execute(
-                deductScript,
+                decreaseScript,
                 Collections.singletonList(generateKey(hubId)),
-                String.valueOf(maxDeductAmount)
+                String.valueOf(decreaseAmount)
         );
 
         return remainingVolume != null ? remainingVolume.intValue() : 0;

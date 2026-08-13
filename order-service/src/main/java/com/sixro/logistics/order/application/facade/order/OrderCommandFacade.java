@@ -12,6 +12,7 @@ import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.domain.entity.order.OrderStatus;
 import com.sixro.logistics.order.exception.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderCommandFacade {
 
+    private final UserQueryPort userQueryPort;
     private final HubQueryPort hubQueryPort;
     private final CompanyQueryPort companyQueryPort;
     private final ProductQueryPort productQueryPort;
@@ -30,15 +32,25 @@ public class OrderCommandFacade {
     private final OrderCommandService orderCommandService;
     private final OrderQueryService orderQueryService;
 
-    public OrderCreateResult createOrder(
-            UUID userId,
-            UserRole userRole,
-            OrderCreateCommand command
-    ) {
+    public OrderCreateResult createOrder(OrderCreateCommand command) {
 
+        // 동일한 상품은 하나로 묶어서 요청해야 함
         validateDuplicateProductIds(command.orderItems());
 
-        // TO DO: 회원, 허브, 업체, 상품 서비스 호출 및 검증 (validate 호출)
+        UserInfo userInfo = userQueryPort.getUser(command.receiverId());
+        if(userInfo == null){
+            throw new BaseException(OrderErrorCode.RECEIVER_NOT_FOUND);
+        }
+
+        HubInfo hubInfo = hubQueryPort.getHub(command.hubId());
+        if(hubInfo == null){
+            throw new BaseException(OrderErrorCode.HUB_NOT_FOUND);
+        }
+
+        CompanyInfo companyInfo = companyQueryPort.getCompany(command.receiverCompanyId());
+        if(companyInfo == null){
+            throw new BaseException(OrderErrorCode.COMPANY_NOT_FOUND);
+        }
 
         List<InventoryCommandItem> inventoryItems =
                 command.orderItems()
@@ -49,40 +61,60 @@ public class OrderCommandFacade {
                         ))
                         .toList();
 
-        inventoryCommandPort.deductInventory(
-                command.hubId(),
-                inventoryItems
-        );
+        List<UUID> productIds = inventoryItems.stream()
+                        .map(item -> item.productId())
+                        .toList();
+
+        List<ProductInfo> productInfo = productQueryPort.getProducts(productIds);
+        if(productInfo.size() != inventoryItems.size()){
+            throw new BaseException(OrderErrorCode.PRODUCT_NOT_FOUND);
+        }
+
+        boolean inventoryDeducted = false;
 
         try{
+
+            // 재고 차감 동기 처리
+            inventoryCommandPort.deductInventory(
+                    command.hubId(),
+                    inventoryItems
+            );
+
+            inventoryDeducted = true;
+
             List<OrderCreateServiceItem> serviceItems =
-                    createServiceItems(command);
+                    createServiceItems(command, productInfo);
 
             OrderCreateServiceCommand serviceCommand =
                     createServiceCommand(
                             command,
+                            companyInfo,
                             serviceItems
                     );
 
             return orderCommandService.createOrder(serviceCommand);
 
-        }catch (Exception e){
+        }catch(Exception e){
 
-            inventoryCommandPort.restoreInventory(
-                    command.hubId(),
-                    inventoryItems
-            );
+            // 주문 생성 실패 시 재고 복원 동기 처리
+            if(inventoryDeducted){
+                inventoryCommandPort.restoreInventory(
+                        command.hubId(),
+                        inventoryItems
+                );
+            }
 
             throw e;
         }
     }
 
-    public OrderUpdateResult updateOrder(UUID userId, UserRole userRole, UUID affiliationId,
-                                         UUID orderId, OrderUpdateCommand command) {
+    public OrderUpdateResult updateOrder(
+            UserRole userRole, UUID affiliationId,
+            UUID orderId, OrderUpdateCommand command
+    ) {
 
         OrderGetOneResult result = orderQueryService.getOneOrder(orderId);
 
-        // outbox에 order_confirmed 있는지 확인 필요할듯
         if(result.orderStatus() != OrderStatus.CREATED){
             throw new BaseException(OrderErrorCode.ORDER_CANNOT_BE_MODIFIED);
         }
@@ -97,7 +129,7 @@ public class OrderCommandFacade {
     }
 
     public OrderCancelResult cancelOrder(
-            UUID userId, UserRole userRole, UUID affiliationId, UUID orderId
+            UserRole userRole, UUID affiliationId, UUID orderId
     ) {
 
         OrderGetOneResult result = orderQueryService.getOneOrder(orderId);
@@ -130,7 +162,7 @@ public class OrderCommandFacade {
             }
         }
 
-        return orderCommandService.deleteOrder(orderId);
+        return orderCommandService.deleteOrder(userId, orderId);
     }
 
     public void deliveryCreated(DeliveryCreatedCommand command) {
@@ -153,33 +185,43 @@ public class OrderCommandFacade {
         }
     }
 
-    private List<UUID> extractProductIds(OrderCreateCommand command) {
-        return command.orderItems().stream()
-                .map(OrderCommandItem::productId)
-                .toList();
-    }
+    private List<OrderCreateServiceItem> createServiceItems(
+            OrderCreateCommand command,
+            List<ProductInfo> productInfos
+    ) {
+        Map<UUID, ProductInfo> productInfoMap =
+                productInfos.stream()
+                        .collect(Collectors.toMap(
+                                ProductInfo::productId,
+                                Function.identity()
+                        ));
 
-    private List<OrderCreateServiceItem> createServiceItems(OrderCreateCommand command) {
         return command.orderItems().stream()
-                .map(item -> new OrderCreateServiceItem(
-                        item.productId(),
-                        "테스트 상품",
-                        15000,
-                        UUID.randomUUID(),
-                        item.quantity()
-                ))
+                .map(item -> {
+                    ProductInfo product =
+                            productInfoMap.get(item.productId());
+
+                    return new OrderCreateServiceItem(
+                            product.productId(),
+                            product.productName(),
+                            product.price(),
+                            product.companyId(),
+                            item.quantity()
+                    );
+                })
                 .toList();
     }
 
     private OrderCreateServiceCommand createServiceCommand(
             OrderCreateCommand command,
+            CompanyInfo companyInfo,
             List<OrderCreateServiceItem> items
     ) {
         return new OrderCreateServiceCommand(
                 command.hubId(),
                 command.receiverId(),
                 command.receiverCompanyId(),
-                "배송 주소",
+                companyInfo.address(),
                 command.deliveryDeadline(),
                 command.requests(),
                 items

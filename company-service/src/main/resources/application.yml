@@ -10,9 +10,9 @@ spring:
       - "optional:file:../.env[.properties]"
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${COMPANY_DB_URL}
+    username: ${COMPANY_DB_USERNAME}
+    password: ${COMPANY_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -39,7 +39,7 @@ eureka:
     instance-id: ${spring.application.name}:${server.port}
 
   client:
-    # User Service를 Eureka Server에 등록
+    # company Service를 Eureka Server에 등록
     register-with-eureka: true
 
     # Eureka Registry에서 다른 서비스 목록 조회

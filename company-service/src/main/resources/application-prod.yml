@@ -1,0 +1,79 @@
+server:
+  port: 19094
+
+spring:
+  application:
+    name: company-service
+  config:
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:../.env[.properties]"
+
+  datasource:
+    url: ${COMPANY_DB_URL}
+    username: ${COMPANY_DB_USERNAME}
+    password: ${COMPANY_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 운영 환경에서는 테이블 구조 임의 변경 방지를 위해 validate 또는 none 권장
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+        # 스키마 분리 전략에 따른 기본 스키마 설정
+        default_schema: company_schema
+
+cloud:
+  discovery:
+    enabled: true
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    #ip-address: ${EUREKA_INSTANCE_IP_ADDRESS}
+    instance-id: ${spring.application.name}:${server.port}
+
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      # 운영 환경의 Eureka 서버 주소로 변경 필요
+      defaultZone: ${EUREKA_SERVER_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+
+  endpoint:
+    health:
+      show-details: always
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  zipkin:
+    tracing:
+      # 운영 환경의 Zipkin 서버 주소로 변경 필요
+      endpoint: ${ZIPKIN_ENDPOINT}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    com.sixro.logistics.company: INFO
+
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level){green} [${spring.application.name:unknown-service}] [traceId=%X{traceId:-}, spanId=%X{spanId:-}] [%thread] %logger{36} - %msg%n'

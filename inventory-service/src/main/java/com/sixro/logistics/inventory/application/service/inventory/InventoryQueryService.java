@@ -43,9 +43,6 @@ public class InventoryQueryService {
             InventorySearchCommand command, Pageable pageable
     ) {
 
-        // TO DO: userRole 임의로 설정한 부분 삭제
-        userRole = UserRole.MASTER_ADMIN;
-
         Page<Inventory> inventoryPage
                 = inventoryRepository.findAll(userRole, affiliationId, command, pageable);
 

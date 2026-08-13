@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sixro.logistics.order.domain.entity.outbox.Outbox;
 import com.sixro.logistics.order.domain.event.order.OrderCanceledEvent;
 import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
+import com.sixro.logistics.order.domain.event.order.OrderFailedEvent;
 import com.sixro.logistics.order.domain.repository.outbox.OutboxRepository;
 import com.sixro.logistics.order.infrastructure.kafka.KafkaProducer;
 import jakarta.transaction.Transactional;
@@ -71,6 +72,19 @@ public class OutboxPublisher {
                                 );
 
                         kafkaProducer.sendOrderCanceledEvent(event);
+                    }
+
+                    case ORDER_FAILED -> {
+
+                        String payload = outbox.getPayload();
+
+                        EventEnvelope<OrderFailedEvent> event =
+                                objectMapper.readValue(
+                                        payload,
+                                        new TypeReference<EventEnvelope<OrderFailedEvent>>() {}
+                                );
+
+                        kafkaProducer.sendOrderFailedEvent(event);
                     }
 
                     default -> throw new IllegalArgumentException(

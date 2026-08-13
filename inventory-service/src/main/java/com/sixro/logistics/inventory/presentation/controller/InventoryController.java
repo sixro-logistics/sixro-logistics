@@ -1,5 +1,6 @@
 package com.sixro.logistics.inventory.presentation.controller;
 
+import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.common.core.response.PageResponse;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
@@ -32,15 +33,13 @@ public class InventoryController {
 
     @PostMapping
     public ResponseEntity<CommonResponse<InventoryCreateResponseDto>> createInventory(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @Valid @RequestBody InventoryCreateRequestDto requestDto) {
 
         InventoryCreateResult result =
                 inventoryCommandFacade.createInventory(
-                        userId, userRole, affiliationId, requestDto.toCommand()
+                        userRole, affiliationId, requestDto.toCommand()
                 );
 
         return ResponseEntity
@@ -54,15 +53,13 @@ public class InventoryController {
 
     @GetMapping("/{inventoryId}")
     public ResponseEntity<CommonResponse<InventoryGetOneResponseDto>> getOneInventory(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID inventoryId) {
 
         InventoryGetOneResult result =
                 inventoryQueryFacade.getOneInventory(
-                        userId, userRole, affiliationId, inventoryId
+                        userRole, affiliationId, inventoryId
                 );
 
         return ResponseEntity
@@ -76,17 +73,15 @@ public class InventoryController {
 
     @PatchMapping("/{inventoryId}")
     public ResponseEntity<CommonResponse<InventoryUpdateResponseDto>> updateInventory(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID inventoryId,
             @Valid @RequestBody InventoryUpdateRequestDto requestDto
-            ) {
+    ) {
 
         InventoryUpdateResult result =
                 inventoryCommandFacade.updateInventory(
-                        userId, userRole, affiliationId, inventoryId, requestDto.toCommand()
+                        userRole, affiliationId, inventoryId, requestDto.toCommand()
                 );
 
         return ResponseEntity
@@ -100,17 +95,15 @@ public class InventoryController {
 
     @PatchMapping("/{inventoryId}/stock")
     public ResponseEntity<CommonResponse<InventoryStockInResponseDto>> stockInInventory(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID inventoryId,
             @Valid @RequestBody InventoryStockInRequestDto requestDto
     ) {
 
         InventoryStockInCompanyResult result =
                 inventoryCommandFacade.stockInInventory(
-                        userId, userRole, affiliationId, inventoryId, requestDto.toCommand()
+                        userRole, affiliationId, inventoryId, requestDto.toCommand()
                 );
 
         return ResponseEntity
@@ -124,10 +117,9 @@ public class InventoryController {
 
     @DeleteMapping("/{inventoryId}")
     public ResponseEntity<CommonResponse<InventoryDeleteResponseDto>> deleteInventory(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
+            @RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID inventoryId
     ) {
 
@@ -147,16 +139,15 @@ public class InventoryController {
 
     @GetMapping
     public ResponseEntity<CommonResponse<PageResponse<InventorySearchResponseDto>>> searchInventory(
-            /*@RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UserRole userRole, UUID affiliationId,
+            @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @ModelAttribute InventorySearchRequestDto requestDto,
             @PageableDefault(
                     sort = "createdAt",
                     direction = Sort.Direction.DESC,
                     size = 10
             ) Pageable pageable
-            ) {
+    ) {
 
         InventorySearchResult result =
                 inventoryQueryFacade.searchInventory(

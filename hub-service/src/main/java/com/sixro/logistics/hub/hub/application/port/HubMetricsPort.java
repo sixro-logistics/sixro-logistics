@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public interface HubMetricsPort {
-    void increaseVolume(UUID hubId, int boxCount);
-    int decreaseVolume(UUID hubId, int maxDeductAmount);
+    int increaseVolume(UUID hubId, int increaseAmount);
+    int decreaseVolume(UUID hubId, int decreaseAmount);
     Map<UUID, Integer> getCurrentVolumes(List<UUID> hubIds);
 }

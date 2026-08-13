@@ -16,7 +16,7 @@ spring:
       ddl-auto: update
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_SERVER_URL:localhost:9092}
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -28,6 +28,9 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        spring.json.type.mapping: >
+          deliveryCreated:com.sixro.logistics.order.application.event.DeliveryCreatedEvent,
+          deliveryCreationFailed:com.sixro.logistics.order.application.event.DeliveryCreationFailedEvent
 
 server:
   port: 19096

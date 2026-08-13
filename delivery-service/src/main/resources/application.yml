@@ -54,7 +54,6 @@ spring:
           deliveryCreated:com.sixro.logistics.delivery.application.event.DeliveryCreatedEvent,
           deliveryCreationFailed:com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent
 
-
 server:
   port: 19097
 

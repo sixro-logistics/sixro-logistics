@@ -1,5 +1,6 @@
 package com.sixro.logistics.order.infrastructure.client.product;
 
+import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.order.application.model.ProductInfo;
 import com.sixro.logistics.order.application.port.ProductQueryPort;
 import lombok.RequiredArgsConstructor;
@@ -17,19 +18,24 @@ public class ProductClientAdapter implements ProductQueryPort {
     @Override
     public ProductInfo getProduct(UUID productId) {
 
-        ProductClientResponse response =
+        CommonResponse<ProductClientResponse> response =
                 productClient.getProduct(productId);
 
-        return null;
+        return new ProductInfo(
+                response.data().productId(),
+                response.data().productName(),
+                response.data().price(),
+                response.data().companyId()
+        );
     }
 
     @Override
     public List<ProductInfo> getProducts(List<UUID> productIds) {
 
-        ProductClientListResponse response =
+        CommonResponse<List<ProductClientResponse>> response =
                 productClient.getProducts(productIds);
 
-        return response.products().stream()
+        return response.data().stream()
                 .map(product -> new ProductInfo(
                         product.productId(),
                         product.productName(),

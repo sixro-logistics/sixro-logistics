@@ -56,29 +56,58 @@ class UserSecurityEventConsumerTest {
 
     @Test
     void JSON_형식이_잘못되면_예외를_전파한다() {
-        String invalidPayload = "{invalid-json}";
+        String payload = """
+            {
+              "role": "HUB_ADMIN"
+            }
+            """;
 
-        assertThatThrownBy(() -> consumer.consume(invalidPayload))
+        assertThatThrownBy(
+                () -> consumer.consume(payload)
+        )
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("사용자 보안 이벤트 역직렬화 실패")
-                .hasCauseInstanceOf(com.fasterxml.jackson.core.JsonProcessingException.class);
+                .hasMessage(
+                        "사용자 보안 이벤트 역직렬화에 실패했습니다."
+                )
+                .hasCauseInstanceOf(
+                        com.fasterxml.jackson.core
+                                .JsonProcessingException.class
+                );
 
-        verify(invalidationService, never()).invalidate(org.mockito.ArgumentMatchers.any());
+        verify(
+                invalidationService,
+                never()
+        ).invalidate(
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 
     @Test
     void userId가_없는_이벤트는_예외를_전파한다() {
         String payload = """
-                {
-                  "role": "HUB_ADMIN"
-                }
-                """;
+            {
+              "role": "HUB_ADMIN"
+            }
+            """;
 
-        assertThatThrownBy(() -> consumer.consume(payload))
+        assertThatThrownBy(
+                () -> consumer.consume(payload)
+        )
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("사용자 보안 이벤트 역직렬화 실패");
+                .hasMessage(
+                        "사용자 보안 이벤트 역직렬화에 실패했습니다."
+                )
+                .hasCauseInstanceOf(
+                        com.fasterxml.jackson.core
+                                .JsonProcessingException.class
+                );
 
-        verify(invalidationService, never()).invalidate(org.mockito.ArgumentMatchers.any());
+        verify(
+                invalidationService,
+                never()
+        ).invalidate(
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 
     @Test
