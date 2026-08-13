@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS order_schema.p_order
               'CANCELED'
                               )
     )
-
     );
 
 -- 주문 상품
@@ -62,6 +61,24 @@ CREATE TABLE IF NOT EXISTS order_schema.p_order_item
 
     CONSTRAINT ck_order_item_quantity
     CHECK (quantity >= 1)
+    );
+
+-- 주문 멱등성
+CREATE TABLE IF NOT EXISTS order_schema.p_order_idempotency
+(
+    id                UUID NOT NULL,
+    idempotency_key   UUID NOT NULL,
+    order_id          UUID NOT NULL,
+
+    CONSTRAINT pk_order_idempotency
+    PRIMARY KEY (id),
+
+    CONSTRAINT uk_order_idempotency_key
+    UNIQUE (idempotency_key),
+
+    CONSTRAINT fk_order_idempotency_order
+    FOREIGN KEY (order_id)
+    REFERENCES order_schema.p_order (order_id)
     );
 
 -- 처리된 이벤트

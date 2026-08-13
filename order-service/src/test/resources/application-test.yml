@@ -12,3 +12,13 @@ spring:
   h2:
     console:
       enabled: true
+
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
