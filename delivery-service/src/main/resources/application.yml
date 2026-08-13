@@ -49,6 +49,11 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: >
+          deliveryCreated:com.sixro.logistics.delivery.application.event.DeliveryCreatedEvent,
+          deliveryCreationFailed:com.sixro.logistics.delivery.application.event.DeliveryCreationFailedEvent
+
 
 server:
   port: 19097
