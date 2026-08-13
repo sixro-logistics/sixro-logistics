@@ -1,5 +1,6 @@
 package com.sixro.logistics.order.presentation.controller;
 
+import com.sixro.logistics.common.constant.HeaderConstants;
 import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.common.core.response.PageResponse;
 import com.sixro.logistics.order.application.facade.order.OrderCommandFacade;
@@ -8,6 +9,7 @@ import com.sixro.logistics.order.application.result.*;
 import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.presentation.dto.request.OrderCreateRequestDto;
 import com.sixro.logistics.order.presentation.dto.request.OrderSearchRequestDto;
+import com.sixro.logistics.order.presentation.dto.request.OrderUpdateRequestDto;
 import com.sixro.logistics.order.presentation.dto.response.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,13 +32,10 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<CommonResponse<OrderCreateResponseDto>> createOrder(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
-            @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,*/
             @Valid @RequestBody OrderCreateRequestDto requestDto){
 
-        // TO DO: Gateway에서 전달받은 인증 헤더로 대체
         OrderCreateResult result
-                = orderCommandFacade.createOrder(UUID.randomUUID(), UserRole.HUB_ADMIN, requestDto.toCommand());
+                = orderCommandFacade.createOrder(requestDto.toCommand());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -49,16 +48,12 @@ public class OrderController {
 
     @GetMapping("/{orderId}")
     public ResponseEntity<CommonResponse<OrderGetOneResponseDto>> getOneOrder(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID orderId){
 
-        // TO DO: Gateway에서 전달받은 인증 헤더로 대체
-
         OrderGetOneResult result =
-                orderQueryFacade.getOneOrder(userId, userRole, affiliationId, orderId);
+                orderQueryFacade.getOneOrder(userRole, affiliationId, orderId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -70,15 +65,34 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}")
-    public ResponseEntity<CommonResponse<OrderDeleteResponseDto>> deleteOrder(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
+    public ResponseEntity<CommonResponse<OrderUpdateResponseDto>> updateOrder(
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
+            @PathVariable UUID orderId,
+            @Valid @RequestBody OrderUpdateRequestDto requestDto
+    ){
+
+        OrderUpdateResult result =
+                orderCommandFacade.updateOrder(
+                        userRole, affiliationId, orderId, requestDto.toCommand()
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(CommonResponse.success(
+                        HttpStatus.OK,
+                        "주문이 수정되었습니다.",
+                        OrderUpdateResponseDto.from(result)
+                ));
+    }
+
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<CommonResponse<OrderDeleteResponseDto>> deleteOrder(
+            @RequestHeader(HeaderConstants.USER_ID) UUID userId,
+            @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID orderId
             ){
-
-        // TO DO: Gateway에서 전달받은 인증 헤더로 대체
 
         OrderDeleteResult result =
                 orderCommandFacade.deleteOrder(userId, userRole, affiliationId, orderId);
@@ -94,16 +108,12 @@ public class OrderController {
 
     @PatchMapping("/{orderId}/status")
     public ResponseEntity<CommonResponse<OrderCancelResponseDto>> cancelOrder(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @PathVariable UUID orderId){
 
-        // TO DO: Gateway에서 전달받은 인증 헤더로 대체
-
         OrderCancelResult result =
-                orderCommandFacade.cancelOrder(userId, userRole, affiliationId, orderId);
+                orderCommandFacade.cancelOrder(userRole, affiliationId, orderId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -116,10 +126,9 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<CommonResponse<PageResponse<OrderSearchResponseDto>>> searchOrder(
-            /*@RequestHeader(HeaderConstants.USER_ID) UUID userId,
+            @RequestHeader(HeaderConstants.USER_ID) UUID userId,
             @RequestHeader(HeaderConstants.USER_ROLE) UserRole userRole,
-            @RequestHeader(HeaderConstants.AFFILIATION_ID) UUID affiliationId*/
-            UUID userId, UserRole userRole, UUID affiliationId,
+            @RequestHeader(value = HeaderConstants.AFFILIATION_ID, required = false) UUID affiliationId,
             @ModelAttribute OrderSearchRequestDto requestDto,
             @PageableDefault(
                     sort = "createdAt",
@@ -127,8 +136,6 @@ public class OrderController {
                     size = 10
             ) Pageable pageable
     ) {
-
-        // TO DO: Gateway에서 전달받은 인증 헤더로 대체
 
         OrderSearchResult result = orderQueryFacade.searchOrder(
                 userId, userRole, affiliationId, requestDto.toCommand(), pageable

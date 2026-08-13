@@ -4,6 +4,5 @@ import java.util.UUID;
 
 public record HubClientResponse(
         UUID hubId
-        //HubStatus hubStatus
 ) {
 }

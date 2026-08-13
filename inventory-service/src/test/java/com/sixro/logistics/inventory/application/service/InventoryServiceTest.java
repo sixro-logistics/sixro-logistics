@@ -270,6 +270,7 @@ class InventoryServiceTest {
     void deleteInventory_success() {
 
         // given
+        UUID userId = UUID.randomUUID();
         UUID inventoryId = UUID.randomUUID();
 
         Inventory inventory =
@@ -294,7 +295,7 @@ class InventoryServiceTest {
 
         // when
         InventoryDeleteResult result =
-                inventoryCommandService.deleteInventory(inventoryId);
+                inventoryCommandService.deleteInventory(userId, inventoryId);
 
         // then
         assertThat(result).isNotNull();
@@ -310,6 +311,7 @@ class InventoryServiceTest {
     void deleteInventory_fail_inventoryNotFound() {
 
         // given
+        UUID userId = UUID.randomUUID();
         UUID inventoryId = UUID.randomUUID();
 
         given(
@@ -320,7 +322,7 @@ class InventoryServiceTest {
 
         // when
         BaseException exception = catchThrowableOfType(
-                () -> inventoryCommandService.deleteInventory(inventoryId),
+                () -> inventoryCommandService.deleteInventory(userId, inventoryId),
                 BaseException.class
         );
 

@@ -60,6 +60,8 @@ dependencies {
 	// Observability / Tracing
 	implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 	implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+	// OpenFeign Observation / Trace Context 전파
+	implementation 'io.github.openfeign:feign-micrometer'
 
 	// OpenAPI / Swagger UI
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'

@@ -77,14 +77,14 @@ public class InventoryCommandService {
 
     }
 
-    public InventoryDeleteResult deleteInventory(UUID inventoryId) {
+    public InventoryDeleteResult deleteInventory(UUID userId, UUID inventoryId) {
 
         Inventory inventory = inventoryRepository.findByIdAndIsDeletedFalse(inventoryId)
                 .orElseThrow(() ->
                         new BaseException(InventoryErrorCode.INVENTORY_NOT_FOUND)
                 );
 
-        inventory.softDelete(UUID.randomUUID());
+        inventory.softDelete(userId);
 
         return new InventoryDeleteResult(inventoryId);
     }

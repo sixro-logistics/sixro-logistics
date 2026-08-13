@@ -1,6 +1,7 @@
 package com.sixro.logistics.order.infrastructure.client.company;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.order.application.model.CompanyInfo;
 import com.sixro.logistics.order.application.model.HubInfo;
 import com.sixro.logistics.order.application.port.CompanyQueryPort;
@@ -22,12 +23,13 @@ public class CompanyClientAdapter implements CompanyQueryPort {
     public CompanyInfo getCompany(UUID receiverCompanyId) {
 
         try {
-            CompanyClientResponse response = companyClient.getCompany(receiverCompanyId);
+            CommonResponse<CompanyClientResponse> response
+                    = companyClient.getCompany(receiverCompanyId);
 
             return new CompanyInfo(
-                    response.companyId(),
-                    response.address(),
-                    response.hubId()
+                    response.data().companyId(),
+                    response.data().address(),
+                    response.data().hubId()
             );
 
         } catch (FeignException.NotFound e) {
