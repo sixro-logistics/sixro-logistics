@@ -1,6 +1,7 @@
 package com.sixro.logistics.inventory.infrastructure.client.product;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.core.response.CommonResponse;
 import com.sixro.logistics.inventory.application.model.ProductInfo;
 import com.sixro.logistics.inventory.application.port.ProductQueryPort;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
@@ -20,11 +21,11 @@ public class ProductClientAdapter implements ProductQueryPort {
     public ProductInfo getProduct(UUID productID) {
 
         try {
-            ProductClientResponse response = productClient.getProduct(productID);
+            CommonResponse<ProductClientResponse> response = productClient.getProduct(productID);
 
             return new ProductInfo(
-                    response.productId(),
-                    response.companyId()
+                    response.data().productId(),
+                    response.data().companyId()
             );
 
         } catch (FeignException.NotFound e) {

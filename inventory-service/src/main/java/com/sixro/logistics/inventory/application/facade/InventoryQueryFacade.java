@@ -1,6 +1,7 @@
 package com.sixro.logistics.inventory.application.facade;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.inventory.application.command.InventorySearchCommand;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
 import com.sixro.logistics.inventory.application.result.InventoryGetOneResult;
@@ -23,27 +24,24 @@ public class InventoryQueryFacade {
     private final InventoryQueryService inventoryQueryService;
 
     public InventoryGetOneResult getOneInventory(
-            UUID userId, UserRole userRole, UUID affiliationId, UUID inventoryId
+            UserRole userRole, UUID affiliationId, UUID inventoryId
     ) {
 
-        // UserRole 검증
         if(userRole == UserRole.DELIVERY_MANAGER){
             throw new BaseException(InventoryErrorCode.FORBIDDEN);
         }
 
         InventoryGetOneResult result = inventoryQueryService.getOneInventory(inventoryId);
 
-        // 허브 관리자 권한 검증
         if(userRole == UserRole.HUB_ADMIN){
             if(!affiliationId.equals(result.hubId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
-        // 업체 관리자 권한 검증
         if(userRole == UserRole.COMPANY_MANAGER){
             if(!affiliationId.equals(result.companyId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
@@ -55,7 +53,6 @@ public class InventoryQueryFacade {
             InventorySearchCommand command, Pageable pageable
     ) {
 
-        // UserRole 검증
         if(userRole == UserRole.DELIVERY_MANAGER){
             throw new BaseException(InventoryErrorCode.FORBIDDEN);
         }

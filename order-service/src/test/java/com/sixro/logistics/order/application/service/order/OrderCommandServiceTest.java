@@ -303,6 +303,7 @@ class OrderCommandServiceTest {
     void deleteOrder_success() {
 
         // given
+        UUID userId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
 
         Order order = Order.create(
@@ -321,7 +322,7 @@ class OrderCommandServiceTest {
 
         // when
         OrderDeleteResult result =
-                orderService.deleteOrder(orderId);
+                orderService.deleteOrder(userId, orderId);
 
         // then
         assertThat(result.orderId())
@@ -338,6 +339,7 @@ class OrderCommandServiceTest {
     void deleteOrder_orderNotFound() {
 
         // given
+        UUID userId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
 
         when(orderRepository.findByIdAndIsDeletedFalse(orderId))
@@ -345,7 +347,7 @@ class OrderCommandServiceTest {
 
         // when & then
         assertThatThrownBy(() ->
-                orderService.deleteOrder(orderId)
+                orderService.deleteOrder(userId, orderId)
         )
                 .isInstanceOf(BaseException.class);
 

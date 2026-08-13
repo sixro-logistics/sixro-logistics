@@ -30,11 +30,13 @@ public class InventoryClientAdapter implements InventoryCommandPort {
                         .toList()
         );
 
-        try{
+        try {
             inventoryClient.deductInventory(request);
-        }catch(FeignException.NotFound e){
+        } catch (FeignException.NotFound e) {
             throw new BaseException(OrderErrorCode.INVENTORY_NOT_FOUND);
-        }
+        } catch(FeignException.Conflict e) {
+            throw new BaseException(OrderErrorCode.OUT_OF_STOCK);
+    }
 
     }
 

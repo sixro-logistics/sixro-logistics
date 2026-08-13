@@ -2,11 +2,9 @@ package com.sixro.logistics.order.infrastructure.kafka;
 
 import com.sixro.logistics.order.application.command.DeliveryCreatedCommand;
 import com.sixro.logistics.order.application.command.DeliveryCreationFailedCommand;
-import com.sixro.logistics.order.application.event.EventEnvelope;
 import com.sixro.logistics.order.application.facade.order.OrderCommandFacade;
-import com.sixro.logistics.order.application.service.event.ProcessedEventService;
-import com.sixro.logistics.order.domain.event.delivery.DeliveryCreatedEvent;
-import com.sixro.logistics.order.domain.event.delivery.DeliveryCreationFailedEvent;
+import com.sixro.logistics.order.application.event.DeliveryCreatedEvent;
+import com.sixro.logistics.order.application.event.DeliveryCreationFailedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -19,7 +17,7 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = KafkaTopics.DELIVERY_CREATED)
     public void consumeDeliveryCreated(
-            EventEnvelope<DeliveryCreatedEvent> event
+            DeliveryCreatedEvent event
     ) {
 
         orderCommandFacade.deliveryCreated(
@@ -34,7 +32,7 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = KafkaTopics.DELIVERY_CREATION_FAILED)
     public void consumeDeliveryCreationFailed(
-            EventEnvelope<DeliveryCreationFailedEvent> event
+            DeliveryCreationFailedEvent event
     ) {
         orderCommandFacade.deliveryCreationFailed(
                 new DeliveryCreationFailedCommand(

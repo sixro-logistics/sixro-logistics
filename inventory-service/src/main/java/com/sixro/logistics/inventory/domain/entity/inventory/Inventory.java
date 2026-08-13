@@ -18,9 +18,8 @@ import java.util.UUID;
                         name = "uk_inventory_hub_product",
                         columnNames = {"hub_id", "product_id"}
                 )
-        }/*,
+        },
         schema = "inventory_schema"
-        */
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter

@@ -3,6 +3,7 @@ package com.sixro.logistics.order.infrastructure.kafka;
 import com.sixro.logistics.order.application.event.EventEnvelope;
 import com.sixro.logistics.order.domain.event.order.OrderCanceledEvent;
 import com.sixro.logistics.order.domain.event.order.OrderCreatedEvent;
+import com.sixro.logistics.order.domain.event.order.OrderFailedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -34,4 +35,15 @@ public class KafkaProducer {
                 event
         ).get();
     }
+
+    public void sendOrderFailedEvent(EventEnvelope<OrderFailedEvent> event)
+            throws ExecutionException, InterruptedException {
+
+        kafkaTemplate.send(
+                KafkaTopics.ORDER_FAILED,
+                event.data().orderId().toString(),
+                event
+        ).get();
+    }
+
 }

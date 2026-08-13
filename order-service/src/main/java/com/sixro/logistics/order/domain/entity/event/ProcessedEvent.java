@@ -15,7 +15,8 @@ import java.util.UUID;
                         name = "uk_order_processed_event_event_id",
                         columnNames = "event_id"
                 )
-        }
+        },
+        schema = "order_schema"
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

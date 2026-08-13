@@ -152,13 +152,13 @@ public class OrderCommandService {
         );
     }
 
-    public OrderDeleteResult deleteOrder(UUID orderId) {
+    public OrderDeleteResult deleteOrder(UUID userId, UUID orderId) {
         Order order = orderRepository.findByIdAndIsDeletedFalse(orderId)
                 .orElseThrow(() ->
                         new BaseException(OrderErrorCode.ORDER_NOT_FOUND)
                 );
 
-        order.softDelete(SYSTEM_ID);
+        order.softDelete(userId);
 
         return new OrderDeleteResult(
                 order.getId(),
@@ -200,7 +200,6 @@ public class OrderCommandService {
         processedEventService.save(command.eventId());
 
         // ORDER_FAILED 이벤트 발행
-
         OrderFailedEvent data = new OrderFailedEvent(
                 order.getId(),
                 order.getHubId(),

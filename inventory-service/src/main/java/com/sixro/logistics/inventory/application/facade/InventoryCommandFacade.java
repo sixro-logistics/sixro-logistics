@@ -1,15 +1,16 @@
 package com.sixro.logistics.inventory.application.facade;
 
 import com.sixro.logistics.common.core.exception.BaseException;
+import com.sixro.logistics.common.core.exception.CommonErrorCode;
 import com.sixro.logistics.inventory.application.command.*;
 import com.sixro.logistics.inventory.application.common.model.UserRole;
+import com.sixro.logistics.inventory.application.model.HubInfo;
 import com.sixro.logistics.inventory.application.model.ProductInfo;
 import com.sixro.logistics.inventory.application.port.HubQueryPort;
 import com.sixro.logistics.inventory.application.port.ProductQueryPort;
 import com.sixro.logistics.inventory.application.result.*;
 import com.sixro.logistics.inventory.application.service.inventory.InventoryCommandService;
 import com.sixro.logistics.inventory.application.service.inventory.InventoryQueryService;
-import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,32 +27,25 @@ public class InventoryCommandFacade {
     private final ProductQueryPort productQueryPort;
 
     public InventoryCreateResult createInventory(
-            UUID userId, UserRole userRole, UUID affiliationId,
-            InventoryCreateCommand command
-    ) {
+            UserRole userRole, UUID affiliationId, InventoryCreateCommand command
+    ){
 
-        // UserRole 검증
         if(userRole == UserRole.DELIVERY_MANAGER){
-            throw new BaseException(InventoryErrorCode.FORBIDDEN);
+            throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
-        // 허브 관리자 권한 검증
         if(userRole == UserRole.HUB_ADMIN){
             if(!affiliationId.equals(command.hubId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
-        /*HubInfo hubInfo = hubQueryPort.getHub(command.hubId());
+        HubInfo hubInfo = hubQueryPort.getHub(command.hubId());
         ProductInfo productInfo = productQueryPort.getProduct(command.productId());
-        createValidate(hubInfo, productInfo);*/
 
-        ProductInfo productInfo = new ProductInfo(UUID.randomUUID(), UUID.randomUUID());
-
-        // 업체 관리자 권한 검증
         if(userRole == UserRole.COMPANY_MANAGER){
             if(!affiliationId.equals(productInfo.companyId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
@@ -62,16 +56,15 @@ public class InventoryCommandFacade {
     }
 
     public InventoryUpdateResult updateInventory(
-            UUID userId, UserRole userRole, UUID affiliationId,
+            UserRole userRole, UUID affiliationId,
             UUID inventoryId, InventoryUpdateCommand command
     ) {
 
         InventoryGetOneResult result = inventoryQueryService.getOneInventory(inventoryId);
 
-        // 허브 관리자 권한 검증
         if(userRole == UserRole.HUB_ADMIN){
             if(!affiliationId.equals(result.hubId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
@@ -79,35 +72,32 @@ public class InventoryCommandFacade {
     }
 
     public InventoryStockInCompanyResult stockInInventory(
-            UUID userId, UserRole userRole, UUID affiliationId,
+            UserRole userRole, UUID affiliationId,
             UUID inventoryId, InventoryStockInCommand command
     ) {
 
         InventoryGetOneResult result = inventoryQueryService.getOneInventory(inventoryId);
 
-        // UserRole 검증
         if(userRole == UserRole.DELIVERY_MANAGER){
-            throw new BaseException(InventoryErrorCode.FORBIDDEN);
+            throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
-        // 허브 관리자 권한 검증
         if(userRole == UserRole.HUB_ADMIN){
             if(!affiliationId.equals(result.hubId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
-        // 업체 관리자 권한 검증
         if(userRole == UserRole.COMPANY_MANAGER){
             if(!affiliationId.equals(result.companyId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
         return inventoryCommandService.stockInInventory(inventoryId, command);
     }
 
-    // TO DO : deleteInventory에 userId 같이 넘기기
+
     public InventoryDeleteResult deleteInventory(
             UUID userId, UserRole userRole, UUID affiliationId,
             UUID inventoryId
@@ -116,16 +106,16 @@ public class InventoryCommandFacade {
         InventoryGetOneResult result = inventoryQueryService.getOneInventory(inventoryId);
 
         if(userRole == UserRole.COMPANY_MANAGER || userRole == UserRole.DELIVERY_MANAGER){
-            throw new BaseException(InventoryErrorCode.FORBIDDEN);
+            throw new BaseException(CommonErrorCode.FORBIDDEN);
         }
 
         if(userRole == UserRole.HUB_ADMIN){
             if(!affiliationId.equals(result.hubId())){
-                throw new BaseException(InventoryErrorCode.FORBIDDEN);
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
-        return inventoryCommandService.deleteInventory(inventoryId);
+        return inventoryCommandService.deleteInventory(userId, inventoryId);
     }
 
     public void deductInventory(InventoryDeductCommand command) {

@@ -2,16 +2,12 @@ package com.sixro.logistics.order.application.facade.order;
 
 import com.sixro.logistics.common.core.exception.BaseException;
 import com.sixro.logistics.common.core.exception.CommonErrorCode;
-import com.sixro.logistics.common.core.exception.ErrorCode;
 import com.sixro.logistics.order.application.command.OrderSearchCommand;
-import com.sixro.logistics.order.application.result.OrderCreateResult;
 import com.sixro.logistics.order.application.result.OrderGetOneResult;
 import com.sixro.logistics.order.application.result.OrderSearchResult;
 import com.sixro.logistics.order.application.service.order.OrderQueryService;
-import com.sixro.logistics.order.common.model.AffiliationType;
 import com.sixro.logistics.order.common.model.UserRole;
 import com.sixro.logistics.order.exception.OrderErrorCode;
-import com.sixro.logistics.order.presentation.dto.request.OrderSearchRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,34 +24,31 @@ public class OrderQueryFacade {
     private final OrderQueryService orderQueryService;
 
     public OrderGetOneResult getOneOrder(
-            UUID uuid, UserRole userRole, UUID affiliationId, UUID orderId
+            UserRole userRole, UUID affiliationId, UUID orderId
     ) {
 
         OrderGetOneResult result = orderQueryService.getOneOrder(orderId);
 
-        //userRole = UserRole.MASTER_ADMIN;
-
-        /* 허브 관리자 권한 검증
         if(userRole == UserRole.HUB_ADMIN){
             if(!affiliationId.equals(result.hubId())){
                 throw new BaseException(CommonErrorCode.FORBIDDEN);
             }
         }
 
-        // 업체 담당자 권한 검증
-        boolean isReceiverCompany = affiliationId.equals(result.receiverCompanyId());
+        if(userRole == UserRole.COMPANY_MANAGER) {
+            boolean isReceiverCompany = affiliationId.equals(result.receiverCompanyId());
 
-        boolean isSupplierCompany =
-                result.orderItems().stream()
-                        .anyMatch(item ->
-                                affiliationId.equals(item.companyId()));
+            boolean isSupplierCompany =
+                    result.orderItems().stream()
+                            .anyMatch(item ->
+                                    affiliationId.equals(item.companyId()));
 
-        if(!isReceiverCompany || !isSupplierCompany){
-            throw new BaseException(CommonErrorCode.FORBIDDEN);
+            if (!isReceiverCompany || !isSupplierCompany) {
+                throw new BaseException(CommonErrorCode.FORBIDDEN);
+            }
         }
 
-        // TO DO: 배송 담당자 권한 검증
-        */
+        // TO DO : 배송 담당자 API 호출 및 권한 검증
 
         return result;
     }
@@ -66,7 +59,7 @@ public class OrderQueryFacade {
 
         Pageable validatedPageable = pageValidate(pageable);
 
-        return orderQueryService.search(userId, userRole, affiliationId, command, pageable);
+        return orderQueryService.search(userId, userRole, affiliationId, command, validatedPageable);
     }
 
     private Pageable pageValidate(Pageable pageable){
