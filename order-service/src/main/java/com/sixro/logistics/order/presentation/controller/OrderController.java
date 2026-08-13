@@ -32,10 +32,11 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<CommonResponse<OrderCreateResponseDto>> createOrder(
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @Valid @RequestBody OrderCreateRequestDto requestDto){
 
         OrderCreateResult result
-                = orderCommandFacade.createOrder(requestDto.toCommand());
+                = orderCommandFacade.createOrder(requestDto.toCommand(idempotencyKey));
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)

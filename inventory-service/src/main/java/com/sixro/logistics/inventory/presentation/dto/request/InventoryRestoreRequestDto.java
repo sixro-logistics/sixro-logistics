@@ -7,12 +7,14 @@ import java.util.List;
 import java.util.UUID;
 
 public record InventoryRestoreRequestDto(
+        UUID idempotencyKey,
         UUID hubId,
         List<InventoryRequestItem> items
 ) {
 
-    public InventoryRestoreCommand toCommand() {
+    public InventoryRestoreCommand toCommand(UUID idempotencyKey) {
         return new InventoryRestoreCommand(
+                idempotencyKey,
                 hubId,
                 items.stream()
                         .map(item ->
