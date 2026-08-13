@@ -1,33 +1,28 @@
 server:
-  port: ${SERVER_PORT:19098}
+  port: ${HUB_SERVER_PORT:19098}
 
 eureka:
   instance:
-    # 개발환경
     prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
-    # 운영환경
-    #    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:false}
-    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
-    # 로컬 단일 인스턴스에서 확인하기 쉬운 고정 ID
     instance-id: ${spring.application.name}:${server.port}
   client:
     service-url:
-      defaultZone: http://localhost:19090/eureka/
+      defaultZone: ${EUREKA_SERVER_URL}
 
 spring:
   application:
     name: hub-service
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${HUB_DB_URL}
+    username: ${HUB_DB_USERNAME}
+    password: ${HUB_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -69,7 +64,7 @@ logging:
     root: INFO
     com.sixro.logistics: INFO
     org.springframework.web: INFO
-    org.springframework.cache: TRACE
+    org.springframework.cache: INFO
 
 resilience4j:
   retry:
@@ -106,7 +101,7 @@ resilience4j:
 management:
   tracing:
     sampling:
-      probability: 1.0 # 100% 추적
+      probability: 0.1 # 10% 추적
   zipkin:
     tracing:
       endpoint: ${ZIPKIN_ENDPOINT}
