@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_order_outbox" /*, schema = "" */)
+@Table(name = "p_order_outbox" , schema = "order_schema")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Outbox extends BaseEntity {
