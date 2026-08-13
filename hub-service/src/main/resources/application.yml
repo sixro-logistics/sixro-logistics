@@ -56,12 +56,13 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
       # Route Consumer 설정
-      group-id: route-service-group
+      group-id: hub-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*" # 모든 매핑 허용
+        spring.json.use.type.headers: false
 
 logging:
   level:
@@ -101,6 +102,14 @@ resilience4j:
         limit-refresh-period: 1s
         limit-for-period: 3
         timeout-duration: 30s
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # 100% 추적
+  zipkin:
+    tracing:
+      endpoint: "http://localhost:9411/api/v2/spans"
 
 # TMAP API 1,000건/일 무료
 tmap:
