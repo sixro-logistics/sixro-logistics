@@ -113,21 +113,14 @@ public class OrderCommandFacade {
                 requestHash
         );
 
-        // 중복 차감, 복원 방지하기 위해 멱등키를 재고 서비스로 전달
-        UUID deductIdempotencyKey = command.idempotencyKey();
-
-        UUID restoreIdempotencyKey = UUID.nameUUIDFromBytes(
-                (command.idempotencyKey() + ":RESTORE")
-                        .getBytes(StandardCharsets.UTF_8)
-        );
-
         boolean inventoryDeducted = false;
 
         try{
 
             // 재고 차감 동기 처리
+            // 중복 차감을 방지하기 위해 멱등키를 재고 서비스로 전달
             inventoryCommandPort.deductInventory(
-                    deductIdempotencyKey,
+                    command.idempotencyKey(),
                     command.hubId(),
                     inventoryItems
             );
@@ -149,9 +142,10 @@ public class OrderCommandFacade {
         }catch(Exception e){
 
             // 주문 생성 실패 시 재고 복원 동기 처리
+            // 중복 복원을 방지하기 위해 멱등키를 재고 서비스로 전달
             if(inventoryDeducted){
                 inventoryCommandPort.restoreInventory(
-                        restoreIdempotencyKey,
+                        command.idempotencyKey(),
                         command.hubId(),
                         inventoryItems
                 );

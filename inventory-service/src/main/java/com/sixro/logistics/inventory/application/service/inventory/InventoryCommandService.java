@@ -5,7 +5,8 @@ import com.sixro.logistics.inventory.application.command.*;
 import com.sixro.logistics.inventory.application.result.*;
 import com.sixro.logistics.inventory.application.service.event.ProcessedEventService;
 import com.sixro.logistics.inventory.domain.entity.inventory.Inventory;
-import com.sixro.logistics.inventory.domain.entity.inventory.InventoryOperation;
+import com.sixro.logistics.inventory.domain.entity.inventory.InventoryIdempotency;
+import com.sixro.logistics.inventory.domain.entity.inventory.InventoryReservationStatus;
 import com.sixro.logistics.inventory.domain.repository.inventory.InventoryRepository;
 import com.sixro.logistics.inventory.exception.InventoryErrorCode;
 import jakarta.transaction.Transactional;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -93,10 +95,19 @@ public class InventoryCommandService {
 
     public void deductInventory(InventoryDeductCommand command) {
 
-        if(inventoryIdempotencyService.isProcessed(
-                command.idempotencyKey()
-        )){
-            return;
+        Optional<InventoryIdempotency> existing =
+                inventoryIdempotencyService.find(command.idempotencyKey());
+
+        if(existing.isPresent()){
+            if(existing.get().getStatus() == InventoryReservationStatus.RESERVED){
+                return;
+            }
+
+            if(existing.get().getStatus() == InventoryReservationStatus.RELEASED){
+                throw new BaseException(
+                        InventoryErrorCode.INVENTORY_RESERVATION_RELEASED
+                );
+            }
         }
 
         Map<UUID, Integer> quantityMap = command.items()
@@ -125,32 +136,28 @@ public class InventoryCommandService {
 
         for(Inventory inventory : inventoryList){
             Integer quantity = quantityMap.get(inventory.getProductId());
-
             inventory.deductStock(quantity);
         }
 
-        inventoryIdempotencyService.save(
-                command.idempotencyKey(),
-                InventoryOperation.DEDUCT
-        );
+        inventoryIdempotencyService.reserve(command.idempotencyKey());
 
     }
 
     public void restoreInventory(InventoryRestoreCommand command) {
 
-        if(inventoryIdempotencyService.isProcessed(
-                command.idempotencyKey()
-        )){
+        InventoryIdempotency idempotency =
+                inventoryIdempotencyService.find(command.idempotencyKey())
+                        .orElseThrow(() ->
+                                new BaseException(InventoryErrorCode.IDEMPOTENCY_NOT_FOUND)
+                        );
+
+        if(idempotency.getStatus() == InventoryReservationStatus.RELEASED){
             return;
         }
 
         restoreStock(command.hubId(), command.items());
 
-        inventoryIdempotencyService.save(
-                command.idempotencyKey(),
-                InventoryOperation.RESTORE
-        );
-
+        inventoryIdempotencyService.release(command.idempotencyKey());
     }
 
     public void restoreInventoryByEvent(InventoryRestoreByEventCommand command) {

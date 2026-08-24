@@ -34,24 +34,24 @@ public class InventoryIdempotency {
     private UUID idempotencyKey;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, updatable = false)
-    private InventoryOperation operation;
+    @Column(nullable = false)
+    private InventoryReservationStatus status;
 
     private InventoryIdempotency(
-            UUID idempotencyKey,
-            InventoryOperation operation
+            UUID idempotencyKey
     ) {
         this.idempotencyKey = idempotencyKey;
-        this.operation = operation;
+        this.status = InventoryReservationStatus.RESERVED;
     }
 
     public static InventoryIdempotency create(
-            UUID idempotencyKey,
-            InventoryOperation operation
+            UUID idempotencyKey
     ) {
-        return new InventoryIdempotency(
-                idempotencyKey,
-                operation
-        );
+        return new InventoryIdempotency(idempotencyKey);
     }
+
+    public void release() {
+        this.status = InventoryReservationStatus.RELEASED;
+    }
+
 }

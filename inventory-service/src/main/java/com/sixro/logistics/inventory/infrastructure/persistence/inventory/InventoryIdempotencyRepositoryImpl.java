@@ -5,6 +5,7 @@ import com.sixro.logistics.inventory.domain.repository.inventory.InventoryIdempo
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -14,8 +15,8 @@ public class InventoryIdempotencyRepositoryImpl implements InventoryIdempotencyR
     private final InventoryIdempotencyJpaRepository inventoryIdempotencyJpaRepository;
 
     @Override
-    public boolean existsByIdempotencyKey(UUID idempotencyKey) {
-        return inventoryIdempotencyJpaRepository.existsByIdempotencyKey(idempotencyKey);
+    public Optional<InventoryIdempotency> findByIdempotencyKey(UUID idempotencyKey) {
+        return inventoryIdempotencyJpaRepository.findByIdempotencyKey(idempotencyKey);
     }
 
     @Override
