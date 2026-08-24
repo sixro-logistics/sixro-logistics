@@ -6,9 +6,7 @@ import com.sixro.logistics.order.application.event.EventEnvelope;
 import com.sixro.logistics.order.application.result.*;
 import com.sixro.logistics.order.application.service.event.ProcessedEventService;
 import com.sixro.logistics.order.application.service.outbox.OutboxService;
-import com.sixro.logistics.order.domain.entity.order.Order;
-import com.sixro.logistics.order.domain.entity.order.OrderItem;
-import com.sixro.logistics.order.domain.entity.order.OrderStatus;
+import com.sixro.logistics.order.domain.entity.order.*;
 import com.sixro.logistics.order.domain.repository.order.OrderRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -82,8 +80,16 @@ class OrderCommandServiceTest {
                         )
                 );
 
+        String requestHash = "test-request-hash";
+
+        OrderIdempotency idempotency =
+                OrderIdempotency.create(
+                        idempotencyKey,
+                        requestHash
+                );
+
         when(orderIdempotencyService.find(idempotencyKey))
-                .thenReturn(Optional.empty());
+                .thenReturn(Optional.of(idempotency));
 
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> {
@@ -146,7 +152,7 @@ class OrderCommandServiceTest {
                 .isEqualTo(3);
 
         verify(orderIdempotencyService)
-                .save(idempotencyKey, orderId);
+                .succeed(idempotency, orderId);
 
         verify(outboxService)
                 .saveOrderCreated(any(EventEnvelope.class));
