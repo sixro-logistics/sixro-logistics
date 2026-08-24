@@ -54,11 +54,23 @@ public enum InventoryErrorCode implements ErrorCode {
             "재고를 찾을 수 없습니다."
     ),
 
+    IDEMPOTENCY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "I011",
+            "멱등키를 찾을 수 없습니다."
+    ),
+
     // 409
     OUT_OF_STOCK(
             HttpStatus.CONFLICT,
             "I005",
             "상품의 재고가 부족합니다."
+    ),
+
+    INVENTORY_RESERVATION_RELEASED(
+            HttpStatus.CONFLICT,
+            "I012",
+            "해당 멱등키의 재고는 복원 처리가 완료되었습니다. 새로운 멱등키로 요청해주세요."
     );
 
     private final HttpStatus status;
