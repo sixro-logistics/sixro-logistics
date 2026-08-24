@@ -29,25 +29,44 @@ public class OrderIdempotency {
     @Column(name = "idempotency_key", nullable = false, updatable = false)
     private UUID idempotencyKey;
 
-    @Column(name = "order_id", nullable = false, updatable = false)
+    // 동일한 멱등키로 다른 요청이 들어오는 것을 구분하기 위해 요청 내용을 해시로 저장
+    @Column(name = "request_hash", nullable = false, updatable = false)
+    private String requestHash;
+
+    // 주문 생성 성공 후에만 멱등키를 기록하지 않고, 요청 처리 단계에 따라 상태를 관리하기 위해 추가
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private OrderIdempotencyStatus status;
+
+    @Column(name = "order_id")
     private UUID orderId;
 
     private OrderIdempotency(
             UUID idempotencyKey,
-            UUID orderId
+            String requestHash
     ) {
         this.idempotencyKey = idempotencyKey;
-        this.orderId = orderId;
+        this.requestHash = requestHash;
+        this.status = OrderIdempotencyStatus.PROCESSING;
     }
 
     public static OrderIdempotency create(
             UUID idempotencyKey,
-            UUID orderId
+            String requestHash
     ) {
         return new OrderIdempotency(
                 idempotencyKey,
-                orderId
+                requestHash
         );
+    }
+
+    public void succeed(UUID orderId) {
+        this.orderId = orderId;
+        this.status = OrderIdempotencyStatus.SUCCEEDED;
+    }
+
+    public void compensate() {
+        this.status = OrderIdempotencyStatus.COMPENSATED;
     }
 
 }

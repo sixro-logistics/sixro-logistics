@@ -7,8 +7,12 @@ import com.sixro.logistics.order.application.model.*;
 import com.sixro.logistics.order.application.port.*;
 import com.sixro.logistics.order.application.result.*;
 import com.sixro.logistics.order.application.service.order.OrderCommandService;
+import com.sixro.logistics.order.application.service.order.OrderIdempotencyService;
 import com.sixro.logistics.order.application.service.order.OrderQueryService;
+import com.sixro.logistics.order.application.service.order.OrderRequestHashGenerator;
 import com.sixro.logistics.order.common.model.UserRole;
+import com.sixro.logistics.order.domain.entity.order.OrderIdempotency;
+import com.sixro.logistics.order.domain.entity.order.OrderIdempotencyStatus;
 import com.sixro.logistics.order.domain.entity.order.OrderStatus;
 import com.sixro.logistics.order.exception.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +35,9 @@ public class OrderCommandFacade {
 
     private final OrderCommandService orderCommandService;
     private final OrderQueryService orderQueryService;
+
+    private final OrderIdempotencyService orderIdempotencyService;
+    private final OrderRequestHashGenerator orderRequestHashGenerator;
 
     public OrderCreateResult createOrder(OrderCreateCommand command) {
 
@@ -69,6 +76,42 @@ public class OrderCommandFacade {
         if(productInfo.size() != inventoryItems.size()){
             throw new BaseException(OrderErrorCode.PRODUCT_NOT_FOUND);
         }
+
+        // 주문 생성 성공 후에만 멱등키를 기록하지 않고, 요청 처리 단계에 따라 상태를 관리
+        String requestHash =
+                orderRequestHashGenerator.generate(command);
+
+        Optional<OrderIdempotency> existing =
+                orderIdempotencyService.find(command.idempotencyKey());
+
+        if(existing.isPresent()){
+            OrderIdempotency idempotency = existing.get();
+
+            // 같은 멱등키인데 다른 주문 요청
+            if(!idempotency.getRequestHash().equals(requestHash)){
+                throw new BaseException(OrderErrorCode.IDEMPOTENCY_KEY_CONFLICT);
+            }
+
+            // 이미 처리 중인 요청
+            if(idempotency.getStatus() == OrderIdempotencyStatus.PROCESSING){
+                throw new BaseException(OrderErrorCode.ORDER_ALREADY_PROCESSING);
+            }
+
+            // 실패 후 재고 복원까지 완료된 요청
+            if(idempotency.getStatus() == OrderIdempotencyStatus.COMPENSATED){
+                throw new BaseException(OrderErrorCode.IDEMPOTENCY_KEY_COMPENSATED);
+            }
+
+            // 이미 성공한 요청이면 기존 주문 반환
+            if(idempotency.getStatus() == OrderIdempotencyStatus.SUCCEEDED){
+                return orderCommandService.getExistingOrder(idempotency.getOrderId());
+            }
+        }
+
+        orderIdempotencyService.start(
+                command.idempotencyKey(),
+                requestHash
+        );
 
         // 중복 차감, 복원 방지하기 위해 멱등키를 재고 서비스로 전달
         UUID deductIdempotencyKey = command.idempotencyKey();
@@ -112,6 +155,9 @@ public class OrderCommandFacade {
                         command.hubId(),
                         inventoryItems
                 );
+
+                // 재고 복원이 성공한 경우에만 멱등키 상태를 COMPENSATED로 변경
+                orderIdempotencyService.compensate(command.idempotencyKey());
             }
 
             throw e;

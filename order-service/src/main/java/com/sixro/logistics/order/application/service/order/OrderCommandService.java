@@ -34,38 +34,6 @@ public class OrderCommandService {
 
     public OrderCreateResult createOrder(OrderCreateServiceCommand command) {
 
-        Optional<OrderIdempotency> existing =
-                orderIdempotencyService.find(command.idempotencyKey());
-
-        if(existing.isPresent()){
-
-            // 기존 주문 반환
-            Order order = orderRepository.findByIdWithItems(existing.get().getOrderId())
-                    .orElseThrow(() -> new BaseException(OrderErrorCode.ORDER_NOT_FOUND)
-            );
-
-            return new OrderCreateResult(
-                    order.getId(),
-                    order.getReceiverId(),
-                    order.getHubId(),
-                    order.getReceiverCompanyId(),
-                    order.getDeliveryAddress(),
-                    order.getDeliveryDeadline(),
-                    order.getRequests(),
-                    order.getOrderStatus(),
-                    order.getItems()
-                            .stream()
-                            .map(item -> new OrderResultItem(
-                                    item.getProductId(),
-                                    item.getProductName(),
-                                    item.getProductPrice(),
-                                    item.getQuantity(),
-                                    item.getCompanyId()
-                            ))
-                            .toList()
-            );
-        }
-
         Order order = Order.create(
                 command.hubId(),
                 command.receiverId(),
@@ -89,9 +57,12 @@ public class OrderCommandService {
 
         Order createdOrder = orderRepository.save(order);
 
-        // 주문 생성 성공 후 멱등키 기록
-        orderIdempotencyService.save(
-                command.idempotencyKey(),
+        OrderIdempotency idempotency =
+                orderIdempotencyService.find(command.idempotencyKey())
+                        .orElseThrow(() -> new BaseException(OrderErrorCode.ORDER_NOT_FOUND));
+
+        orderIdempotencyService.succeed(
+                idempotency,
                 createdOrder.getId()
         );
 
@@ -259,4 +230,33 @@ public class OrderCommandService {
         outboxService.saveOrderFailed(event);
 
     }
+
+    public OrderCreateResult getExistingOrder(UUID orderId) {
+        Order order = orderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new BaseException(
+                        OrderErrorCode.ORDER_NOT_FOUND
+                ));
+
+        return new OrderCreateResult(
+                order.getId(),
+                order.getReceiverId(),
+                order.getHubId(),
+                order.getReceiverCompanyId(),
+                order.getDeliveryAddress(),
+                order.getDeliveryDeadline(),
+                order.getRequests(),
+                order.getOrderStatus(),
+                order.getItems()
+                        .stream()
+                        .map(item -> new OrderResultItem(
+                                item.getProductId(),
+                                item.getProductName(),
+                                item.getProductPrice(),
+                                item.getQuantity(),
+                                item.getCompanyId()
+                        ))
+                        .toList()
+        );
+    }
+
 }

@@ -36,7 +36,7 @@ public enum OrderErrorCode implements ErrorCode {
 
     INVALID_SORT_FIELD(
             HttpStatus.BAD_REQUEST,
-            "I015",
+            "O015",
             "생성일시, 수정일시로만 정렬할 수 있습니다."
     ),
 
@@ -106,6 +106,24 @@ public enum OrderErrorCode implements ErrorCode {
             HttpStatus.CONFLICT,
             "O014",
         "배송 생성 상태로 변경할 수 없는 주문입니다."
+    ),
+
+    IDEMPOTENCY_KEY_CONFLICT(
+            HttpStatus.CONFLICT,
+            "O017",
+            "동일한 멱등키로 다른 주문 요청을 보낼 수 없습니다."
+    ),
+
+    ORDER_ALREADY_PROCESSING(
+            HttpStatus.CONFLICT,
+            "O018",
+            "동일한 멱등키의 주문 요청이 현재 처리 중입니다."
+    ),
+
+    IDEMPOTENCY_KEY_COMPENSATED(
+            HttpStatus.CONFLICT,
+            "O019",
+            "해당 멱등키의 주문은 실패 및 보상 처리가 완료되었습니다. 새로운 멱등키로 다시 요청해주세요."
     );
 
     private final HttpStatus status;
